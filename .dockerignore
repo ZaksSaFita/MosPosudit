@@ -1,0 +1,65 @@
+# Git
+.git
+.gitignore
+
+# Visual Studio files
+.vs/
+*.user
+*.userosscache
+*.suo
+*.userprefs
+*.dbmdl
+*.jfm
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+build/
+bld/
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+msbuild.log
+msbuild.err
+msbuild.wrn
+
+# Visual Studio Code
+.vscode/
+
+# Docker
+Dockerfile
+.dockerignore
+
+# Node.js
+node_modules/
+npm-debug.log
+
+# Test Results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+
+# NuGet
+*.nupkg
+*.snupkg
+**/packages/*
+!**/packages/build/
+*.nuget.props
+*.nuget.targets
+
+# Local development settings
+appsettings.Development.json
+appsettings.Local.json
+
+**/.classpath
+**/.env
+**/.git
+**/.project
+**/.settings
+**/.toolstarget
+**/.vs
+**/.vscode
+**/*.*proj.user
