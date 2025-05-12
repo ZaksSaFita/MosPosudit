@@ -135,5 +135,73 @@ namespace MošPosudit.Services.Services
             }
             entity.UpdateDate = DateTime.UtcNow;
         }
+
+        public override async Task<User> Patch(int id, UserPatchRequest patch)
+        {
+            var entity = await GetById(id);
+            MapToEntity(patch, entity);
+            await _context.SaveChangesAsync();
+            return entity;
+        }
+
+        protected override void MapToEntity(UserPatchRequest patch, User entity)
+        {
+            // Convert empty strings to null
+            if (string.IsNullOrWhiteSpace(patch.Email)) patch.Email = null;
+            if (string.IsNullOrWhiteSpace(patch.FirstName)) patch.FirstName = null;
+            if (string.IsNullOrWhiteSpace(patch.LastName)) patch.LastName = null;
+            if (string.IsNullOrWhiteSpace(patch.PhoneNumber)) patch.PhoneNumber = null;
+            if (string.IsNullOrWhiteSpace(patch.Address)) patch.Address = null;
+            if (string.IsNullOrWhiteSpace(patch.Username)) patch.Username = null;
+
+            // Only update fields that are provided (not null)
+            if (patch.FirstName != null)
+            {
+                entity.FirstName = patch.FirstName;
+            }
+
+            if (patch.LastName != null)
+            {
+                entity.LastName = patch.LastName;
+            }
+
+            if (patch.Username != null)
+            {
+                if (CheckUsernameExists(patch.Username).Result && entity.Username != patch.Username)
+                    throw new ConflictException(ErrorMessages.UsernameExists);
+                entity.Username = patch.Username;
+            }
+
+            if (patch.Email != null)
+            {
+                // Validate email format
+                try
+                {
+                    var addr = new System.Net.Mail.MailAddress(patch.Email);
+                    if (addr.Address != patch.Email)
+                        throw new ValidationException(ErrorMessages.InvalidEmail);
+                }
+                catch
+                {
+                    throw new ValidationException(ErrorMessages.InvalidEmail);
+                }
+
+                if (CheckEmailExists(patch.Email).Result && entity.Email != patch.Email)
+                    throw new ConflictException(ErrorMessages.EmailExists);
+                entity.Email = patch.Email;
+            }
+
+            if (patch.PhoneNumber != null)
+            {
+                entity.PhoneNumber = patch.PhoneNumber;
+            }
+
+            if (patch.Address != null)
+            {
+                entity.Address = patch.Address;
+            }
+
+            entity.UpdateDate = DateTime.UtcNow;
+        }
     }
 }

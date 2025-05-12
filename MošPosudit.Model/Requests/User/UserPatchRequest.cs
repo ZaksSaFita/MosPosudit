@@ -10,7 +10,9 @@ namespace MošPosudit.Model.Requests.User
         [StringLength(50)]
         public string? LastName { get; set; }
 
-        [EmailAddress]
+        [StringLength(50)]
+        public string? Username { get; set; }
+
         [StringLength(100)]
         public string? Email { get; set; }
 
@@ -20,4 +22,4 @@ namespace MošPosudit.Model.Requests.User
         [StringLength(100)]
         public string? Address { get; set; }
     }
-} 
+}

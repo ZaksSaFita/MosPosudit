@@ -74,14 +74,8 @@ namespace MošPosudit.WebAPI.Controllers
 
         // User endpoints
         [HttpPatch("{id}")]
-        [Authorize]
         public override async Task<ActionResult<User>> Patch(int id, [FromBody] UserPatchRequest request)
         {
-            // Dodatna provjera - korisnik može mijenjati samo svoj profil
-            var userId = int.Parse(User.FindFirst("UserId")?.Value);
-            if (userId != id)
-                return Forbid();
-
             return await base.Patch(id, request);
         }
 
@@ -91,6 +85,7 @@ namespace MošPosudit.WebAPI.Controllers
         }
 
         [HttpPost("{id}/deactivate")]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult> DeactivateUser(int id)
         {
             try
@@ -105,6 +100,7 @@ namespace MošPosudit.WebAPI.Controllers
         }
 
         [HttpPost("{id}/activate")]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult> ActivateUser(int id)
         {
             try
@@ -147,6 +143,7 @@ namespace MošPosudit.WebAPI.Controllers
         }
 
         [HttpGet("active")]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<IEnumerable<User>>> GetActiveUsers()
         {
             var users = await _userService.GetActiveUsers();
@@ -154,6 +151,7 @@ namespace MošPosudit.WebAPI.Controllers
         }
 
         [HttpGet("inactive")]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<IEnumerable<User>>> GetInactiveUsers()
         {
             var users = await _userService.GetInactiveUsers();
