@@ -1,20 +1,22 @@
-using MošPosudit.Model.DTOs;
+using MošPosudit.Model.Requests.User;
 using MošPosudit.Model.SearchObjects;
-using MošPosudit.Model.Responses;
+using MošPosudit.Services.DataBase.Data;
 
 namespace MošPosudit.Services.Interfaces
 {
-    public interface IUserService
+    public interface IUserService : ICrudService<User, UserSearchObject, UserInsertRequest, UserUpdateRequest, UserPatchRequest>
     {
-        Task<UserResponse> GetById(int id);
-        Task<PagedResult<UserResponse>> Get(UserSearchObject search);
-        Task<UserResponse> Insert(UserInsertRequest request);
-        Task<UserResponse> Update(int id, UserUpdateRequest request);
-        Task<UserResponse> Delete(int id);
-        Task<UserResponse> Login(string username, string password);
-        Task<UserResponse> Register(UserInsertRequest request);
-        Task<UserResponse> ChangePassword(int id, string oldPassword, string newPassword);
-        Task<UserResponse> Deactivate(int id);
-        Task<UserResponse> Activate(int id);
+        // User status management
+        Task<bool> ActivateUser(int id);
+        Task<bool> DeactivateUser(int id);
+        Task<IEnumerable<User>> GetActiveUsers();
+        Task<IEnumerable<User>> GetInactiveUsers();
+
+        // User authentication
+        Task<bool> ChangePassword(int id, string newPassword);
+
+        // Validation methods
+        Task<bool> CheckUsernameExists(string username);
+        Task<bool> CheckEmailExists(string email);
     }
-} 
+}

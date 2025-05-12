@@ -1,3 +1,4 @@
+using MošPosudit.Model.Enums;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -29,11 +30,15 @@ namespace MošPosudit.Services.DataBase.Data
         [Required]
         public int PaymentMethodId { get; set; }
 
+        public string? OrderNumber { get; set; }
         public string? Notes { get; set; }
 
         // Navigation properties
+        [ForeignKey("UserId")]
         public User User { get; set; }
+        [ForeignKey("StatusId")]
         public OrderStatus Status { get; set; }
+        [ForeignKey("PaymentMethodId")]
         public PaymentMethod PaymentMethod { get; set; }
         public ICollection<OrderItem> OrderItems { get; set; }
         public ICollection<PaymentTransaction> Payments { get; set; }
@@ -45,4 +50,4 @@ namespace MošPosudit.Services.DataBase.Data
         [NotMapped]
         public string DisplayName => $"Order #{Id} - {User?.Username}";
     }
-} 
+}

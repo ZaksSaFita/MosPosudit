@@ -1,3 +1,4 @@
+using MošPosudit.Model.Enums;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -28,12 +29,14 @@ namespace MošPosudit.Services.DataBase.Data
         public string? Notes { get; set; }
 
         [MaxLength(100)]
-        public string PerformedBy { get; set; }
+        public string? PerformedBy { get; set; }
 
         public DateTime? NextMaintenanceDate { get; set; }
 
         // Navigation properties
+        [ForeignKey("ToolId")]
         public Tool Tool { get; set; }
+        [ForeignKey("MaintenanceTypeId")]
         public MaintenanceType MaintenanceType { get; set; }
 
         // Logging properties
@@ -41,6 +44,6 @@ namespace MošPosudit.Services.DataBase.Data
         public string EntityName => "MaintenanceLog";
 
         [NotMapped]
-        public string DisplayName => $"{MaintenanceType?.Name} for {Tool?.Name} on {MaintenanceDate:d}";
+        public string DisplayName => $"{MaintenanceType} for {Tool?.Name} on {MaintenanceDate:d}";
     }
-} 
+}

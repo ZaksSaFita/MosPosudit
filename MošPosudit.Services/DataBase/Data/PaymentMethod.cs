@@ -8,15 +8,15 @@ namespace MošPosudit.Services.DataBase.Data
         public int Id { get; set; }
 
         [Required]
-        [MaxLength(50)]
+        [StringLength(50)]
         public string Name { get; set; }
 
-        [MaxLength(200)]
-        public string Description { get; set; }
+        [StringLength(200)]
+        public string? Description { get; set; }
 
         public bool IsActive { get; set; } = true;
 
-        // Navigation properties
-        public ICollection<PaymentTransaction> Transactions { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime? UpdatedAt { get; set; }
     }
 } 

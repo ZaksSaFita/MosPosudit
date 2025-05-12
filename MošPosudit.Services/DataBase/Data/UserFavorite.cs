@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace MošPosudit.Services.DataBase.Data
 {
@@ -16,8 +17,12 @@ namespace MošPosudit.Services.DataBase.Data
         [Required]
         public DateTime CreatedAt { get; set; }
 
+        public string? Notes { get; set; }
+
         // Navigation properties
+        [ForeignKey("UserId")]
         public User User { get; set; }
+        [ForeignKey("ToolId")]
         public Tool Tool { get; set; }
     }
 } 

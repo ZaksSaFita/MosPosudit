@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace MošPosudit.Model.Requests
+namespace MošPosudit.Model.Requests.User
 {
     public class CreateUserRequest
     {

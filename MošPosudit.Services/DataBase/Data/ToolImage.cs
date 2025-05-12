@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace MošPosudit.Services.DataBase.Data
 {
@@ -12,7 +13,7 @@ namespace MošPosudit.Services.DataBase.Data
 
         [Required]
         [MaxLength(200)]
-        public string ImageUrl { get; set; }
+        public string? ImageUrl { get; set; }
 
         public bool IsPrimary { get; set; }
 
@@ -20,6 +21,7 @@ namespace MošPosudit.Services.DataBase.Data
         public DateTime CreatedAt { get; set; }
 
         // Navigation properties
+        [ForeignKey("ToolId")]
         public Tool Tool { get; set; }
     }
 } 
