@@ -9,7 +9,7 @@ namespace MošPosudit.Services.DataBase.Data
 
         [Required]
         [MaxLength(50)]
-        public string Name { get; set; }
+        public string? Name { get; set; }
 
         [MaxLength(255)]
         public string Description { get; set; }

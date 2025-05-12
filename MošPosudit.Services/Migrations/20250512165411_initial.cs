@@ -3,10 +3,12 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
+#pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
+
 namespace MošPosudit.Services.Migrations
 {
     /// <inheritdoc />
-    public partial class init : Migration
+    public partial class initial : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -17,8 +19,8 @@ namespace MošPosudit.Services.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    Name = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
                     ParentCategoryId = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
@@ -32,42 +34,16 @@ namespace MošPosudit.Services.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "MaintenanceTypes",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Name = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_MaintenanceTypes", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "OrderStatuses",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Name = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_OrderStatuses", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "PaymentMethods",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     Name = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false)
+                    Description = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -81,39 +57,14 @@ namespace MošPosudit.Services.Migrations
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     Name = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false)
+                    Description = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_PaymentStatuses", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "RentalStatuses",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Name = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_RentalStatuses", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "RepairStatuses",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Name = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_RepairStatuses", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -131,17 +82,56 @@ namespace MošPosudit.Services.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "ToolConditions",
+                name: "SystemLogs",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    Name = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false)
+                    Timestamp = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    LogLevel = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    Action = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Entity = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    EntityId = table.Column<int>(type: "int", nullable: true),
+                    Message = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    Username = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    IpAddress = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    AdditionalInfo = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    StackTrace = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    Details = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_ToolConditions", x => x.Id);
+                    table.PrimaryKey("PK_SystemLogs", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Tools",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: false),
+                    CategoryId = table.Column<int>(type: "int", nullable: false),
+                    ConditionId = table.Column<int>(type: "int", nullable: false),
+                    DailyRate = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    Quantity = table.Column<int>(type: "int", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    IsAvailable = table.Column<bool>(type: "bit", nullable: false),
+                    DepositAmount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    LastMaintenanceDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    NextMaintenanceDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    Condition = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Tools", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Tools_Categories_CategoryId",
+                        column: x => x.CategoryId,
+                        principalTable: "Categories",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -150,16 +140,20 @@ namespace MošPosudit.Services.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    Username = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    PasswordHash = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
-                    Email = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     FirstName = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     LastName = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    Email = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     PhoneNumber = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
-                    Address = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
+                    Address = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Username = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    PasswordHash = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    PasswordUpdateDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     RoleId = table.Column<int>(type: "int", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false)
+                    UpdateDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    LastLogin = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    DeactivateTime = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -173,36 +167,51 @@ namespace MošPosudit.Services.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Tools",
+                name: "MaintenanceLogs",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    CategoryId = table.Column<int>(type: "int", nullable: false),
-                    DailyRate = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
-                    TotalQuantity = table.Column<int>(type: "int", nullable: false),
-                    AvailableQuantity = table.Column<int>(type: "int", nullable: false),
-                    ConditionId = table.Column<int>(type: "int", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false)
+                    ToolId = table.Column<int>(type: "int", nullable: false),
+                    MaintenanceTypeId = table.Column<int>(type: "int", nullable: false),
+                    MaintenanceDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: false),
+                    Cost = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    Notes = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    PerformedBy = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    NextMaintenanceDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    MaintenanceType = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Tools", x => x.Id);
+                    table.PrimaryKey("PK_MaintenanceLogs", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Tools_Categories_CategoryId",
-                        column: x => x.CategoryId,
-                        principalTable: "Categories",
+                        name: "FK_MaintenanceLogs_Tools_ToolId",
+                        column: x => x.ToolId,
+                        principalTable: "Tools",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ToolImages",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    ToolId = table.Column<int>(type: "int", nullable: false),
+                    ImageUrl = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    IsPrimary = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ToolImages", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Tools_ToolConditions_ConditionId",
-                        column: x => x.ConditionId,
-                        principalTable: "ToolConditions",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        name: "FK_ToolImages_Tools_ToolId",
+                        column: x => x.ToolId,
+                        principalTable: "Tools",
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -213,7 +222,8 @@ namespace MošPosudit.Services.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     UserId = table.Column<int>(type: "int", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    LastModifiedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    LastModifiedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    Notes = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -245,8 +255,7 @@ namespace MošPosudit.Services.Migrations
                         name: "FK_Notifications_Users_UserId",
                         column: x => x.UserId,
                         principalTable: "Users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -256,19 +265,23 @@ namespace MošPosudit.Services.Migrations
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     UserId = table.Column<int>(type: "int", nullable: false),
-                    StatusId = table.Column<int>(type: "int", nullable: false),
+                    OrderDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    StartDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    EndDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     TotalAmount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    CompletedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    Notes = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false)
+                    StatusId = table.Column<int>(type: "int", nullable: false),
+                    PaymentMethodId = table.Column<int>(type: "int", nullable: false),
+                    OrderNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Notes = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Status = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Orders", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Orders_OrderStatuses_StatusId",
-                        column: x => x.StatusId,
-                        principalTable: "OrderStatuses",
+                        name: "FK_Orders_PaymentMethods_PaymentMethodId",
+                        column: x => x.PaymentMethodId,
+                        principalTable: "PaymentMethods",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
@@ -291,45 +304,28 @@ namespace MošPosudit.Services.Migrations
                     StatusId = table.Column<int>(type: "int", nullable: false),
                     TotalPrice = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    Notes = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false)
+                    Notes = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    ToolId = table.Column<int>(type: "int", nullable: false),
+                    IsReturned = table.Column<bool>(type: "bit", nullable: false),
+                    ReturnDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ReturnNotes = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    TotalAmount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    Status = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Rentals", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Rentals_RentalStatuses_StatusId",
-                        column: x => x.StatusId,
-                        principalTable: "RentalStatuses",
+                        name: "FK_Rentals_Tools_ToolId",
+                        column: x => x.ToolId,
+                        principalTable: "Tools",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_Rentals_Users_UserId",
                         column: x => x.UserId,
                         principalTable: "Users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "MaintenanceLogs",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    ToolId = table.Column<int>(type: "int", nullable: false),
-                    MaintenanceDate = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: false),
-                    Cost = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: true),
-                    PerformedBy = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    NextMaintenanceDate = table.Column<DateTime>(type: "datetime2", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_MaintenanceLogs", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_MaintenanceLogs_Tools_ToolId",
-                        column: x => x.ToolId,
-                        principalTable: "Tools",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -344,7 +340,8 @@ namespace MošPosudit.Services.Migrations
                     ToolId = table.Column<int>(type: "int", nullable: false),
                     Rating = table.Column<int>(type: "int", nullable: false),
                     Comment = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -353,36 +350,12 @@ namespace MošPosudit.Services.Migrations
                         name: "FK_Reviews_Tools_ToolId",
                         column: x => x.ToolId,
                         principalTable: "Tools",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_Reviews_Users_UserId",
                         column: x => x.UserId,
                         principalTable: "Users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "ToolImages",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    ToolId = table.Column<int>(type: "int", nullable: false),
-                    ImageUrl = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    IsPrimary = table.Column<bool>(type: "bit", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_ToolImages", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_ToolImages_Tools_ToolId",
-                        column: x => x.ToolId,
-                        principalTable: "Tools",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -395,24 +368,18 @@ namespace MošPosudit.Services.Migrations
                     PlannedDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     MaintenanceTypeId = table.Column<int>(type: "int", nullable: false),
                     AssignedToId = table.Column<int>(type: "int", nullable: true),
-                    Notes = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    Notes = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    MaintenanceType = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_ToolMaintenanceSchedules", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_ToolMaintenanceSchedules_MaintenanceTypes_MaintenanceTypeId",
-                        column: x => x.MaintenanceTypeId,
-                        principalTable: "MaintenanceTypes",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
                         name: "FK_ToolMaintenanceSchedules_Tools_ToolId",
                         column: x => x.ToolId,
                         principalTable: "Tools",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_ToolMaintenanceSchedules_Users_AssignedToId",
                         column: x => x.AssignedToId,
@@ -428,7 +395,8 @@ namespace MošPosudit.Services.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     UserId = table.Column<int>(type: "int", nullable: false),
                     ToolId = table.Column<int>(type: "int", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    Notes = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -437,14 +405,12 @@ namespace MošPosudit.Services.Migrations
                         name: "FK_UserFavorites_Tools_ToolId",
                         column: x => x.ToolId,
                         principalTable: "Tools",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_UserFavorites_Users_UserId",
                         column: x => x.UserId,
                         principalTable: "Users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -458,7 +424,8 @@ namespace MošPosudit.Services.Migrations
                     Quantity = table.Column<int>(type: "int", nullable: false),
                     StartDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     EndDate = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    DailyRate = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false)
+                    DailyRate = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    Notes = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -467,14 +434,12 @@ namespace MošPosudit.Services.Migrations
                         name: "FK_CartItems_Carts_CartId",
                         column: x => x.CartId,
                         principalTable: "Carts",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_CartItems_Tools_ToolId",
                         column: x => x.ToolId,
                         principalTable: "Tools",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -488,7 +453,8 @@ namespace MošPosudit.Services.Migrations
                     Quantity = table.Column<int>(type: "int", nullable: false),
                     StartDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     EndDate = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    DailyRate = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false)
+                    DailyRate = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    Notes = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -497,14 +463,12 @@ namespace MošPosudit.Services.Migrations
                         name: "FK_OrderItems_Orders_OrderId",
                         column: x => x.OrderId,
                         principalTable: "Orders",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_OrderItems_Tools_ToolId",
                         column: x => x.ToolId,
                         principalTable: "Tools",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -518,30 +482,47 @@ namespace MošPosudit.Services.Migrations
                     StatusId = table.Column<int>(type: "int", nullable: false),
                     Amount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
                     TransactionDate = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    TransactionReference = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    Notes = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false)
+                    TransactionReference = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    Notes = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    TransactionId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    PaymentReference = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    RefundReason = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    UserId = table.Column<int>(type: "int", nullable: false),
+                    OrderId = table.Column<int>(type: "int", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ProcessedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RefundedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    Description = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_PaymentTransactions", x => x.Id);
                     table.ForeignKey(
+                        name: "FK_PaymentTransactions_Orders_OrderId",
+                        column: x => x.OrderId,
+                        principalTable: "Orders",
+                        principalColumn: "Id");
+                    table.ForeignKey(
                         name: "FK_PaymentTransactions_PaymentMethods_PaymentMethodId",
                         column: x => x.PaymentMethodId,
                         principalTable: "PaymentMethods",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_PaymentTransactions_PaymentStatuses_StatusId",
                         column: x => x.StatusId,
                         principalTable: "PaymentStatuses",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_PaymentTransactions_Rentals_RentalId",
                         column: x => x.RentalId,
                         principalTable: "Rentals",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_PaymentTransactions_Users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "Users",
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -553,7 +534,8 @@ namespace MošPosudit.Services.Migrations
                     RentalId = table.Column<int>(type: "int", nullable: false),
                     ToolId = table.Column<int>(type: "int", nullable: false),
                     Quantity = table.Column<int>(type: "int", nullable: false),
-                    DailyRate = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false)
+                    DailyRate = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    Notes = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -562,14 +544,12 @@ namespace MošPosudit.Services.Migrations
                         name: "FK_RentalItems_Rentals_RentalId",
                         column: x => x.RentalId,
                         principalTable: "Rentals",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_RentalItems_Tools_ToolId",
                         column: x => x.ToolId,
                         principalTable: "Tools",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -586,7 +566,8 @@ namespace MošPosudit.Services.Migrations
                     SeverityLevel = table.Column<int>(type: "int", nullable: false),
                     RepairCost = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: true),
                     RepairStatusId = table.Column<int>(type: "int", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    RepairStatus = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -598,22 +579,40 @@ namespace MošPosudit.Services.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_ToolDamageReports_RepairStatuses_RepairStatusId",
-                        column: x => x.RepairStatusId,
-                        principalTable: "RepairStatuses",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
                         name: "FK_ToolDamageReports_Tools_ToolId",
                         column: x => x.ToolId,
                         principalTable: "Tools",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_ToolDamageReports_Users_ReportedById",
                         column: x => x.ReportedById,
                         principalTable: "Users",
                         principalColumn: "Id");
+                });
+
+            migrationBuilder.InsertData(
+                table: "PaymentMethods",
+                columns: new[] { "Id", "CreatedAt", "Description", "IsActive", "Name", "UpdatedAt" },
+                values: new object[,]
+                {
+                    { 1, new DateTime(2025, 5, 12, 16, 54, 11, 215, DateTimeKind.Utc).AddTicks(8466), "Credit card payment", true, "Credit Card", null },
+                    { 2, new DateTime(2025, 5, 12, 16, 54, 11, 215, DateTimeKind.Utc).AddTicks(8469), "Debit card payment", true, "Debit Card", null },
+                    { 3, new DateTime(2025, 5, 12, 16, 54, 11, 215, DateTimeKind.Utc).AddTicks(8470), "PayPal payment", true, "PayPal", null },
+                    { 4, new DateTime(2025, 5, 12, 16, 54, 11, 215, DateTimeKind.Utc).AddTicks(8471), "Bank transfer payment", true, "Bank Transfer", null },
+                    { 5, new DateTime(2025, 5, 12, 16, 54, 11, 215, DateTimeKind.Utc).AddTicks(8472), "Cash payment", true, "Cash", null }
+                });
+
+            migrationBuilder.InsertData(
+                table: "PaymentStatuses",
+                columns: new[] { "Id", "CreatedAt", "Description", "IsActive", "Name", "UpdatedAt" },
+                values: new object[,]
+                {
+                    { 1, new DateTime(2025, 5, 12, 16, 54, 11, 215, DateTimeKind.Utc).AddTicks(8626), "Payment is pending", true, "Pending", null },
+                    { 2, new DateTime(2025, 5, 12, 16, 54, 11, 215, DateTimeKind.Utc).AddTicks(8629), "Payment is completed", true, "Completed", null },
+                    { 3, new DateTime(2025, 5, 12, 16, 54, 11, 215, DateTimeKind.Utc).AddTicks(8630), "Payment has failed", true, "Failed", null },
+                    { 4, new DateTime(2025, 5, 12, 16, 54, 11, 215, DateTimeKind.Utc).AddTicks(8631), "Payment has been refunded", true, "Refunded", null },
+                    { 5, new DateTime(2025, 5, 12, 16, 54, 11, 215, DateTimeKind.Utc).AddTicks(8632), "Payment has been partially refunded", true, "Partially Refunded", null },
+                    { 6, new DateTime(2025, 5, 12, 16, 54, 11, 215, DateTimeKind.Utc).AddTicks(8632), "Payment has been cancelled", true, "Cancelled", null }
                 });
 
             migrationBuilder.CreateIndex(
@@ -629,8 +628,7 @@ namespace MošPosudit.Services.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_Carts_UserId",
                 table: "Carts",
-                column: "UserId",
-                unique: true);
+                column: "UserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Categories_ParentCategoryId",
@@ -658,14 +656,19 @@ namespace MošPosudit.Services.Migrations
                 column: "ToolId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Orders_StatusId",
+                name: "IX_Orders_PaymentMethodId",
                 table: "Orders",
-                column: "StatusId");
+                column: "PaymentMethodId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Orders_UserId",
                 table: "Orders",
                 column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PaymentTransactions_OrderId",
+                table: "PaymentTransactions",
+                column: "OrderId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_PaymentTransactions_PaymentMethodId",
@@ -683,6 +686,11 @@ namespace MošPosudit.Services.Migrations
                 column: "StatusId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_PaymentTransactions_UserId",
+                table: "PaymentTransactions",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_RentalItems_RentalId",
                 table: "RentalItems",
                 column: "RentalId");
@@ -693,9 +701,9 @@ namespace MošPosudit.Services.Migrations
                 column: "ToolId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Rentals_StatusId",
+                name: "IX_Rentals_ToolId",
                 table: "Rentals",
-                column: "StatusId");
+                column: "ToolId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Rentals_UserId",
@@ -718,11 +726,6 @@ namespace MošPosudit.Services.Migrations
                 column: "RentalId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ToolDamageReports_RepairStatusId",
-                table: "ToolDamageReports",
-                column: "RepairStatusId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_ToolDamageReports_ReportedById",
                 table: "ToolDamageReports",
                 column: "ReportedById");
@@ -743,11 +746,6 @@ namespace MošPosudit.Services.Migrations
                 column: "AssignedToId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ToolMaintenanceSchedules_MaintenanceTypeId",
-                table: "ToolMaintenanceSchedules",
-                column: "MaintenanceTypeId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_ToolMaintenanceSchedules_ToolId",
                 table: "ToolMaintenanceSchedules",
                 column: "ToolId");
@@ -756,11 +754,6 @@ namespace MošPosudit.Services.Migrations
                 name: "IX_Tools_CategoryId",
                 table: "Tools",
                 column: "CategoryId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Tools_ConditionId",
-                table: "Tools",
-                column: "ConditionId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_UserFavorites_ToolId",
@@ -803,6 +796,9 @@ namespace MošPosudit.Services.Migrations
                 name: "Reviews");
 
             migrationBuilder.DropTable(
+                name: "SystemLogs");
+
+            migrationBuilder.DropTable(
                 name: "ToolDamageReports");
 
             migrationBuilder.DropTable(
@@ -821,37 +817,22 @@ namespace MošPosudit.Services.Migrations
                 name: "Orders");
 
             migrationBuilder.DropTable(
-                name: "PaymentMethods");
-
-            migrationBuilder.DropTable(
                 name: "PaymentStatuses");
 
             migrationBuilder.DropTable(
                 name: "Rentals");
 
             migrationBuilder.DropTable(
-                name: "RepairStatuses");
-
-            migrationBuilder.DropTable(
-                name: "MaintenanceTypes");
+                name: "PaymentMethods");
 
             migrationBuilder.DropTable(
                 name: "Tools");
-
-            migrationBuilder.DropTable(
-                name: "OrderStatuses");
-
-            migrationBuilder.DropTable(
-                name: "RentalStatuses");
 
             migrationBuilder.DropTable(
                 name: "Users");
 
             migrationBuilder.DropTable(
                 name: "Categories");
-
-            migrationBuilder.DropTable(
-                name: "ToolConditions");
 
             migrationBuilder.DropTable(
                 name: "Roles");

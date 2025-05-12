@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace MošPosudit.Services.DataBase.Data
 {
@@ -12,11 +13,11 @@ namespace MošPosudit.Services.DataBase.Data
 
         [Required]
         [MaxLength(100)]
-        public string Title { get; set; }
+        public string? Title { get; set; }
 
         [Required]
         [MaxLength(500)]
-        public string Message { get; set; }
+        public string? Message { get; set; }
 
         public bool IsRead { get; set; }
 
@@ -24,6 +25,7 @@ namespace MošPosudit.Services.DataBase.Data
         public DateTime CreatedAt { get; set; }
 
         // Navigation properties
+        [ForeignKey("UserId")]
         public User User { get; set; }
     }
 } 

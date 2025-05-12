@@ -2,6 +2,16 @@ namespace MošPosudit.Model.Messages
 {
     public static class SuccessMessages
     {
+        // Base class messages
+        public const string EntityCreated = "Entity successfully created";
+        public const string EntityUpdated = "Entity successfully updated";
+        public const string EntityDeleted = "Entity successfully deleted";
+        public const string EntityActivated = "Entity successfully activated";
+        public const string EntityDeactivated = "Entity successfully deactivated";
+        public const string EntityRetrieved = "Entity successfully retrieved";
+        public const string EntityListRetrieved = "Entity list successfully retrieved";
+        public const string EntityOperationSuccessful = "Entity operation completed successfully";
+
         // User related messages
         public const string UserCreated = "User successfully created";
         public const string UserUpdated = "User successfully updated";

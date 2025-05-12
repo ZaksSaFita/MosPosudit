@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace MošPosudit.Services.DataBase.Data
 {
@@ -27,8 +28,12 @@ namespace MošPosudit.Services.DataBase.Data
         [Range(0.01, double.MaxValue)]
         public decimal DailyRate { get; set; }
 
+        public string? Notes { get; set; }
+
         // Navigation properties
+        [ForeignKey("CartId")]
         public Cart Cart { get; set; }
+        [ForeignKey("ToolId")]
         public Tool Tool { get; set; }
     }
 } 

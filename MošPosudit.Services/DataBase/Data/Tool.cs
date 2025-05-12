@@ -1,3 +1,4 @@
+using MošPosudit.Model.Enums;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -10,11 +11,11 @@ namespace MošPosudit.Services.DataBase.Data
 
         [Required]
         [StringLength(100)]
-        public string Name { get; set; }
+        public string? Name { get; set; }
 
         [Required]
         [StringLength(1000)]
-        public string Description { get; set; }
+        public string? Description { get; set; }
 
         [Required]
         public int CategoryId { get; set; }
@@ -35,7 +36,15 @@ namespace MošPosudit.Services.DataBase.Data
         [Required]
         public bool IsAvailable { get; set; }
 
+        // Add missing properties
+        [Required]
+        [Range(0, double.MaxValue)]
+        public decimal DepositAmount { get; set; }
+        public DateTime? LastMaintenanceDate { get; set; }
+        public DateTime? NextMaintenanceDate { get; set; }
+
         // Navigation properties
+        [ForeignKey("CategoryId")]
         public Category Category { get; set; }
         public ToolCondition Condition { get; set; }
         public ICollection<RentalItem> RentalItems { get; set; }
@@ -55,4 +64,4 @@ namespace MošPosudit.Services.DataBase.Data
         [NotMapped]
         public string DisplayName => $"{Name} ({Category?.Name})";
     }
-} 
+}

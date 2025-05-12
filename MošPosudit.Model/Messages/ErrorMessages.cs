@@ -2,6 +2,18 @@ namespace MošPosudit.Model.Messages
 {
     public static class ErrorMessages
     {
+        // Base class errors
+        public const string EntityNotFound = "Entity not found";
+        public const string EntityAlreadyExists = "Entity already exists";
+        public const string InvalidEntityId = "Invalid entity ID";
+        public const string EntityDeactivated = "Entity is deactivated";
+        public const string EntityActivated = "Entity is already activated";
+        public const string EntityDeleted = "Entity is deleted";
+        public const string EntityNotModified = "Entity was not modified";
+        public const string EntityValidationFailed = "Entity validation failed";
+        public const string EntityMappingFailed = "Entity mapping failed";
+        public const string EntityOperationFailed = "Entity operation failed";
+
         // User related errors
         public const string UserNotFound = "User not found";
         public const string InvalidCredentials = "Invalid username or password";

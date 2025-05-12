@@ -1,3 +1,4 @@
+using MošPosudit.Model.Enums;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -22,7 +23,7 @@ namespace MošPosudit.Services.DataBase.Data
 
         [Required]
         [MaxLength(1000)]
-        public string DamageDescription { get; set; }
+        public string? DamageDescription { get; set; }
 
         [Required]
         [Range(1, 5)]
@@ -37,9 +38,13 @@ namespace MošPosudit.Services.DataBase.Data
         public DateTime CreatedAt { get; set; }
 
         // Navigation properties
+        [ForeignKey("ToolId")]
         public Tool Tool { get; set; }
+        [ForeignKey("RentalId")]
         public Rental Rental { get; set; }
+        [ForeignKey("ReportedById")]
         public User ReportedBy { get; set; }
+        [ForeignKey("RepairStatusId")]
         public RepairStatus RepairStatus { get; set; }
 
         // Logging properties
@@ -49,4 +54,4 @@ namespace MošPosudit.Services.DataBase.Data
         [NotMapped]
         public string DisplayName => $"Damage Report for {Tool?.Name} by {ReportedBy?.Username}";
     }
-} 
+}

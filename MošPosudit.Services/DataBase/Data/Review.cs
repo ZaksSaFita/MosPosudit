@@ -20,13 +20,17 @@ namespace MošPosudit.Services.DataBase.Data
 
         [Required]
         [StringLength(1000)]
-        public string Comment { get; set; }
+        public string? Comment { get; set; }
 
         [Required]
         public DateTime CreatedAt { get; set; }
 
+        public DateTime? UpdatedAt { get; set; }
+
         // Navigation properties
+        [ForeignKey("UserId")]
         public User User { get; set; }
+        [ForeignKey("ToolId")]
         public Tool Tool { get; set; }
 
         // Logging properties

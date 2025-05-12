@@ -10,55 +10,68 @@ namespace MošPosudit.Services.DataBase.Data
 
         [Required]
         [StringLength(50)]
-        public string FirstName { get; set; }
+        public string? FirstName { get; set; }
 
         [Required]
         [StringLength(50)]
-        public string LastName { get; set; }
+        public string? LastName { get; set; }
 
         [Required]
         [EmailAddress]
         [StringLength(100)]
-        public string Email { get; set; }
+        public string? Email { get; set; }
 
         [Required]
         [StringLength(20)]
-        public string PhoneNumber { get; set; }
+        public string? PhoneNumber { get; set; }
 
         [Required]
         [StringLength(100)]
-        public string Address { get; set; }
+        public string? Address { get; set; }
 
         [Required]
         [StringLength(50)]
-        public string Username { get; set; }
+        public string? Username { get; set; }
 
         [Required]
         [StringLength(100)]
-        public string Password { get; set; }
+        public string? PasswordHash { get; set; }
 
         [Required]
-        public int RoleId { get; set; }
+        public DateTime PasswordUpdateDate { get; set; }
 
+        [Required]
+        [ForeignKey("Role")]
+        public int RoleId { get; set; }
+        public Role Role { get; set; }
+
+
+
+        // information about the user
         [Required]
         public DateTime CreatedAt { get; set; }
+
+        [Required]
+        public DateTime UpdateDate { get; set; }
 
         public DateTime? LastLogin { get; set; }
 
         [Required]
         public bool IsActive { get; set; }
 
+        public DateTime? DeactivationDate { get; set; }
+
         // Navigation properties
-        public Role Role { get; set; }
-        public ICollection<Rental> Rentals { get; set; }
-        public ICollection<Review> Reviews { get; set; }
-        public ICollection<PaymentTransaction> PaymentTransactions { get; set; }
-        public ICollection<Cart> Carts { get; set; }
-        public ICollection<Order> Orders { get; set; }
-        public ICollection<Notification> Notifications { get; set; }
-        public ICollection<UserFavorite> Favorites { get; set; }
-        public ICollection<ToolDamageReport> ReportedDamages { get; set; }
-        public ICollection<ToolMaintenanceSchedule> AssignedMaintenance { get; set; }
+
+        public virtual ICollection<Rental> Rentals { get; set; }
+        public virtual ICollection<Review> Reviews { get; set; }
+        public virtual ICollection<PaymentTransaction> PaymentTransactions { get; set; }
+        public virtual ICollection<Cart> Carts { get; set; }
+        public virtual ICollection<Order> Orders { get; set; }
+        public virtual ICollection<Notification> Notifications { get; set; }
+        public virtual ICollection<UserFavorite> Favorites { get; set; }
+        public virtual ICollection<ToolDamageReport> ReportedDamages { get; set; }
+        public virtual ICollection<ToolMaintenanceSchedule> AssignedMaintenance { get; set; }
 
         // Logging properties
         [NotMapped]
@@ -67,4 +80,4 @@ namespace MošPosudit.Services.DataBase.Data
         [NotMapped]
         public string FullName => $"{FirstName} {LastName}";
     }
-} 
+}

@@ -1,100 +1,163 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using MošPosudit.Model.DTOs;
+using MošPosudit.Model.Exceptions;
+using MošPosudit.Model.Messages;
+using MošPosudit.Model.Requests.User;
 using MošPosudit.Model.SearchObjects;
+using MošPosudit.Services.DataBase.Data;
 using MošPosudit.Services.Interfaces;
 
 namespace MošPosudit.WebAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class UserController : ControllerBase
+    public class UserController : BaseCrudController<User, UserSearchObject, UserInsertRequest, UserUpdateRequest, UserPatchRequest>
     {
         private readonly IUserService _userService;
 
         public UserController(IUserService userService)
+            : base((ICrudService<User, UserSearchObject, UserInsertRequest, UserUpdateRequest, UserPatchRequest>)userService)
         {
             _userService = userService;
         }
 
-        [HttpGet("{id}")]
-        [Authorize]
-        public async Task<IActionResult> GetById(int id)
+        // Public endpoints
+        [HttpPost("register")]
+        [AllowAnonymous]
+        public async Task<ActionResult<User>> Register([FromBody] UserRegisterRequest request)
         {
-            var user = await _userService.GetById(id);
-            return Ok(user);
+            try
+            {
+                if (request == null)
+                    return BadRequest(ErrorMessages.InvalidRequest);
+
+                // Konvertujemo RegisterRequest u InsertRequest i postavljamo RoleId na User
+                var insertRequest = new UserInsertRequest
+                {
+                    FirstName = request.FirstName,
+                    LastName = request.LastName,
+                    Email = request.Email,
+                    PhoneNumber = request.PhoneNumber,
+                    Address = request.Address,
+                    Username = request.Username,
+                    Password = request.Password,
+                    RoleId = 2 // Pretpostavljamo da je 2 ID za User rolu
+                };
+
+                var result = await _userService.Insert(insertRequest);
+                return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
+            }
+            catch (ValidationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ErrorMessages.ServerError);
+            }
         }
 
-        [HttpGet]
-        // [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> Get([FromQuery] UserSearchObject search)
-        {
-            var users = await _userService.Get(search);
-            return Ok(users);
-        }
-
+        // Admin only endpoints
         [HttpPost]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> Insert([FromBody] UserInsertRequest request)
+        public override async Task<ActionResult<User>> Insert([FromBody] UserInsertRequest request)
         {
-            var user = await _userService.Insert(request);
-            return CreatedAtAction(nameof(GetById), new { id = user.Id }, user);
+            return await base.Insert(request);
         }
 
         [HttpPut("{id}")]
-        [Authorize]
-        public async Task<IActionResult> Update(int id, [FromBody] UserUpdateRequest request)
-        {
-            var user = await _userService.Update(id, request);
-            return Ok(user);
-        }
-
-        [HttpDelete("{id}")]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> Delete(int id)
+        public override async Task<ActionResult<User>> Update(int id, [FromBody] UserUpdateRequest request)
         {
-            var user = await _userService.Delete(id);
-            return Ok(user);
+            return await base.Update(id, request);
         }
 
-        [HttpPost("login")]
-        [AllowAnonymous]
-        public async Task<IActionResult> Login([FromBody] LoginRequest request)
-        {
-            var user = await _userService.Login(request.Username, request.Password);
-            return Ok(user);
-        }
-
-        [HttpPost("register")]
-        [AllowAnonymous]
-        public async Task<IActionResult> Register([FromBody] UserInsertRequest request)
-        {
-            var user = await _userService.Register(request);
-            return CreatedAtAction(nameof(GetById), new { id = user.Id }, user);
-        }
-
-        [HttpPost("{id}/change-password")]
+        // User endpoints
+        [HttpPatch("{id}")]
         [Authorize]
-        public async Task<IActionResult> ChangePassword(int id, [FromBody] ChangePasswordRequest request)
+        public override async Task<ActionResult<User>> Patch(int id, [FromBody] UserPatchRequest request)
         {
-            var user = await _userService.ChangePassword(id, request.OldPassword, request.NewPassword);
-            return Ok(user);
+            // Dodatna provjera - korisnik može mijenjati samo svoj profil
+            var userId = int.Parse(User.FindFirst("UserId")?.Value);
+            if (userId != id)
+                return Forbid();
+
+            return await base.Patch(id, request);
+        }
+
+        protected override int GetId(User entity)
+        {
+            return entity.Id;
         }
 
         [HttpPost("{id}/deactivate")]
-        [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> Deactivate(int id)
+        public async Task<ActionResult> DeactivateUser(int id)
         {
-            var user = await _userService.Deactivate(id);
-            return Ok(user);
+            try
+            {
+                await _userService.DeactivateUser(id);
+                return Ok(SuccessMessages.UserDeactivated);
+            }
+            catch (NotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
         }
 
         [HttpPost("{id}/activate")]
-        [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> Activate(int id)
+        public async Task<ActionResult> ActivateUser(int id)
         {
-            var user = await _userService.Activate(id);
-            return Ok(user);
+            try
+            {
+                await _userService.ActivateUser(id);
+                return Ok(SuccessMessages.UserActivated);
+            }
+            catch (NotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+        }
+
+        [HttpPost("{id}/change-password")]
+        public async Task<ActionResult> ChangePassword(int id, [FromBody] ChangePasswordRequest request)
+        {
+            try
+            {
+                await _userService.ChangePassword(id, request.NewPassword);
+                return Ok(SuccessMessages.PasswordChanged);
+            }
+            catch (NotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+        }
+
+        [HttpGet("check-username/{username}")]
+        public async Task<ActionResult<bool>> CheckUsernameExists(string username)
+        {
+            var exists = await _userService.CheckUsernameExists(username);
+            return Ok(exists);
+        }
+
+        [HttpGet("check-email/{email}")]
+        public async Task<ActionResult<bool>> CheckEmailExists(string email)
+        {
+            var exists = await _userService.CheckEmailExists(email);
+            return Ok(exists);
+        }
+
+        [HttpGet("active")]
+        public async Task<ActionResult<IEnumerable<User>>> GetActiveUsers()
+        {
+            var users = await _userService.GetActiveUsers();
+            return Ok(users);
+        }
+
+        [HttpGet("inactive")]
+        public async Task<ActionResult<IEnumerable<User>>> GetInactiveUsers()
+        {
+            var users = await _userService.GetInactiveUsers();
+            return Ok(users);
         }
     }
 }
