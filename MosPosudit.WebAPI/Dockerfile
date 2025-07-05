@@ -4,27 +4,27 @@
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
 USER $APP_UID
 WORKDIR /app
-EXPOSE 8080
-EXPOSE 8081
+EXPOSE 5000
+ENV ASPNETCORE_URLS=http://+:5000
 
 
 # This stage is used to build the service project
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["MošPosudit.WebAPI/MošPosudit.WebAPI.csproj", "MošPosudit.WebAPI/"]
-RUN dotnet restore "./MošPosudit.WebAPI/MošPosudit.WebAPI.csproj"
+COPY ["MosPosudit.WebAPI/MosPosudit.WebAPI.csproj", "MosPosudit.WebAPI/"]
+RUN dotnet restore "./MosPosudit.WebAPI/MosPosudit.WebAPI.csproj"
 COPY . .
-WORKDIR "/src/MošPosudit.WebAPI"
-RUN dotnet build "./MošPosudit.WebAPI.csproj" -c $BUILD_CONFIGURATION -o /app/build
+WORKDIR "/src/MosPosudit.WebAPI"
+RUN dotnet build "./MosPosudit.WebAPI.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # This stage is used to publish the service project to be copied to the final stage
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./MošPosudit.WebAPI.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "./MosPosudit.WebAPI.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 # This stage is used in production or when running from VS in regular mode (Default when not using the Debug configuration)
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "MošPosudit.WebAPI.dll"]
+ENTRYPOINT ["dotnet", "MosPosudit.WebAPI.dll"]

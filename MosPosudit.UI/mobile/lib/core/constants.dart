@@ -1,7 +1,5 @@
 // API Configuration
-// For Docker setup, use your computer's IP address
-// Replace 192.168.1.100 with your actual computer's IP address
-const String apiBaseUrl = 'http://192.168.1.100:5000/api';
+const String apiBaseUrl = 'http://10.0.2.2:5000/api';
 
 // App Configuration
 const String appName = 'MosPosudit Mobile';
