@@ -2,14 +2,18 @@
 .git
 .gitignore
 
-# Visual Studio files
+# Documentation
+README.md
+*.md
+
+# IDE
 .vs/
+.vscode/
+.idea/
+*.suo
 *.user
 *.userosscache
-*.suo
-*.userprefs
-*.dbmdl
-*.jfm
+*.sln.docstates
 
 # Build results
 [Dd]ebug/
@@ -18,48 +22,57 @@
 [Rr]eleases/
 x64/
 x86/
-build/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
 bld/
 [Bb]in/
 [Oo]bj/
-[Oo]ut/
-msbuild.log
-msbuild.err
-msbuild.wrn
+[Ll]og/
+[Ll]ogs/
 
-# Visual Studio Code
-.vscode/
+# Flutter
+**/build/
+**/ios/Pods/
+**/android/.gradle/
+**/android/app/build/
+**/android/local.properties
+**/android/.idea/
+**/android/captures/
+**/android/gradlew
+**/android/gradlew.bat
+**/android/key.properties
+**/android/app/debug
+**/android/app/profile
+**/android/app/release
 
-# Docker
-Dockerfile
-.dockerignore
+# Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
 
-# Node.js
-node_modules/
-npm-debug.log
+# Database
+*.mdf
+*.ldf
+*.ndf
 
-# Test Results
-[Tt]est[Rr]esult*/
-[Bb]uild[Ll]og.*
+# Logs
+logs/
+*.log
 
-# NuGet
-*.nupkg
-*.snupkg
-**/packages/*
-!**/packages/build/
-*.nuget.props
-*.nuget.targets
+# Environment files
+.env
+.env.local
+.env.development
+.env.production
 
-# Local development settings
-appsettings.Development.json
-appsettings.Local.json
+# Temporary files
+*.tmp
+*.temp
 
-**/.classpath
-**/.env
-**/.git
-**/.project
-**/.settings
-**/.toolstarget
-**/.vs
-**/.vscode
-**/*.*proj.user
+# OS
+.DS_Store
+Thumbs.db

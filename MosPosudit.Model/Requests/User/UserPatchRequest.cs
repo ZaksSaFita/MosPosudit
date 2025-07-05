@@ -19,7 +19,7 @@ namespace MosPosudit.Model.Requests.User
         [StringLength(20)]
         public string? PhoneNumber { get; set; }
 
-        [StringLength(100)]
-        public string? Address { get; set; }
+
+        public byte[]? Picture { get; set; }
     }
 }

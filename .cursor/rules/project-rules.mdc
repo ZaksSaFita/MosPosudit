@@ -1,0 +1,80 @@
+---
+alwaysApply: true
+---
+# 📋 Pravila za izradu seminarskog rada – Razvoj softvera II
+
+## ✅ Opći zahtjevi
+- Tema **ne smije biti klasična prodaja proizvoda** (eCommerce).
+- Rad može biti **individualni** ili **grupni** (podjela zadataka mora biti jasno navedena).
+- Obavezna je **prijava teme i odobrenje** prije početka implementacije.
+- Prijava mora sadržavati:
+  - detaljan opis funkcionalnosti,
+  - mockup skice UI-a (ne gotovi UI),
+  - razdvojene funkcionalnosti desktop/mobilne aplikacije.
+
+## 🧱 Tehnologije
+- **Backend**: .NET Core (C#) + Visual Studio 2022/Code
+- **Frontend**: Flutter (desktop + mobile) – koristi najnovije verzije
+- **Baza**: SQL Server ili drugi RDBMS
+- **Arhitektura**: Mikroservisna (REST API + pomoćni servis)
+- **Komunikacija**: RabbitMQ
+- **Kontejnerizacija**: Docker + docker-compose
+
+## 🗄️ Baza podataka
+- Min. **10 funkcionalnih tabela** (bez referentnih)
+- Baza mora biti imenovana **brojem indeksa** (npr. `180081`)
+- Obavezne FK veze i `NOT NULL` gdje je potrebno
+- Seed podaci za testiranje su obavezni
+
+## 📦 Mikroservisi
+- Min. **2 servisa**:
+  - Glavni servis (REST API)
+  - Pomoćni servis (worker, notifier...)
+- Servisi povezani putem **RabbitMQ**
+- Sve u `docker-compose.yml` – API, worker, baza, RabbitMQ
+
+## ⚙️ Konfiguracija
+- Konfiguracijski podaci smješteni u fajlove (.env, appsettings)
+- Nema hardkodiranja u kodu
+- Obavezna konfiguracija za:
+  - RabbitMQ, SMTP, Stripe, JWT, Connection string, API URL
+- Flutter koristi `--dart-define` za konfiguraciju
+
+## ✏️ Kod i validacija
+- Kod koji se ne koristi → **ukloniti**
+- UI kontrole moraju imati funkcionalnost
+- Validacija mora biti **jasna, precizna, kompletna**
+- Prikaz poruka: ispod kontrola, ne u inputu
+- Loša validacija = loša evaluacija
+
+## 🔐 Autentifikacija
+- Svi endpointi moraju biti zaštićeni (autorizacija)
+- `README.md` mora sadržavati:
+  - upute za pokretanje aplikacije
+  - login podatke za sve uloge:
+    - `desktop/test`
+    - `mobile/test`
+    - `nazivUloge/test` (ako ih ima više)
+
+## 🧩 UI/UX i forme
+- Dropdowni → podaci iz baze
+- Checkbox za `bool`, datepicker za `date`, modal za koordinate
+- ID-ovi → **ne prikazivati korisniku**
+- Nakon unosa:
+  - forma se briše
+  - novi zapis odmah prikazan
+- Dugme `Back`, uredan layout, bez preklapanja
+
+## 🧾 Izvještaji
+- Izvještaji → dostupni za **download i print**
+
+## 📤 Predaja seminarskog rada
+- Github repozitorij → **javan (public)**, .gitignore podešen
+- Predaja → DL sistem > Zadaci > Detalji > postavi link
+- Rad mora raditi **bez dodatnih intervencija**
+- Testirati i izvan razvojnog okruženja
+- **Modifikacija nakon roka = odbijen rad**
+
+## 📚 Odbrana
+- Biće dodijeljen zadatak (API/Flutter) na vlastitom/template projektu
+- Svi članovi grupe moraju znati cijeli projekt

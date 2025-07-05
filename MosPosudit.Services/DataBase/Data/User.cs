@@ -8,56 +8,42 @@ namespace MosPosudit.Services.DataBase.Data
         [Key]
         public int Id { get; set; }
 
-        [Required]
         [StringLength(50)]
-        public string? FirstName { get; set; }
+        public string? FirstName { get; set; } = null;
 
-        [Required]
         [StringLength(50)]
-        public string? LastName { get; set; }
+        public string? LastName { get; set; } = null;
 
-        [Required]
         [EmailAddress]
         [StringLength(100)]
-        public string? Email { get; set; }
+        public string? Email { get; set; } = null;
 
-        [Required]
         [StringLength(20)]
-        public string? PhoneNumber { get; set; }
+        public string? PhoneNumber { get; set; } = null;
 
-        [Required]
-        [StringLength(100)]
-        public string? Address { get; set; }
-
-        [Required]
         [StringLength(50)]
-        public string? Username { get; set; }
+        public string? Username { get; set; } = null;
 
-        [Required]
         [StringLength(100)]
-        public string? PasswordHash { get; set; }
+        public string? PasswordHash { get; set; } = null;
 
-        [Required]
-        public DateTime PasswordUpdateDate { get; set; }
+        public DateTime? PasswordUpdateDate { get; set; }
 
-        [Required]
         [ForeignKey("Role")]
-        public int RoleId { get; set; }
+        public int RoleId { get; set; } = 2; // Default to User role
         public Role Role { get; set; }
 
+        public byte[]? Picture { get; set; }
 
 
         // information about the user
-        [Required]
-        public DateTime CreatedAt { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        [Required]
-        public DateTime UpdateDate { get; set; }
+        public DateTime UpdateDate { get; set; } = DateTime.UtcNow;
 
         public DateTime? LastLogin { get; set; }
 
-        [Required]
-        public bool IsActive { get; set; }
+        public bool IsActive { get; set; } = true;
 
         public DateTime? DeactivationDate { get; set; }
 

@@ -21,9 +21,7 @@ namespace MosPosudit.Model.Requests.User
         [StringLength(20)]
         public string PhoneNumber { get; set; }
 
-        [Required]
-        [StringLength(100)]
-        public string Address { get; set; }
+
 
         [Required]
         [StringLength(50)]
@@ -33,4 +31,4 @@ namespace MosPosudit.Model.Requests.User
         [StringLength(100)]
         public string Password { get; set; }
     }
-} 
+}

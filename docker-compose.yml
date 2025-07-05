@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  # SQL Server Database
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=YourStrong@Passw0rd
+      - MSSQL_PID=Express
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    networks:
+      - mosposudit-network
+
+  # RabbitMQ for inter-service communication
+  rabbitmq:
+    image: rabbitmq:3-management
+    environment:
+      - RABBITMQ_DEFAULT_USER=admin
+      - RABBITMQ_DEFAULT_PASS=admin123
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - mosposudit-network
+
+  # Main API Service
+  api:
+    build:
+      context: .
+      dockerfile: MosPosudit.WebAPI/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=180081;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=true
+      - RabbitMQ__Host=rabbitmq
+      - RabbitMQ__Username=admin
+      - RabbitMQ__Password=admin123
+      - JWT__SecretKey=your-super-secret-key-with-at-least-32-characters
+      - JWT__Issuer=MosPosudit
+      - JWT__Audience=MosPosuditUsers
+    ports:
+      - "5000:5000"
+      - "5001:5001"
+    depends_on:
+      - sqlserver
+      - rabbitmq
+    networks:
+      - mosposudit-network
+
+  # Worker Service for notifications and background tasks
+  worker:
+    build:
+      context: .
+      dockerfile: MosPosudit.Worker/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=180081;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=true
+      - RabbitMQ__Host=rabbitmq
+      - RabbitMQ__Username=admin
+      - RabbitMQ__Password=admin123
+      - SMTP__Host=smtp.gmail.com
+      - SMTP__Port=587
+      - SMTP__Username=your-email@gmail.com
+      - SMTP__Password=your-app-password
+    depends_on:
+      - sqlserver
+      - rabbitmq
+    networks:
+      - mosposudit-network
+
+volumes:
+  sqlserver_data:
+  rabbitmq_data:
+
+networks:
+  mosposudit-network:
+    driver: bridge 

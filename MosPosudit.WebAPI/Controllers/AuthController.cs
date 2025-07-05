@@ -16,11 +16,13 @@ namespace MosPosudit.WebAPI.Controllers
     {
         private readonly IOAuthService _oauthService;
         private readonly IAuthService _authService;
+        private readonly IMessageService _messageService;
 
-        public AuthController(IOAuthService oauthService, IAuthService authService)
+        public AuthController(IOAuthService oauthService, IAuthService authService, IMessageService messageService)
         {
             _oauthService = oauthService;
             _authService = authService;
+            _messageService = messageService;
         }
 
         [HttpPost("login")]
@@ -29,7 +31,19 @@ namespace MosPosudit.WebAPI.Controllers
             try
             {
                 var response = await _authService.Login(request);
-                return Ok(response);
+                
+                // Send welcome notification
+                if (response.UserId.HasValue)
+                {
+                    _messageService.PublishNotification(
+                        response.UserId.Value,
+                        "Welcome Back!",
+                        "You have successfully logged in to MosPosudit.",
+                        "Info"
+                    );
+                }
+                
+                return Ok(new { token = response.Token });
             }
             catch (Exception ex)
             {

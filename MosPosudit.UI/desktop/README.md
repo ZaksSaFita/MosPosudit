@@ -1,105 +1,16 @@
-# MošPosudit Desktop App - Administracija
+# mosposudit_desktop
 
-Windows desktop aplikacija za administrativni dio MošPosudit sistema pozajmljivanja alata.
+A new Flutter project.
 
-## Preduvjeti
+## Getting Started
 
-- Flutter SDK (3.32.5 ili noviji)
-- Visual Studio 2022 sa Windows development tools
-- Windows 10 ili noviji
+This project is a starting point for a Flutter application.
 
-## Instalacija
+A few resources to get you started if this is your first Flutter project:
 
-1. Navigirajte u desktop folder:
-```bash
-cd MošPosudit.UI/desktop/mosposudit_desktop
-```
+- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
+- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
 
-2. Instalirajte dependencies:
-```bash
-flutter pub get
-```
-
-3. Pokrenite aplikaciju:
-```bash
-flutter run -d windows
-```
-
-## Funkcionalnosti
-
-### Dashboard
-- Pregled statistika (broj alata, korisnika, pozajmica)
-- Brzi pristup glavnim funkcionalnostima
-
-### Upravljanje alatima
-- Dodavanje novih alata
-- Uređivanje postojećih alata
-- Brisanje alata
-- Pretraga i filtriranje
-
-### Upravljanje kategorijama
-- Dodavanje novih kategorija
-- Uređivanje postojećih kategorija
-- Brisanje kategorija
-
-### Upravljanje korisnicima
-- Pregled svih korisnika
-- Dodavanje novih korisnika
-- Uređivanje korisničkih podataka
-- Aktivacija/deaktivacija korisnika
-
-### Upravljanje pozajmicama
-- Pregled svih pozajmica
-- Upravljanje statusom pozajmica
-- Pretraga po korisnicima i alatima
-
-### Izvještaji
-- Generisanje izvještaja o pozajmicama
-- Statistike korišćenja
-- Export podataka
-
-## API Endpoints
-
-Aplikacija se povezuje sa backend API-jem na:
-- `https://localhost:7001/api/Auth/login`
-
-## Test podaci
-
-- **Korisničko ime**: `desktop`
-- **Lozinka**: `test`
-
-## Struktura
-
-```
-mosposudit_desktop/
-├── lib/
-│   └── main.dart          # Glavna aplikacija sa admin dashboardom
-├── windows/               # Windows konfiguracija
-├── pubspec.yaml           # Dependencies
-└── README.md             # Ova datoteka
-```
-
-## Dependencies
-
-- `http: ^1.1.0` - Za HTTP zahteve
-- `shared_preferences: ^2.2.2` - Za čuvanje podataka
-
-## Build za distribuciju
-
-Da biste kreirali executable fajl:
-
-```bash
-flutter build windows
-```
-
-Executable fajl će biti kreiran u `build/windows/runner/Release/` folderu.
-
-## Navigacija
-
-Aplikacija koristi NavigationRail za navigaciju između različitih sekcija:
-- Dashboard
-- Alati
-- Kategorije
-- Korisnici
-- Pozajmice
-- Izvještaji 
+For help getting started with Flutter development, view the
+[online documentation](https://docs.flutter.dev/), which offers tutorials,
+samples, guidance on mobile development, and a full API reference.

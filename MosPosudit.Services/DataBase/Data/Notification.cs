@@ -19,6 +19,9 @@ namespace MosPosudit.Services.DataBase.Data
         [MaxLength(500)]
         public string? Message { get; set; }
 
+        [MaxLength(50)]
+        public string? Type { get; set; }
+
         public bool IsRead { get; set; }
 
         [Required]

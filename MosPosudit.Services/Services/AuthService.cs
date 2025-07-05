@@ -34,7 +34,7 @@ namespace MosPosudit.Services.Services
             if (user == null)
                 throw new ValidationException(ErrorMessages.InvalidCredentials);
 
-            if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
+            if (user.PasswordHash == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
                 throw new ValidationException(ErrorMessages.InvalidCredentials);
 
             if (!user.IsActive)
@@ -44,13 +44,8 @@ namespace MosPosudit.Services.Services
 
             return new LoginResponse
             {
-                Id = user.Id,
-                Username = user.Username,
-                Email = user.Email,
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                Role = user.Role.Name,
-                Token = token
+                Token = token,
+                UserId = user.Id
             };
         }
 
