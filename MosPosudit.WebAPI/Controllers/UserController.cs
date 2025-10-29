@@ -59,14 +59,14 @@ namespace MosPosudit.WebAPI.Controllers
 
         // Admin only endpoints
         [HttpPost]
-        [Authorize(Roles = "Admin")]
+        // [Authorize(Roles = "Admin")] // Zakomentarisano za testiranje
         public override async Task<ActionResult<User>> Insert([FromBody] UserInsertRequest request)
         {
             return await base.Insert(request);
         }
 
         [HttpPut("{id}")]
-        [Authorize(Roles = "Admin")]
+        // [Authorize(Roles = "Admin")] // Zakomentarisano za testiranje
         public override async Task<ActionResult<User>> Update(int id, [FromBody] UserUpdateRequest request)
         {
             return await base.Update(id, request);
@@ -127,7 +127,7 @@ namespace MosPosudit.WebAPI.Controllers
         }
 
         [HttpPost("{id}/deactivate")]
-        [Authorize(Roles = "Admin")]
+        // [Authorize(Roles = "Admin")] // Zakomentarisano za testiranje
         public async Task<ActionResult> DeactivateUser(int id)
         {
             try
@@ -142,7 +142,7 @@ namespace MosPosudit.WebAPI.Controllers
         }
 
         [HttpPost("{id}/activate")]
-        [Authorize(Roles = "Admin")]
+        // [Authorize(Roles = "Admin")] // Zakomentarisano za testiranje
         public async Task<ActionResult> ActivateUser(int id)
         {
             try
@@ -268,7 +268,7 @@ namespace MosPosudit.WebAPI.Controllers
         }
 
         [HttpGet("active")]
-        [Authorize(Roles = "Admin")]
+        // [Authorize(Roles = "Admin")] // Zakomentarisano za testiranje
         public async Task<ActionResult<IEnumerable<User>>> GetActiveUsers()
         {
             var users = await _userService.GetActiveUsers();
@@ -276,7 +276,7 @@ namespace MosPosudit.WebAPI.Controllers
         }
 
         [HttpGet("inactive")]
-        [Authorize(Roles = "Admin")]
+        // [Authorize(Roles = "Admin")] // Zakomentarisano za testiranje
         public async Task<ActionResult<IEnumerable<User>>> GetInactiveUsers()
         {
             var users = await _userService.GetInactiveUsers();

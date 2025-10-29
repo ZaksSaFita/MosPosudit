@@ -9,7 +9,7 @@ namespace MosPosudit.WebAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
+    // [Authorize] // Zakomentarisano za testiranje
     public class NotificationController : ControllerBase
     {
         private readonly ApplicationDbContext _context;

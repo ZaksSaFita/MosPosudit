@@ -44,7 +44,7 @@ services:
       - JWT__Issuer=MosPosudit
       - JWT__Audience=MosPosuditUsers
     ports:
-      - "5000:5000"
+      - "5001:5000"
     depends_on:
       - sqlserver
       - rabbitmq

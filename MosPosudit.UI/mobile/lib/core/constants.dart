@@ -1,5 +1,5 @@
 // API Configuration
-const String apiBaseUrl = 'http://10.0.2.2:5000/api';
+const String apiBaseUrl = 'http://192.168.0.32:5001/api';
 
 // App Configuration
 const String appName = 'MosPosudit Mobile';

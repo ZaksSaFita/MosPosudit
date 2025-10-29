@@ -43,7 +43,7 @@ docker-compose up -d
 This will start:
 - SQL Server (port 1433)
 - RabbitMQ (ports 5672, 15672)
-- API Service (ports 5000, 5001)
+- API Service (ports 5001, 5002)
 - Worker Service (background processing)
 
 **Note**: First run may take 5-10 minutes to download images and build containers.
@@ -57,7 +57,7 @@ docker-compose logs worker
 
 ### 5. Access the application
 
-- **API Documentation**: http://localhost:5000/swagger
+- **API Documentation**: http://localhost:5001/swagger
 - **RabbitMQ Management**: http://localhost:15672 (admin/admin123)
 - **Desktop App**: Run `flutter run -d windows` in `MosPosudit.UI/desktop`
 - **Mobile App**: Run `flutter run` in `MosPosudit.UI/mobile`
@@ -103,7 +103,7 @@ MosPosudit/
 
 ## 🔧 Services
 
-### API Service (Port 5000/5001)
+### API Service (Port 5001/5002)
 - REST API endpoints
 - JWT authentication
 - User management
@@ -162,7 +162,7 @@ cd MosPosudit.UI/mobile && flutter run
    - Access management UI at http://localhost:15672 (guest/guest)
 
 3. **API**: Run `dotnet run` in `MosPosudit.WebAPI`
-   - API will be available at http://localhost:5000
+   - API will be available at http://localhost:5001
 
 4. **Worker**: Run `dotnet run` in `MosPosudit.Worker`
    - Worker will process background tasks
@@ -211,7 +211,7 @@ If you're getting "check your internet connection" error on mobile:
 
 3. **Test connection**:
    - Open mobile browser
-   - Go to `http://YOUR_IP:5000/swagger`
+   - Go to `http://YOUR_IP:5001/swagger`
    - If it loads, the connection works
 
 4. **Alternative solutions**:
@@ -226,13 +226,13 @@ If you're getting "check your internet connection" error on mobile:
    - Update `MosPosudit.UI/mobile/lib/core/constants.dart` with this IP
 
 2. **Check API service**:
-   - Ensure API is running on port 5000
-   - Test with: `curl http://localhost:5000/api/User/me`
+   - Ensure API is running on port 5001
+   - Test with: `curl http://localhost:5001/api/User/me`
 
 3. **Network connectivity**:
    - Ensure mobile device and computer are on same network
-   - Check Windows Firewall allows connections on port 5000
-   - Try accessing API from mobile browser: `http://YOUR_IP:5000/swagger`
+   - Check Windows Firewall allows connections on port 5001
+   - Try accessing API from mobile browser: `http://YOUR_IP:5001/swagger`
 
 4. **Alternative solution**:
    - Use `10.0.2.2` for Android emulator
@@ -241,7 +241,7 @@ If you're getting "check your internet connection" error on mobile:
 
 ### Docker Issues
 1. Ensure Docker Desktop is running
-2. Check if ports 5000, 1433, 5672, 15672 are available
+2. Check if ports 5001, 1433, 5672, 15672 are available
 3. Run `docker-compose logs` to check service status
 
 ### Database Issues

@@ -1,6 +1,6 @@
 // API Configuration
 // For Docker setup, use the API service name
-const String apiBaseUrl = 'http://localhost:5000/api';
+const String apiBaseUrl = 'http://localhost:5001/api';
 
 // App Configuration
 const String appName = 'MosPosudit Desktop';
