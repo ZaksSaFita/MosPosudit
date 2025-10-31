@@ -33,6 +33,7 @@ namespace MosPosudit.Services.DataBase
         public DbSet<ToolMaintenanceSchedule> ToolMaintenanceSchedules { get; set; }
         public DbSet<ToolImage> ToolImages { get; set; }
         public DbSet<SystemLog> SystemLogs { get; set; }
+        public DbSet<Message> Messages { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -125,6 +126,21 @@ namespace MosPosudit.Services.DataBase
 
             modelBuilder.Entity<PaymentTransaction>().HasOne(pt => pt.Status)
                 .WithMany()
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<Message>().HasOne(m => m.FromUser)
+                .WithMany(u => u.SentMessages)
+                .HasForeignKey(m => m.FromUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<Message>().HasOne(m => m.ToUser)
+                .WithMany(u => u.ReceivedMessages)
+                .HasForeignKey(m => m.ToUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<Message>().HasOne(m => m.StartedByAdmin)
+                .WithMany(u => u.StartedChats)
+                .HasForeignKey(m => m.StartedByAdminId)
                 .OnDelete(DeleteBehavior.NoAction);
         }
     }

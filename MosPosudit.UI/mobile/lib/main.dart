@@ -1,18 +1,27 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:ui';
+import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:mosposudit_shared/services/auth_service.dart';
 import 'package:mosposudit_shared/services/tool_service.dart';
+import 'package:mosposudit_shared/services/utility_service.dart';
+import 'package:mosposudit_shared/services/message_service.dart';
+import 'package:mosposudit_shared/services/cart_service.dart';
 import 'package:mosposudit_shared/models/tool.dart';
 import 'package:mosposudit_shared/models/category.dart';
 import 'package:mosposudit_shared/core/config.dart';
 import 'core/constants.dart';
 import 'screens/edit_profile_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/chat_screen.dart';
+import 'screens/registration_screen.dart';
+import 'screens/cart_screen.dart';
 
 void main() {
   // Add error handling
@@ -39,7 +48,7 @@ class MosPosuditMobileApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'MosPosudit - Klijent',
+      title: 'MosPosudit',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
@@ -102,7 +111,9 @@ class _AuthWrapperState extends State<AuthWrapper> {
     }
     
     try {
-      return _isLoggedIn ? const ClientHomeScreen() : const LoginScreen();
+      return _isLoggedIn 
+          ? const ClientHomeScreen() 
+          : const LoginScreen();
     } catch (e, stackTrace) {
       print('Error building AuthWrapper: $e');
       print('Stack trace: $stackTrace');
@@ -199,11 +210,21 @@ class _LoginScreenState extends State<LoginScreen> {
         }),
       );
 
+      print('Login response status: ${response.statusCode}');
+      print('Login response body: ${response.body}');
+      
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        print('Login data: $data');
         
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('token', data['token']);
+        
+        // Check if token exists in response
+        if (data['token'] == null && data['Token'] == null) {
+          throw Exception('Token not found in response');
+        }
+        
+        await prefs.setString('token', data['token'] ?? data['Token']);
         
         // Save credentials if remember me is checked
         if (_rememberMe) {
@@ -264,11 +285,13 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       }
     } catch (e) {
+      print('Login error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Connection error. Please check your internet connection.'),
+          SnackBar(
+            content: Text('Error: ${e.toString()}\n\nAPI URL: ${AppConfig.instance.apiBaseUrl}/Auth/login'),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
           ),
         );
       }
@@ -411,6 +434,33 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         const SizedBox(height: 16),
+                        // Register link
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Text(
+                              "Don't have an account? ",
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (context) => const RegistrationScreen(),
+                                  ),
+                                );
+                              },
+                              child: const Text(
+                                'Register',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.blue,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
                         const Text(
                           'Test credentials: user / test',
                           style: TextStyle(
@@ -440,12 +490,91 @@ class ClientHomeScreen extends StatefulWidget {
 
 class _ClientHomeScreenState extends State<ClientHomeScreen> {
   int _selectedIndex = 0; // Back to HomeScreen
+  int? _selectedCategoryId;
+  int _unreadMessageCount = 0;
+  int _cartItemCount = 0;
+  Timer? _messageCountTimer;
+  final _cartService = CartService();
 
-  final List<Widget> _pages = [
-    const HomeScreen(),
-    const ToolsPage(),
+  @override
+  void initState() {
+    super.initState();
+    _loadUnreadMessageCount();
+    _loadCartCount();
+    // Refresh message count every 5 seconds
+    _messageCountTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (mounted) {
+        _loadUnreadMessageCount();
+        _loadCartCount();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _messageCountTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadUnreadMessageCount() async {
+    try {
+      final messageService = MessageService();
+      final count = await messageService.getUnreadMessageCount();
+      if (mounted) {
+        setState(() {
+          _unreadMessageCount = count;
+        });
+      }
+    } catch (e) {
+      print('Error loading unread message count: $e');
+    }
+  }
+
+  Future<void> _loadCartCount() async {
+    try {
+      final count = await _cartService.getCartItemCount();
+      if (mounted) {
+        setState(() {
+          _cartItemCount = count;
+        });
+      }
+    } catch (e) {
+      print('Error loading cart count: $e');
+    }
+  }
+
+  void _navigateToToolsWithCategory(int categoryId) {
+    setState(() {
+      _selectedCategoryId = categoryId;
+      _selectedIndex = 1; // Switch to ToolsPage
+    });
+  }
+
+  void _navigateToToolsWithTool(int? toolId, int? categoryId) {
+    setState(() {
+      _selectedCategoryId = categoryId;
+      _selectedIndex = 1; // Switch to ToolsPage
+    });
+  }
+
+  void _navigateToProfile() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const ProfilePage(),
+      ),
+    );
+  }
+
+  List<Widget> get _pages => [
+    HomeScreen(
+      onCategoryTap: _navigateToToolsWithCategory,
+      onToolTap: _navigateToToolsWithTool,
+      onProfileTap: _navigateToProfile,
+    ),
+    ToolsPage(key: ValueKey(_selectedCategoryId), initialCategoryId: _selectedCategoryId),
     const MyRentalsPage(),
-    const ProfilePage(),
+    ChatScreen(),
+    const CartScreen(),
   ];
 
   @override
@@ -472,6 +601,14 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
             setState(() {
               _selectedIndex = index;
             });
+            // Reload message count when navigating to chat
+            if (index == 3) {
+              _loadUnreadMessageCount();
+            }
+            // Reload cart count when navigating to cart
+            if (index == 4) {
+              _loadCartCount();
+            }
           },
           backgroundColor: Colors.transparent,
           selectedItemColor: Colors.white,
@@ -493,28 +630,93 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
                   size: 24,
                 ),
               ),
-              label: 'Početna',
+              label: 'Home',
             ),
             BottomNavigationBarItem(
               icon: Icon(
                 _selectedIndex == 1 ? Icons.build : Icons.build_outlined,
                 size: 24,
               ),
-              label: 'Alati',
+              label: 'Tools',
             ),
             BottomNavigationBarItem(
               icon: Icon(
                 _selectedIndex == 2 ? Icons.assignment : Icons.assignment_outlined,
                 size: 24,
               ),
-              label: 'Moja iznajmljivanja',
+              label: 'My Rentals',
             ),
             BottomNavigationBarItem(
-              icon: Icon(
-                _selectedIndex == 3 ? Icons.person : Icons.person_outline,
-                size: 24,
+              icon: Stack(
+                children: [
+                  Icon(
+                    _selectedIndex == 3 ? Icons.chat : Icons.chat_outlined,
+                    size: 24,
+                  ),
+                  if (_unreadMessageCount > 0)
+                    Positioned(
+                      right: 0,
+                      top: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 16,
+                          minHeight: 16,
+                        ),
+                        child: Text(
+                          _unreadMessageCount > 9 ? '9+' : '$_unreadMessageCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
               ),
-              label: 'Profil',
+              label: 'Chat',
+            ),
+            BottomNavigationBarItem(
+              icon: Stack(
+                children: [
+                  Icon(
+                    _selectedIndex == 4 ? Icons.shopping_cart : Icons.shopping_cart_outlined,
+                    size: 24,
+                  ),
+                  if (_cartItemCount > 0)
+                    Positioned(
+                      right: 0,
+                      top: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: Colors.orange,
+                          shape: BoxShape.circle,
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 16,
+                          minHeight: 16,
+                        ),
+                        child: Text(
+                          _cartItemCount > 9 ? '9+' : '$_cartItemCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              label: 'Cart',
             ),
           ],
         ),
@@ -524,7 +726,9 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
 }
 
 class ToolsPage extends StatefulWidget {
-  const ToolsPage({super.key});
+  final int? initialCategoryId;
+  
+  const ToolsPage({super.key, this.initialCategoryId});
 
   @override
   State<ToolsPage> createState() => _ToolsPageState();
@@ -532,8 +736,10 @@ class ToolsPage extends StatefulWidget {
 
 class _ToolsPageState extends State<ToolsPage> {
   final _toolService = ToolService();
+  final _cartService = CartService();
   List<ToolModel> _tools = [];
   List<CategoryModel> _categories = [];
+  Set<int> _toolsInCart = {}; // Track which tools are in cart
   bool _isLoading = true;
   String? _error;
   int? _selectedCategoryId;
@@ -541,7 +747,19 @@ class _ToolsPageState extends State<ToolsPage> {
   @override
   void initState() {
     super.initState();
+    _selectedCategoryId = widget.initialCategoryId;
     _loadData();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Refresh cart status when page becomes visible (e.g., returning from cart)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _refreshCartStatus();
+      }
+    });
   }
 
   Future<void> _loadData() async {
@@ -554,11 +772,16 @@ class _ToolsPageState extends State<ToolsPage> {
       final results = await Future.wait([
         _toolService.fetchTools(),
         _toolService.fetchCategories(),
+        _cartService.getCartItems(),
       ]);
+
+      final cartItems = results[2] as List;
+      final toolsInCart = cartItems.map<int>((item) => item.toolId as int).toSet();
 
       setState(() {
         _tools = results[0] as List<ToolModel>;
         _categories = results[1] as List<CategoryModel>;
+        _toolsInCart = toolsInCart;
         _isLoading = false;
       });
     } catch (e) {
@@ -569,9 +792,23 @@ class _ToolsPageState extends State<ToolsPage> {
     }
   }
 
+  Future<void> _refreshCartStatus() async {
+    try {
+      final cartItems = await _cartService.getCartItems();
+      final toolsInCart = cartItems.map<int>((item) => item.toolId as int).toSet();
+      if (mounted) {
+        setState(() {
+          _toolsInCart = toolsInCart;
+        });
+      }
+    } catch (e) {
+      print('Error refreshing cart status: $e');
+    }
+  }
+
   List<ToolModel> get _filteredTools {
-    if (_selectedCategoryId == null) return _tools.where((t) => t.isAvailable == true).toList();
-    return _tools.where((tool) => tool.categoryId == _selectedCategoryId && tool.isAvailable == true).toList();
+    if (_selectedCategoryId == null) return _tools;
+    return _tools.where((tool) => tool.categoryId == _selectedCategoryId).toList();
   }
 
   String? _getCategoryName(int? categoryId) {
@@ -583,12 +820,11 @@ class _ToolsPageState extends State<ToolsPage> {
     return category.id != 0 ? category.name : null;
   }
 
-  String _generateImageFileName(String? name) {
-    if (name == null || name.isEmpty) return '';
-    return name.toLowerCase().replaceAll(' ', '_').replaceAll(RegExp(r'[^a-z0-9_]'), '') + '.jpg';
-  }
 
-  Widget _buildToolImage(ToolModel tool) {
+  Widget _buildToolImage(ToolModel tool, {double? width, double? height}) {
+    final imgWidth = width ?? 120.0;
+    final imgHeight = height ?? 120.0;
+    
     // Priority: base64 > asset filename (generated from name) > default icon
     if (tool.imageBase64 != null && tool.imageBase64!.isNotEmpty) {
       try {
@@ -597,59 +833,126 @@ class _ToolsPageState extends State<ToolsPage> {
           borderRadius: BorderRadius.circular(12),
           child: Image.memory(
             bytes,
-            width: 60,
-            height: 60,
+            width: imgWidth,
+            height: imgHeight,
             fit: BoxFit.cover,
             errorBuilder: (context, error, stackTrace) {
               print('Error loading base64 image: $error');
-              return _defaultIcon();
+              return _defaultIcon(width: imgWidth, height: imgHeight);
             },
           ),
         );
       } catch (e) {
         print('Exception loading base64 image: $e');
-        return _defaultIcon();
+        return _defaultIcon(width: imgWidth, height: imgHeight);
       }
     } else if (tool.name != null && tool.name!.isNotEmpty) {
-      final fileName = _generateImageFileName(tool.name);
+      final fileName = UtilityService.generateImageFileName(tool.name);
+      print('ToolsPage: Tool name="${tool.name}", Generated fileName="$fileName"');
       if (fileName.isNotEmpty) {
         final assetPath = 'packages/mosposudit_shared/assets/images/tools/$fileName';
-        print('Attempting to load asset: $assetPath');
+        print('ToolsPage: Attempting to load asset: $assetPath for tool: ${tool.name}');
         return ClipRRect(
           borderRadius: BorderRadius.circular(12),
           child: Image.asset(
             assetPath,
-            width: 60,
-            height: 60,
+            width: imgWidth,
+            height: imgHeight,
             fit: BoxFit.cover,
             errorBuilder: (context, error, stackTrace) {
-              print('Error loading asset image: $assetPath, error: $error');
-              return _defaultIcon();
+              print('ToolsPage: Error loading asset image: $assetPath, error: $error');
+              return _defaultIcon(width: imgWidth, height: imgHeight);
             },
           ),
         );
+      } else {
+        print('ToolsPage: Generated fileName is empty for tool: ${tool.name}');
       }
     }
     print('No image for tool: ${tool.name}, imageBase64: ${tool.imageBase64 != null ? "exists" : "null"}');
-    return _defaultIcon();
+    return _defaultIcon(width: imgWidth, height: imgHeight);
   }
 
-  Widget _defaultIcon() {
+  Widget _defaultIcon({double? width, double? height}) {
     return Container(
-      width: 60,
-      height: 60,
+      width: width ?? 120.0,
+      height: height ?? 120.0,
       decoration: BoxDecoration(
         color: Colors.blue.shade50,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Icon(Icons.build, size: 32, color: Colors.blue.shade700),
+      child: Icon(Icons.build, size: 48, color: Colors.blue.shade700),
     );
+  }
+
+  Future<void> _addToCart(ToolModel tool) async {
+    try {
+      final toolId = tool.id ?? 0;
+      
+      // Check if item already exists in cart
+      final existingItem = await _cartService.findItemByToolId(toolId);
+      
+      if (existingItem != null) {
+        // Item already exists, automatically increase quantity
+        final success = await _cartService.updateCartItemQuantity(
+          existingItem.id,
+          existingItem.quantity + 1,
+        );
+
+        if (success && mounted) {
+          await _refreshCartStatus();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Quantity increased to ${existingItem.quantity + 1}'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+        return;
+      }
+
+      // Item doesn't exist, add new item
+      final success = await _cartService.addToCart(
+        toolId: toolId,
+        quantity: 1,
+        dailyRate: tool.dailyRate ?? 0,
+      );
+
+      if (success && mounted) {
+        await _refreshCartStatus();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Added to cart'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to add to cart'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return RefreshIndicator(
-      onRefresh: _loadData,
+      onRefresh: () async {
+        await _loadData();
+        await _refreshCartStatus();
+      },
       child: CustomScrollView(
         slivers: [
           SliverToBoxAdapter(
@@ -659,7 +962,7 @@ class _ToolsPageState extends State<ToolsPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Dostupni alati',
+                    'Available Tools',
                     style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 16),
@@ -673,7 +976,7 @@ class _ToolsPageState extends State<ToolsPage> {
                           Padding(
                             padding: const EdgeInsets.only(right: 8.0),
                             child: FilterChip(
-                              label: const Text('Sve'),
+                              label: const Text('All'),
                               selected: _selectedCategoryId == null,
                               onSelected: (selected) {
                                 if (selected) {
@@ -685,7 +988,7 @@ class _ToolsPageState extends State<ToolsPage> {
                           ..._categories.map((category) => Padding(
                             padding: const EdgeInsets.only(right: 8.0),
                             child: FilterChip(
-                              label: Text(category.name ?? 'Nepoznato'),
+                              label: Text(category.name ?? 'Unknown'),
                               selected: _selectedCategoryId == category.id,
                               onSelected: (selected) {
                                 setState(() => _selectedCategoryId = selected ? category.id : null);
@@ -712,25 +1015,25 @@ class _ToolsPageState extends State<ToolsPage> {
                   children: [
                     const Icon(Icons.error_outline, size: 64, color: Colors.red),
                     const SizedBox(height: 16),
-                    Text('Greška: $_error', style: const TextStyle(color: Colors.red)),
+                    Text('Error: $_error', style: const TextStyle(color: Colors.red)),
                     const SizedBox(height: 16),
                     ElevatedButton(
                       onPressed: _loadData,
-                      child: const Text('Pokušaj ponovo'),
+                      child: const Text('Try again'),
                     ),
                   ],
                 ),
               ),
             )
           else if (_filteredTools.isEmpty)
-            const SliverFillRemaining(
+            SliverFillRemaining(
               child: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.build_circle_outlined, size: 64, color: Colors.grey),
-                    SizedBox(height: 16),
-                    Text('Nema dostupnih alata', style: TextStyle(color: Colors.grey, fontSize: 18)),
+                    const Icon(Icons.build_circle_outlined, size: 64, color: Colors.grey),
+                    const SizedBox(height: 16),
+                    const Text('No available tools', style: TextStyle(color: Colors.grey, fontSize: 18)),
                   ],
                 ),
               ),
@@ -746,111 +1049,97 @@ class _ToolsPageState extends State<ToolsPage> {
                     
                     return Card(
                       margin: const EdgeInsets.only(bottom: 12),
-                      child: InkWell(
-                        onTap: () {
-                          // TODO: Navigate to tool details
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Row(
-                            children: [
-                              _buildToolImage(tool),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      tool.name ?? 'Nepoznat alat',
-                                      style: const TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    if (categoryName != null) ...[
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        categoryName,
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.grey.shade600,
-                                        ),
-                                      ),
-                                    ],
-                                    if (tool.description != null && tool.description!.isNotEmpty) ...[
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        tool.description!,
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.grey.shade600,
-                                        ),
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ],
-                                    const SizedBox(height: 8),
-                                    Row(
-                                      children: [
-                                        Text(
-                                          '${tool.dailyRate?.toStringAsFixed(2) ?? '0.00'} KM',
-                                          style: const TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.blue,
-                                          ),
-                                        ),
-                                        const Text(
-                                          ' / dan',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            color: Colors.grey,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Column(
+                      elevation: 2,
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Image on the left
+                            _buildToolImage(tool, width: 120, height: 120),
+                            const SizedBox(width: 12),
+                            // Content on the right
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: Colors.green.shade100,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(Icons.check_circle, size: 16, color: Colors.green.shade700),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          'Dostupno',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.green.shade700,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ],
+                                  // Tool name
+                                  Text(
+                                    tool.name ?? 'Unknown tool',
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
                                     ),
                                   ),
+                                  const SizedBox(height: 4),
+                                  // Category
+                                  if (categoryName != null)
+                                    Text(
+                                      categoryName,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey.shade600,
+                                      ),
+                                    ),
+                                  const SizedBox(height: 6),
+                                  // Description
+                                  if (tool.description != null && tool.description!.isNotEmpty)
+                                    Text(
+                                      tool.description!,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.grey.shade700,
+                                      ),
+                                      maxLines: 3,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   const SizedBox(height: 8),
-                                  ElevatedButton(
-                                    onPressed: () {
-                                      // TODO: Navigate to rental
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.blue,
-                                      foregroundColor: Colors.white,
+                                  // Price
+                                  Text(
+                                    '€${tool.dailyRate?.toStringAsFixed(2) ?? '0.00'} / day',
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.blue,
                                     ),
-                                    child: const Text('Rezerviši'),
                                   ),
+                                    const SizedBox(height: 8),
+                                    // Add to cart button - disabled if already in cart
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: ElevatedButton.icon(
+                                        onPressed: _toolsInCart.contains(tool.id)
+                                            ? null
+                                            : () => _addToCart(tool),
+                                        icon: Icon(
+                                          _toolsInCart.contains(tool.id)
+                                              ? Icons.check_circle
+                                              : Icons.shopping_cart,
+                                          size: 18,
+                                        ),
+                                        label: Text(
+                                          _toolsInCart.contains(tool.id)
+                                              ? 'In cart'
+                                              : 'Add to cart',
+                                        ),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: _toolsInCart.contains(tool.id)
+                                              ? Colors.grey
+                                              : Colors.blue,
+                                          foregroundColor: Colors.white,
+                                          padding: const EdgeInsets.symmetric(vertical: 12),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          disabledBackgroundColor: Colors.grey.shade400,
+                                          disabledForegroundColor: Colors.white,
+                                        ),
+                                      ),
+                                    ),
                                 ],
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
                     );
@@ -916,6 +1205,9 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   Map<String, dynamic>? userData;
   bool isLoading = true;
+  bool isUploading = false;
+  File? _selectedFile;
+  Uint8List? _pictureBytes;
 
   @override
   void initState() {
@@ -927,8 +1219,111 @@ class _ProfilePageState extends State<ProfilePage> {
     final user = await AuthService.getCurrentUser();
     setState(() {
       userData = user;
+      if (user != null && user['picture'] != null) {
+        try {
+          _pictureBytes = base64Decode(user['picture']);
+        } catch (e) {
+          _pictureBytes = null;
+        }
+      } else {
+        _pictureBytes = null;
+      }
       isLoading = false;
     });
+  }
+
+  Future<void> pickImage() async {
+    final result = await FilePicker.platform.pickFiles(type: FileType.image);
+    
+    if (result != null && result.files.isNotEmpty) {
+      final filePath = result.files.single.path;
+      
+      if (filePath != null) {
+        try {
+          final file = File(filePath);
+          final bytes = await file.readAsBytes();
+          
+          setState(() {
+            _pictureBytes = bytes;
+            _selectedFile = file;
+          });
+          
+          // Automatically upload the image
+          await uploadImage();
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Error reading image: $e'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+      }
+    }
+  }
+
+  Future<void> uploadImage() async {
+    if (_selectedFile == null || userData == null || userData!['id'] == null) {
+      return;
+    }
+
+    setState(() {
+      isUploading = true;
+    });
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      final userId = userData!['id'];
+      
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('${AppConfig.instance.apiBaseUrl}/User/$userId/upload-picture'),
+      );
+      request.headers['Authorization'] = 'Bearer $token';
+      request.files.add(await http.MultipartFile.fromPath('file', _selectedFile!.path));
+      
+      final response = await request.send();
+      final responseString = await response.stream.bytesToString();
+      
+      if (response.statusCode == 200) {
+        // Update local user data
+        final userResp = jsonDecode(responseString);
+        await prefs.setString('user', jsonEncode(userResp));
+        
+        // Reload user data to show updated picture
+        await loadUserData();
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Image successfully updated'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        throw Exception('Error uploading image: ${response.statusCode}');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error uploading image: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          isUploading = false;
+          _selectedFile = null;
+        });
+      }
+    }
   }
 
   @override
@@ -943,114 +1338,191 @@ class _ProfilePageState extends State<ProfilePage> {
 
     final fullName = '${userData!['firstName']} ${userData!['lastName']}';
     final email = userData!['email'] ?? 'N/A';
-    final role = userData!['roleName'] ?? userData!['role'] ?? 'N/A';
     final phoneNumber = userData!['phoneNumber'] ?? 'N/A';
     
-    Uint8List? pictureBytes;
-    if (userData!['picture'] != null) {
-      try {
-        pictureBytes = base64Decode(userData!['picture']);
-      } catch (e) {
-        // Ignore picture if it's invalid
-      }
-    }
-
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'My Profile',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: const Text('My Profile'),
+        backgroundColor: Colors.blue,
+        foregroundColor: Colors.white,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Card(
+          elevation: 2,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
           ),
-          const SizedBox(height: 24),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  CircleAvatar(
-                    radius: 40,
-                    backgroundImage: pictureBytes != null
-                        ? MemoryImage(pictureBytes)
-                        : null,
-                    backgroundColor: Colors.blue,
-                    child: pictureBytes == null
-                        ? const Icon(Icons.person, size: 40, color: Colors.white)
-                        : null,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    fullName,
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    email,
-                    style: const TextStyle(color: Colors.grey),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Role: $role',
-                    style: const TextStyle(color: Colors.grey, fontSize: 12),
-                  ),
-                  if (phoneNumber != 'N/A') ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      'Tel: $phoneNumber',
-                      style: const TextStyle(color: Colors.grey, fontSize: 12),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 50,
+                      backgroundImage: _pictureBytes != null
+                          ? MemoryImage(_pictureBytes!)
+                          : null,
+                      backgroundColor: Colors.blue,
+                      child: _pictureBytes == null
+                          ? const Icon(Icons.person, size: 50, color: Colors.white)
+                          : null,
                     ),
-                  ],
-                  const SizedBox(height: 24),
-                  ListTile(
-                    leading: const Icon(Icons.edit),
-                    title: const Text('Edit Profile'),
-                    trailing: const Icon(Icons.arrow_forward_ios),
-                    onTap: () async {
-                      final result = await Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => EditProfileScreen(
-                            onProfileUpdated: loadUserData,
+                    if (isUploading)
+                      Positioned.fill(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.5),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Center(
+                            child: CircularProgressIndicator(color: Colors.white),
                           ),
                         ),
-                      );
-                      if (result == true) {
-                        loadUserData();
-                      }
-                    },
+                      )
+                    else
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: GestureDetector(
+                          onTap: pickImage,
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: const BoxDecoration(
+                              color: Colors.blue,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.camera_alt,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  fullName,
+                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  email,
+                  style: TextStyle(color: Colors.grey.shade700, fontSize: 15),
+                ),
+                if (phoneNumber != 'N/A') ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'Tel: $phoneNumber',
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
                   ),
-                                      ListTile(
-                      leading: const Icon(Icons.lock),
-                      title: const Text('Change Password'),
-                      trailing: const Icon(Icons.arrow_forward_ios),
-                      onTap: () {
-                        // TODO: Implement password change
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Feature in development'),
-                          ),
-                        );
-                      },
-                    ),
-                                      ListTile(
-                      leading: const Icon(Icons.history),
-                      title: const Text('Rental History'),
-                      trailing: const Icon(Icons.arrow_forward_ios),
-                      onTap: () {
-                        // TODO: Implement rental history
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Feature in development'),
-                          ),
-                        );
-                      },
-                    ),
                 ],
-              ),
+                const SizedBox(height: 24),
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.edit, color: Colors.blue),
+                  title: const Text('Edit Profile'),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: () async {
+                    final result = await Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => EditProfileScreen(
+                          onProfileUpdated: loadUserData,
+                        ),
+                      ),
+                    );
+                    if (result == true) {
+                      loadUserData();
+                    }
+                  },
+                ),
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.lock, color: Colors.blue),
+                  title: const Text('Change Password'),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: () {
+                    // TODO: Implement password change
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Feature in development'),
+                      ),
+                    );
+                  },
+                ),
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.history, color: Colors.blue),
+                  title: const Text('Rental History'),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: () {
+                    // TODO: Implement rental history
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Feature in development'),
+                      ),
+                    );
+                  },
+                ),
+                const Divider(height: 24),
+                ListTile(
+                  leading: const Icon(Icons.logout, color: Colors.red),
+                  title: const Text(
+                    'Logout',
+                    style: TextStyle(color: Colors.red),
+                  ),
+                  onTap: () async {
+                    // Show confirmation dialog
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Logout'),
+                        content: const Text('Are you sure you want to logout?'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(false),
+                            child: const Text('Cancel'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(true),
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.red,
+                            ),
+                            child: const Text('Logout'),
+                          ),
+                        ],
+                      ),
+                    );
+
+                    if (confirm == true) {
+                      // Clear stored data
+                      final prefs = await SharedPreferences.getInstance();
+                      await prefs.remove('token');
+                      await prefs.remove('user');
+                      await prefs.remove('saved_username');
+                      await prefs.remove('saved_password');
+                      await prefs.remove('remember_me');
+
+                      // Navigate to login screen
+                      if (mounted) {
+                        Navigator.of(context).pushAndRemoveUntil(
+                          MaterialPageRoute(
+                            builder: (context) => const AuthWrapper(),
+                          ),
+                          (route) => false,
+                        );
+                      }
+                    }
+                  },
+                ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MosPosudit.Services.DataBase;
 
@@ -11,9 +12,11 @@ using MosPosudit.Services.DataBase;
 namespace MosPosudit.Services.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251031153448_InitialCreate")]
+    partial class InitialCreate
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -152,50 +155,6 @@ namespace MosPosudit.Services.Migrations
                     b.HasIndex("ToolId");
 
                     b.ToTable("MaintenanceLogs");
-                });
-
-            modelBuilder.Entity("MosPosudit.Services.DataBase.Data.Message", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Content")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("FromUserId")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsRead")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime?>("ReadAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("SentAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("StartedByAdminId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("ToUserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("FromUserId");
-
-                    b.HasIndex("StartedByAdminId");
-
-                    b.HasIndex("ToUserId");
-
-                    b.ToTable("Messages");
                 });
 
             modelBuilder.Entity("MosPosudit.Services.DataBase.Data.Notification", b =>
@@ -944,31 +903,6 @@ namespace MosPosudit.Services.Migrations
                     b.Navigation("Tool");
                 });
 
-            modelBuilder.Entity("MosPosudit.Services.DataBase.Data.Message", b =>
-                {
-                    b.HasOne("MosPosudit.Services.DataBase.Data.User", "FromUser")
-                        .WithMany("SentMessages")
-                        .HasForeignKey("FromUserId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.HasOne("MosPosudit.Services.DataBase.Data.User", "StartedByAdmin")
-                        .WithMany("StartedChats")
-                        .HasForeignKey("StartedByAdminId")
-                        .OnDelete(DeleteBehavior.NoAction);
-
-                    b.HasOne("MosPosudit.Services.DataBase.Data.User", "ToUser")
-                        .WithMany("ReceivedMessages")
-                        .HasForeignKey("ToUserId")
-                        .OnDelete(DeleteBehavior.NoAction);
-
-                    b.Navigation("FromUser");
-
-                    b.Navigation("StartedByAdmin");
-
-                    b.Navigation("ToUser");
-                });
-
             modelBuilder.Entity("MosPosudit.Services.DataBase.Data.Notification", b =>
                 {
                     b.HasOne("MosPosudit.Services.DataBase.Data.User", "User")
@@ -1279,17 +1213,11 @@ namespace MosPosudit.Services.Migrations
 
                     b.Navigation("PaymentTransactions");
 
-                    b.Navigation("ReceivedMessages");
-
                     b.Navigation("Rentals");
 
                     b.Navigation("ReportedDamages");
 
                     b.Navigation("Reviews");
-
-                    b.Navigation("SentMessages");
-
-                    b.Navigation("StartedChats");
                 });
 #pragma warning restore 612, 618
         }

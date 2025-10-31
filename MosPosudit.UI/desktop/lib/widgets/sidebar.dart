@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'dart:typed_data';
+import 'dart:async';
 import '../screens/edit_profile_screen.dart';
 import '../main.dart' show AuthWrapper;
 import 'package:mosposudit_shared/services/auth_service.dart';
+import 'package:mosposudit_shared/services/message_service.dart';
 
 class Sidebar extends StatefulWidget {
   final int selectedIndex;
@@ -19,17 +21,91 @@ class _SidebarState extends State<Sidebar> {
   String? name;
   String? role;
   Uint8List? pictureBytes;
+  int _unreadMessageCount = 0;
+  Timer? _messageCountTimer;
+  final MessageService _messageService = MessageService();
 
   @override
   void initState() {
     super.initState();
     loadUser();
+    _loadUnreadMessageCount();
+    // Refresh unread count every 5 seconds
+    _messageCountTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (mounted) {
+        _loadUnreadMessageCount();
+      }
+    });
     // Dodajemo i delayed load da se osiguramo da se podaci učitaju
     Future.delayed(const Duration(milliseconds: 100), () {
       if (mounted) {
         loadUser();
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _messageCountTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadUnreadMessageCount() async {
+    try {
+      final currentUser = await AuthService.getCurrentUser();
+      
+      if (currentUser == null) {
+        if (mounted) {
+          setState(() {
+            _unreadMessageCount = 0;
+          });
+        }
+        return;
+      }
+      
+      final userId = currentUser['id'];
+      final userRole = currentUser['roleName'] ?? currentUser['role'] ?? '';
+      final isAdmin = userRole.toString().toLowerCase() == 'admin';
+      
+      if (isAdmin) {
+        // For admin, count unread messages where admin is the receiver
+        final messages = await _messageService.getPendingMessages();
+        final allMessages = await _messageService.getUserMessages();
+        
+        // Count: pending messages + unread messages in active chats where admin is receiver
+        int pendingCount = messages.length;
+        int unreadActiveCount = allMessages.where((m) => 
+          m.isActive && 
+          m.toUserId == userId && 
+          !m.isRead && 
+          m.fromUserId != userId
+        ).length;
+        
+        if (mounted) {
+          setState(() {
+            _unreadMessageCount = pendingCount + unreadActiveCount;
+          });
+        }
+      } else {
+        // For regular users, count unread messages where user is the receiver
+        final allMessages = await _messageService.getUserMessages();
+        
+        // Count unread messages where current user is receiver
+        int unreadCount = allMessages.where((m) => 
+          m.toUserId == userId && 
+          !m.isRead && 
+          m.fromUserId != userId
+        ).length;
+        
+        if (mounted) {
+          setState(() {
+            _unreadMessageCount = unreadCount;
+          });
+        }
+      }
+    } catch (e) {
+      print('Error loading unread message count: $e');
+    }
   }
 
   Future<void> loadUser() async {
@@ -200,10 +276,20 @@ class _SidebarState extends State<Sidebar> {
                   ],
                 ),
                 _SidebarItem(
+                  icon: Icons.chat,
+                  label: 'Chat',
+                  selected: widget.selectedIndex == 9,
+                  onTap: () {
+                    widget.onItemSelected(9);
+                    _loadUnreadMessageCount(); // Refresh count when navigating to chat
+                  },
+                  badgeCount: _unreadMessageCount > 0 ? _unreadMessageCount : null,
+                ),
+                _SidebarItem(
                   icon: Icons.settings,
                   label: 'Settings',
-                  selected: widget.selectedIndex == 9,
-                  onTap: () => widget.onItemSelected(9),
+                  selected: widget.selectedIndex == 10,
+                  onTap: () => widget.onItemSelected(10),
                 ),
               ],
             ),
@@ -238,12 +324,14 @@ class _SidebarItem extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
   final bool isSubItem;
+  final int? badgeCount;
   const _SidebarItem({
     required this.icon,
     required this.label,
     required this.selected,
     required this.onTap,
     this.isSubItem = false,
+    this.badgeCount,
   });
   @override
   Widget build(BuildContext context) {
@@ -259,10 +347,39 @@ class _SidebarItem extends StatelessWidget {
           child: Row(
             children: [
               if (isSubItem) const SizedBox(width: 24),
-              Icon(
-                icon,
-                size: isSubItem ? 18 : 20,
-                color: selected ? Colors.blue[700] : Colors.black54,
+              Stack(
+                children: [
+                  Icon(
+                    icon,
+                    size: isSubItem ? 18 : 20,
+                    color: selected ? Colors.blue[700] : Colors.black54,
+                  ),
+                  if (badgeCount != null && badgeCount! > 0)
+                    Positioned(
+                      right: 0,
+                      top: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 16,
+                          minHeight: 16,
+                        ),
+                        child: Text(
+                          badgeCount! > 9 ? '9+' : '$badgeCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
               ),
               const SizedBox(width: 12),
               Expanded(

@@ -37,6 +37,8 @@ builder.Services.AddSingleton<IMessageService, MessageService>();
 builder.Services.AddScoped<ISeedService, SeedService>();
 builder.Services.AddScoped<IToolService, ToolService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
+builder.Services.AddScoped<IChatService, ChatService>();
+builder.Services.AddScoped<IRentalService, RentalService>();
 
 // Configure JWT Authentication
 builder.Services.AddAuthentication(options =>

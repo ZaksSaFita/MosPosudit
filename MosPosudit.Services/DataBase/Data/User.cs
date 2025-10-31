@@ -51,6 +51,9 @@ namespace MosPosudit.Services.DataBase.Data
         public virtual ICollection<UserFavorite> Favorites { get; set; }
         public virtual ICollection<ToolDamageReport> ReportedDamages { get; set; }
         public virtual ICollection<ToolMaintenanceSchedule> AssignedMaintenance { get; set; }
+        public virtual ICollection<Message> SentMessages { get; set; }
+        public virtual ICollection<Message> ReceivedMessages { get; set; }
+        public virtual ICollection<Message> StartedChats { get; set; }
 
         [NotMapped]
         public string FullName => $"{FirstName} {LastName}";

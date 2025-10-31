@@ -27,9 +27,9 @@ class ApiClient {
     return http.get(_uri(path, query), headers: headers);
   }
 
-  Future<http.Response> post(String path, {Object? body, bool auth = true}) async {
+  Future<http.Response> post(String path, {Object? body, Map<String, dynamic>? query, bool auth = true}) async {
     final headers = await _defaultHeaders(withAuth: auth);
-    return http.post(_uri(path), headers: headers, body: body is String ? body : jsonEncode(body));
+    return http.post(_uri(path, query), headers: headers, body: body is String ? body : jsonEncode(body));
   }
 
   Future<http.Response> put(String path, {Object? body, bool auth = true}) async {

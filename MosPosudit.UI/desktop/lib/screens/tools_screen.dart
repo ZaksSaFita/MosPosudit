@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:mosposudit_shared/services/tool_service.dart';
+import 'package:mosposudit_shared/services/utility_service.dart';
 import 'package:mosposudit_shared/models/tool.dart';
 import 'package:mosposudit_shared/models/category.dart';
 
@@ -416,10 +417,6 @@ class _ToolListCard extends StatelessWidget {
     required this.onDelete,
   });
 
-  String _generateImageFileName(String? name) {
-    if (name == null || name.isEmpty) return '';
-    return name.toLowerCase().replaceAll(' ', '_').replaceAll(RegExp(r'[^a-z0-9_]'), '') + '.jpg';
-  }
 
   Widget _buildToolImage() {
     // Priority: base64 > asset filename (generated from name) > default icon
@@ -448,7 +445,7 @@ class _ToolListCard extends StatelessWidget {
         return _defaultIcon();
       }
     } else if (tool.name != null && tool.name!.isNotEmpty) {
-      final fileName = _generateImageFileName(tool.name);
+      final fileName = UtilityService.generateImageFileName(tool.name);
       if (fileName.isNotEmpty) {
         // Asset image from shared package
         final assetPath = 'packages/mosposudit_shared/assets/images/tools/$fileName';

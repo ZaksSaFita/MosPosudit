@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/users_screen.dart';
 import 'screens/tools_screen.dart';
 import 'screens/categories_screen.dart';
+import 'screens/chat_screen.dart';
 import 'package:mosposudit_shared/core/config.dart';
+import 'package:mosposudit_shared/services/message_service.dart';
+import 'package:mosposudit_shared/services/auth_service.dart';
 import 'widgets/sidebar.dart';
 import 'core/constants.dart';
 
@@ -387,7 +391,10 @@ class AdminDashboard extends StatefulWidget {
 }
 
 class _AdminDashboardState extends State<AdminDashboard> {
-int _selectedIndex = 0;
+  int _selectedIndex = 0;
+  int _lastUnreadCount = 0;
+  Timer? _notificationTimer;
+  final MessageService _messageService = MessageService();
 
   final List<Widget> _pages = [
     const DashboardPage(),
@@ -399,8 +406,109 @@ int _selectedIndex = 0;
     const RentalsManagementPage(), // Active Reservations
     const RentalsManagementPage(), // History
     const ReportsPage(), // Reports
+    const ChatScreen(), // Chat
     const SettingsPage(), // Settings
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _checkForNewMessages();
+    // Check for new messages every 5 seconds
+    _notificationTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (mounted) {
+        _checkForNewMessages();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _notificationTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _checkForNewMessages() async {
+    try {
+      final currentUser = await AuthService.getCurrentUser();
+      if (currentUser == null) return;
+      
+      final userId = currentUser['id'];
+      final userRole = currentUser['roleName'] ?? currentUser['role'] ?? '';
+      final isAdmin = userRole.toString().toLowerCase() == 'admin';
+      
+      int currentUnreadCount = 0;
+      
+      if (isAdmin) {
+        final messages = await _messageService.getPendingMessages();
+        final allMessages = await _messageService.getUserMessages();
+        
+        int pendingCount = messages.length;
+        int unreadActiveCount = allMessages.where((m) => 
+          m.isActive && 
+          m.toUserId == userId && 
+          !m.isRead && 
+          m.fromUserId != userId
+        ).length;
+        
+        currentUnreadCount = pendingCount + unreadActiveCount;
+      } else {
+        final allMessages = await _messageService.getUserMessages();
+        
+        currentUnreadCount = allMessages.where((m) => 
+          m.toUserId == userId && 
+          !m.isRead && 
+          m.fromUserId != userId
+        ).length;
+      }
+      
+      // Show notification if new messages arrived and user is not on chat screen
+      if (mounted && currentUnreadCount > _lastUnreadCount && _selectedIndex != 9) {
+        final newMessagesCount = currentUnreadCount - _lastUnreadCount;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.message, color: Colors.white),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    newMessagesCount == 1
+                        ? 'Nova poruka je stigla'
+                        : '$newMessagesCount nove poruke su stigle',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _selectedIndex = 9; // Navigate to chat screen
+                    });
+                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                  },
+                  child: const Text(
+                    'Otvori Chat',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.blue,
+            duration: const Duration(seconds: 5),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      
+      if (mounted) {
+        setState(() {
+          _lastUnreadCount = currentUnreadCount;
+        });
+      }
+    } catch (e) {
+      print('Error checking for new messages: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -410,7 +518,13 @@ int _selectedIndex = 0;
         children: [
           Sidebar(
             selectedIndex: _selectedIndex,
-            onItemSelected: (int index) => setState(() => _selectedIndex = index),
+            onItemSelected: (int index) {
+              setState(() => _selectedIndex = index);
+              // Refresh notification check when navigating
+              if (index == 9) {
+                _checkForNewMessages();
+              }
+            },
           ),
           const VerticalDivider(thickness: 1, width: 1),
           Expanded(

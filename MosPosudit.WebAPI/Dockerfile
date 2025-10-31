@@ -12,8 +12,12 @@ ENV ASPNETCORE_URLS=http://+:5000
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
+# Copy project files for dependency restoration
 COPY ["MosPosudit.WebAPI/MosPosudit.WebAPI.csproj", "MosPosudit.WebAPI/"]
+COPY ["MosPosudit.Services/MosPosudit.Services.csproj", "MosPosudit.Services/"]
+COPY ["MosPosudit.Model/MosPosudit.Model.csproj", "MosPosudit.Model/"]
 RUN dotnet restore "./MosPosudit.WebAPI/MosPosudit.WebAPI.csproj"
+# Copy all files including migrations
 COPY . .
 WORKDIR "/src/MosPosudit.WebAPI"
 RUN dotnet build "./MosPosudit.WebAPI.csproj" -c $BUILD_CONFIGURATION -o /app/build
