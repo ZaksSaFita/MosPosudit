@@ -26,7 +26,7 @@ class MessageService {
 
   Future<MessageModel> sendMessage(String content) async {
     try {
-      final res = await _api.post('/Message/send', body: {'Content': content});
+      final res = await _api.post('/Message/send', body: {'content': content}); // Backend koristi camelCase
       
       if (res.statusCode == 200) {
         final decoded = jsonDecode(res.body);
@@ -44,7 +44,7 @@ class MessageService {
   Future<MessageModel> sendReply(String content, int conversationUserId) async {
     try {
       final res = await _api.post('/Message/reply?conversationUserId=$conversationUserId', 
-        body: {'Content': content}
+        body: {'content': content} // Backend koristi camelCase
       );
       
       if (res.statusCode == 200) {

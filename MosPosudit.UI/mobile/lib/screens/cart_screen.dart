@@ -43,8 +43,8 @@ class _CartScreenState extends State<CartScreen> {
       
       final toolsMap = <int, ToolModel>{};
       for (var tool in tools) {
-        if (tool.id != null && toolIds.contains(tool.id)) {
-          toolsMap[tool.id!] = tool;
+        if (toolIds.contains(tool.id)) {
+          toolsMap[tool.id] = tool;
         }
       }
 

@@ -38,6 +38,18 @@ class RentalModel {
   });
 
   factory RentalModel.fromJson(Map<String, dynamic> json) {
+    DateTime? parseDateTime(dynamic value) {
+      if (value == null) return null;
+      if (value is String) {
+        try {
+          return DateTime.parse(value);
+        } catch (e) {
+          return null;
+        }
+      }
+      return null;
+    }
+
     List<RentalItemModel>? items;
     if (json['items'] != null && json['items'] is List) {
       items = (json['items'] as List)
@@ -46,20 +58,20 @@ class RentalModel {
     }
 
     return RentalModel(
-      id: json['id'],
-      userId: json['userId'],
-      startDate: DateTime.parse(json['startDate']),
-      endDate: DateTime.parse(json['endDate']),
-      statusId: json['statusId'],
-      totalPrice: json['totalPrice'],
-      createdAt: DateTime.parse(json['createdAt']),
+      id: json['id'] as int,
+      userId: json['userId'] as int,
+      startDate: parseDateTime(json['startDate']) ?? DateTime.now(),
+      endDate: parseDateTime(json['endDate']) ?? DateTime.now(),
+      statusId: json['statusId'] as int,
+      totalPrice: (json['totalPrice'] ?? 0) as num,
+      createdAt: parseDateTime(json['createdAt']) ?? DateTime.now(),
       notes: json['notes'],
-      toolId: json['toolId'],
+      toolId: json['toolId'] as int?,
       isReturned: json['isReturned'] ?? false,
-      returnDate: json['returnDate'] != null ? DateTime.parse(json['returnDate']) : null,
+      returnDate: parseDateTime(json['returnDate']),
       returnNotes: json['returnNotes'],
-      totalAmount: json['totalAmount'] ?? 0,
-      updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null,
+      totalAmount: (json['totalAmount'] ?? 0) as num,
+      updatedAt: parseDateTime(json['updatedAt']),
       userName: json['userName'],
       statusName: json['statusName'],
       items: items,

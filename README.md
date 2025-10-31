@@ -131,7 +131,7 @@ MosPosudit/
 
 ## 🗄️ Database
 
-- **Database Name**: 180081
+- **Database Name**: 220116
 - **Tables**: 10+ functional tables (Users, Tools, Rentals, etc.)
 - **Seeding**: Test data included
 
@@ -163,7 +163,7 @@ cd MosPosudit.UI/mobile && flutter run
 
 1. **Database**: Start SQL Server locally
    - Install SQL Server 2022 Express
-   - Create database named `180081`
+   - Create database named `220116`
    - Update connection string in `appsettings.json`
 
 2. **RabbitMQ**: Install and start RabbitMQ locally

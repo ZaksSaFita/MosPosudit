@@ -5,8 +5,8 @@ class LoginRequestDto {
   LoginRequestDto({required this.username, required this.password});
 
   Map<String, dynamic> toJson() => {
-        'Username': username,
-        'Password': password,
+        'username': username, // Backend koristi camelCase
+        'password': password,
       };
 }
 

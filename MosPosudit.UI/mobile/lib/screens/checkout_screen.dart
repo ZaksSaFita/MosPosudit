@@ -190,6 +190,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         startDate: _selectedStartDate,
         endDate: _selectedEndDate!,
         items: items,
+        termsAccepted: true, // TODO: Add UI checkbox for terms acceptance
       );
 
       // Clear cart after successful rental creation

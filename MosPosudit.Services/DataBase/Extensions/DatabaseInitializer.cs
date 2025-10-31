@@ -24,7 +24,17 @@ namespace MosPosudit.Services.DataBase.Extensions
                 using var scope = serviceProvider.CreateScope();
                 var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
                 var connectionString = configuration.GetConnectionString("DefaultConnection");
-                var masterConnectionString = connectionString?.Replace("Database=220116;", "Database=master;");
+                // Replace any database name with master for connection test
+                var masterConnectionString = connectionString;
+                if (!string.IsNullOrEmpty(connectionString))
+                {
+                    // Extract database name and replace with master
+                    var dbNameMatch = System.Text.RegularExpressions.Regex.Match(connectionString, @"Database=([^;]+);");
+                    if (dbNameMatch.Success)
+                    {
+                        masterConnectionString = connectionString.Replace($"Database={dbNameMatch.Groups[1].Value};", "Database=master;");
+                    }
+                }
 
                 // Wait for SQL Server to be ready
                 await WaitForSqlServerAsync(masterConnectionString, logger);

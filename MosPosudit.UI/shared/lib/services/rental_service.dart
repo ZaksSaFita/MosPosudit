@@ -47,6 +47,7 @@ class RentalService {
     required DateTime endDate,
     required List<Map<String, dynamic>> items,
     String? notes,
+    required bool termsAccepted,
   }) async {
     try {
       final userId = await AuthService.getUserId();
@@ -55,11 +56,12 @@ class RentalService {
       }
 
       final body = {
-        'userId': userId,
         'startDate': startDate.toIso8601String(),
         'endDate': endDate.toIso8601String(),
         'items': items,
+        'termsAccepted': termsAccepted,
         if (notes != null) 'notes': notes,
+        // userId će backend automatski uzeti iz authenticated context
       };
 
       final res = await _api.post('/Rental', body: body);

@@ -45,7 +45,7 @@ Kada radiš lokalno bez Docker-a (npr. `dotnet run`):
 ### Docker (.env)
 ```
 SQL_SERVER_PASSWORD=...
-DATABASE_NAME=180081
+DATABASE_NAME=220116
 RABBITMQ_USERNAME=admin
 RABBITMQ_PASSWORD=admin123
 DB_CONNECTION_STRING=...

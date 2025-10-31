@@ -69,5 +69,25 @@ class NotificationService {
       return false;
     }
   }
+
+  Future<bool> markAllAsRead() async {
+    try {
+      final res = await _api.put('/Notification/read-all');
+      return res.statusCode == 200;
+    } catch (e) {
+      print('Error in markAllAsRead: $e');
+      return false;
+    }
+  }
+
+  Future<bool> deleteNotification(int id) async {
+    try {
+      final res = await _api.delete('/Notification/$id');
+      return res.statusCode == 200 || res.statusCode == 204;
+    } catch (e) {
+      print('Error in deleteNotification: $e');
+      return false;
+    }
+  }
 }
 
