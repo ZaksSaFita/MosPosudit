@@ -10,7 +10,7 @@ namespace MosPosudit.Services.DataBase.Data
 
         [ForeignKey("FromUser")]
         public int FromUserId { get; set; }
-        public User FromUser { get; set; }
+        public User FromUser { get; set; } = null!;
 
         [ForeignKey("ToUser")]
         public int? ToUserId { get; set; }
@@ -18,14 +18,14 @@ namespace MosPosudit.Services.DataBase.Data
 
         public string Content { get; set; } = string.Empty;
 
-        public DateTime SentAt { get; set; } = DateTime.UtcNow;
+        public DateTime SentAt { get; set; }
 
         public DateTime? ReadAt { get; set; }
 
-        public bool IsRead { get; set; } = false;
+        public bool IsRead { get; set; }
 
         // Indicates if admin has started the chat (responded to user)
-        public bool IsActive { get; set; } = false;
+        public bool IsActive { get; set; }
 
         // Admin who started the chat (if applicable)
         [ForeignKey("StartedByAdmin")]

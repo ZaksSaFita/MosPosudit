@@ -2,6 +2,7 @@
 using MosPosudit.Model.Exceptions;
 using MosPosudit.Model.Messages;
 using MosPosudit.Model.Requests.User;
+using MosPosudit.Model.Responses.User;
 using MosPosudit.Model.SearchObjects;
 using MosPosudit.Services.DataBase;
 using MosPosudit.Services.DataBase.Data;
@@ -25,10 +26,10 @@ namespace MosPosudit.Services.Services
             if (search != null)
             {
                 if (!string.IsNullOrWhiteSpace(search.Username))
-                    query = query.Where(x => x.Username.Contains(search.Username));
+                    query = query.Where(x => x.Username != null && x.Username.Contains(search.Username));
 
                 if (!string.IsNullOrWhiteSpace(search.Email))
-                    query = query.Where(x => x.Email.Contains(search.Email));
+                    query = query.Where(x => x.Email != null && x.Email.Contains(search.Email));
             }
 
             if (search?.Page.HasValue == true && search?.PageSize.HasValue == true)
@@ -118,7 +119,7 @@ namespace MosPosudit.Services.Services
             if (request.Username != null)
             {
                 var usernameExists = await _dbSet.AnyAsync(x => 
-                    x.Username.ToLower() == request.Username.ToLower() && x.Id != userId);
+                    x.Username != null && x.Username.ToLower() == request.Username.ToLower() && x.Id != userId);
                 if (usernameExists)
                     throw new ConflictException(ErrorMessages.UsernameExists);
             }
@@ -127,7 +128,7 @@ namespace MosPosudit.Services.Services
             if (request.Email != null)
             {
                 var emailExists = await _dbSet.AnyAsync(x => 
-                    x.Email.ToLower() == request.Email.ToLower() && x.Id != userId);
+                    x.Email != null && x.Email.ToLower() == request.Email.ToLower() && x.Id != userId);
                 if (emailExists)
                     throw new ConflictException(ErrorMessages.EmailExists);
             }
@@ -301,6 +302,101 @@ namespace MosPosudit.Services.Services
             }
 
             entity.UpdateDate = DateTime.UtcNow;
+        }
+
+        public async Task<UserResponse> GetUserDetailsAsResponse(int id)
+        {
+            var user = await GetById(id);
+            return MapToResponse(user);
+        }
+
+        public async Task<UserResponse> GetMeAsResponse(int userId)
+        {
+            var user = await GetById(userId);
+            return MapToResponse(user);
+        }
+
+        public async Task<UserResponse> UpdateProfileAsResponse(int userId, UserProfileUpdateRequest request)
+        {
+            var user = await UpdateProfile(userId, request);
+            return MapToResponse(user);
+        }
+
+        public async Task<UserResponse> UploadPictureAsResponse(int userId, byte[] picture)
+        {
+            var user = await GetById(userId);
+            user.Picture = picture;
+            
+            await Update(user.Id, new UserUpdateRequest
+            {
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Email = user.Email,
+                PhoneNumber = user.PhoneNumber,
+                Username = user.Username,
+                RoleId = user.RoleId,
+                Picture = picture
+            });
+
+            // Reload with includes
+            var updatedUser = await GetById(userId);
+            return MapToResponse(updatedUser);
+        }
+
+        public async Task<bool> DeletePictureAsResponse(int userId)
+        {
+            var user = await GetById(userId);
+            user.Picture = null;
+            
+            await Update(user.Id, new UserUpdateRequest
+            {
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Email = user.Email,
+                PhoneNumber = user.PhoneNumber,
+                Username = user.Username,
+                RoleId = user.RoleId,
+                Picture = null
+            });
+
+            return true;
+        }
+
+        public async Task<UserResponse> RegisterAsResponse(UserRegisterRequest request)
+        {
+            // Convert RegisterRequest to InsertRequest with default User role
+            var insertRequest = new UserInsertRequest
+            {
+                FirstName = request.FirstName,
+                LastName = request.LastName,
+                Email = request.Email,
+                PhoneNumber = request.PhoneNumber,
+                Username = request.Username,
+                Password = request.Password,
+                RoleId = 2 // Default to User role (ID 2)
+            };
+
+            var user = await Insert(insertRequest);
+            return MapToResponse(user);
+        }
+
+        private UserResponse MapToResponse(User entity)
+        {
+            return new UserResponse
+            {
+                Id = entity.Id,
+                FirstName = entity.FirstName,
+                LastName = entity.LastName,
+                Email = entity.Email,
+                PhoneNumber = entity.PhoneNumber,
+                Username = entity.Username,
+                Picture = entity.Picture != null ? Convert.ToBase64String(entity.Picture) : null,
+                RoleId = entity.RoleId,
+                RoleName = entity.Role?.Name,
+                IsActive = entity.IsActive,
+                CreatedAt = entity.CreatedAt,
+                LastLogin = entity.LastLogin
+            };
         }
     }
 }

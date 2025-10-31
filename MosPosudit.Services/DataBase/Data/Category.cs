@@ -16,6 +16,6 @@ namespace MosPosudit.Services.DataBase.Data
         public string? ImageBase64 { get; set; }
 
         // Navigation properties
-        public ICollection<Tool> Tools { get; set; }
+        public ICollection<Tool> Tools { get; set; } = new List<Tool>();
     }
 } 

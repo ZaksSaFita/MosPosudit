@@ -178,5 +178,21 @@ class RentalService {
       return [];
     }
   }
+
+  Future<Map<String, dynamic>?> generatePaymentLink(int rentalId) async {
+    try {
+      final res = await _api.post('/Rental/$rentalId/payment-link');
+      
+      if (res.statusCode == 200) {
+        final decoded = jsonDecode(res.body);
+        return decoded;
+      }
+      
+      return null;
+    } catch (e) {
+      print('Error in generatePaymentLink: $e');
+      return null;
+    }
+  }
 }
 

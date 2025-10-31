@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using MosPosudit.Model.Enums;
 using MosPosudit.Model.Exceptions;
 using MosPosudit.Model.Requests.Rental;
@@ -12,8 +13,16 @@ namespace MosPosudit.Services.Services
 {
     public class RentalService : BaseCrudService<Rental, RentalSearchObject, RentalInsertRequest, RentalUpdateRequest, RentalPatchRequest>, IRentalService
     {
-        public RentalService(ApplicationDbContext context) : base(context)
+        private readonly IPayPalService _payPalService;
+        private readonly Microsoft.Extensions.Configuration.IConfiguration _configuration;
+
+        public RentalService(
+            ApplicationDbContext context,
+            IPayPalService payPalService,
+            Microsoft.Extensions.Configuration.IConfiguration configuration) : base(context)
         {
+            _payPalService = payPalService ?? throw new ArgumentNullException(nameof(payPalService));
+            _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         }
 
         public override async Task<IEnumerable<Rental>> Get(RentalSearchObject? search = null)
@@ -98,20 +107,58 @@ namespace MosPosudit.Services.Services
             if (insert.Items == null || insert.Items.Count == 0)
                 throw new ValidationException("At least one rental item is required");
 
-            // Check availability for each tool
+            // Check availability and determine status for each tool
+            bool requiresApproval = false;
+            
             foreach (var item in insert.Items)
             {
-                var isAvailable = await CheckAvailability(item.ToolId, insert.StartDate, insert.EndDate);
-                if (!isAvailable)
-                {
-                    var tool = await _context.Tools.FindAsync(item.ToolId);
-                    throw new ValidationException($"Tool '{tool?.Name ?? item.ToolId.ToString()}' is not available for the selected dates");
-                }
-
                 // Verify tool exists and get current daily rate
                 var toolEntity = await _context.Tools.FindAsync(item.ToolId);
                 if (toolEntity == null)
                     throw new NotFoundException($"Tool with ID {item.ToolId} not found");
+
+                if (!toolEntity.IsAvailable)
+                {
+                    throw new ValidationException($"Tool '{toolEntity.Name}' is not available");
+                }
+
+                // Check if requested quantity exceeds available quantity
+                if (item.Quantity > toolEntity.Quantity)
+                {
+                    throw new ValidationException($"Requested quantity ({item.Quantity}) exceeds available quantity ({toolEntity.Quantity}) for tool '{toolEntity.Name}'");
+                }
+
+                // Calculate how many tools are already rented during this period
+                var overlappingRentals = await _context.Rentals
+                    .Include(r => r.RentalItems)
+                    .Where(r => !r.IsReturned &&
+                               (r.StatusId == (int)RentalStatus.Pending || r.StatusId == (int)RentalStatus.Active) &&
+                               ((r.StartDate <= insert.StartDate && r.EndDate >= insert.StartDate) ||
+                                (r.StartDate <= insert.EndDate && r.EndDate >= insert.EndDate) ||
+                                (r.StartDate >= insert.StartDate && r.EndDate <= insert.EndDate)) &&
+                               r.RentalItems.Any(ri => ri.ToolId == item.ToolId))
+                    .ToListAsync();
+
+                var totalRentedQuantity = overlappingRentals
+                    .SelectMany(r => r.RentalItems)
+                    .Where(ri => ri.ToolId == item.ToolId)
+                    .Sum(ri => ri.Quantity);
+
+                // Calculate available quantity (total - already rented)
+                var availableQuantity = toolEntity.Quantity - totalRentedQuantity;
+
+                // Check if we have enough available quantity for this rental
+                if (availableQuantity < item.Quantity)
+                {
+                    throw new ValidationException($"Insufficient quantity available for tool '{toolEntity.Name}'. Available: {availableQuantity}, Requested: {item.Quantity}");
+                }
+
+                // Determine if approval is required based on remaining quantity after this rental
+                var remainingAfterRental = availableQuantity - item.Quantity;
+                if (remainingAfterRental < 2)
+                {
+                    requiresApproval = true;
+                }
 
                 // Update daily rate from tool if not provided or different
                 if (item.DailyRate != toolEntity.DailyRate)
@@ -125,16 +172,16 @@ namespace MosPosudit.Services.Services
             var totalDays = (insert.EndDate - insert.StartDate).Days + 1;
             var totalPrice = insert.Items.Sum(item => item.DailyRate * item.Quantity * totalDays);
 
-            // Create rental entity - use first tool's ID for legacy ToolId field
-            // Note: Rental model has both ToolId (legacy) and RentalItems (current approach)
+            // Determine status: Pending if remaining quantity < 2, Active otherwise
+            var rentalStatus = requiresApproval ? RentalStatus.Pending : RentalStatus.Active;
+
+            // Create rental entity
             var rental = new Rental
             {
                 UserId = insert.UserId, // Should be set from authenticated user context
                 StartDate = insert.StartDate,
                 EndDate = insert.EndDate,
-                StatusId = (int)RentalStatus.Pending, // Default to Pending, admin will approve
-                ToolId = insert.Items.First().ToolId, // Legacy field - use first item
-                TotalPrice = totalPrice,
+                StatusId = (int)rentalStatus,
                 TotalAmount = totalPrice,
                 Notes = insert.Notes,
                 CreatedAt = DateTime.UtcNow,
@@ -234,8 +281,12 @@ namespace MosPosudit.Services.Services
             return totalRentedQuantity < tool.Quantity;
         }
 
-        public async Task<IEnumerable<DateTime>> GetBookedDates(int toolId, DateTime startDate, DateTime endDate)
+        public async Task<IEnumerable<DateTime>> GetBookedDates(int toolId, DateTime? startDate, DateTime? endDate)
         {
+            // Default to next 365 days if not specified
+            var start = startDate ?? DateTime.UtcNow;
+            var end = endDate ?? DateTime.UtcNow.AddDays(365);
+
             var bookedDates = new List<DateTime>();
 
             // Check through RentalItems since rental can have multiple tools
@@ -243,8 +294,8 @@ namespace MosPosudit.Services.Services
                 .Include(r => r.RentalItems)
                 .Where(r => !r.IsReturned &&
                            (r.StatusId == (int)RentalStatus.Pending || r.StatusId == (int)RentalStatus.Active) &&
-                           r.EndDate >= startDate &&
-                           r.StartDate <= endDate &&
+                           r.EndDate >= start &&
+                           r.StartDate <= end &&
                            r.RentalItems.Any(ri => ri.ToolId == toolId))
                 .ToListAsync();
 
@@ -260,16 +311,17 @@ namespace MosPosudit.Services.Services
                 if (tool != null && toolQuantity >= tool.Quantity)
                 {
                     // Tool is fully booked for this rental period
-                    var currentDate = rental.StartDate.Date;
-                    var end = rental.EndDate.Date;
+                    var rentalStartDate = rental.StartDate.Date;
+                    var rentalEndDate = rental.EndDate.Date;
 
-                    while (currentDate <= end)
+                    // Only add dates within requested range
+                    var periodStart = rentalStartDate > start.Date ? rentalStartDate : start.Date;
+                    var periodEnd = rentalEndDate < end.Date ? rentalEndDate : end.Date;
+
+                    while (periodStart <= periodEnd)
                     {
-                        if (currentDate >= startDate.Date && currentDate <= endDate.Date)
-                        {
-                            bookedDates.Add(currentDate);
-                        }
-                        currentDate = currentDate.AddDays(1);
+                        bookedDates.Add(periodStart);
+                        periodStart = periodStart.AddDays(1);
                     }
                 }
             }
@@ -288,7 +340,7 @@ namespace MosPosudit.Services.Services
                 EndDate = entity.EndDate,
                 StatusId = entity.StatusId,
                 StatusName = ((RentalStatus)entity.StatusId).ToString(),
-                TotalPrice = entity.TotalPrice,
+                TotalPrice = entity.TotalAmount, // For backward compatibility in response
                 TotalAmount = entity.TotalAmount,
                 CreatedAt = entity.CreatedAt,
                 UpdatedAt = entity.UpdatedAt,
@@ -327,8 +379,7 @@ namespace MosPosudit.Services.Services
             if (entity.RentalItems != null && entity.RentalItems.Any())
             {
                 var totalDays = (update.EndDate - update.StartDate).Days + 1;
-                entity.TotalPrice = entity.RentalItems.Sum(ri => ri.DailyRate * ri.Quantity * totalDays);
-                entity.TotalAmount = entity.TotalPrice;
+                entity.TotalAmount = entity.RentalItems.Sum(ri => ri.DailyRate * ri.Quantity * totalDays);
             }
         }
 
@@ -355,9 +406,44 @@ namespace MosPosudit.Services.Services
             if ((patch.StartDate.HasValue || patch.EndDate.HasValue) && entity.RentalItems != null && entity.RentalItems.Any())
             {
                 var totalDays = ((patch.EndDate ?? entity.EndDate) - (patch.StartDate ?? entity.StartDate)).Days + 1;
-                entity.TotalPrice = entity.RentalItems.Sum(ri => ri.DailyRate * ri.Quantity * totalDays);
-                entity.TotalAmount = entity.TotalPrice;
+                entity.TotalAmount = entity.RentalItems.Sum(ri => ri.DailyRate * ri.Quantity * totalDays);
             }
+        }
+
+        public async Task<object> GeneratePaymentLinkAsync(int rentalId, string baseUrl)
+        {
+            var rental = await GetByIdAsResponse(rentalId);
+
+            // Only generate payment link for Active rentals
+            if (rental.StatusId != (int)RentalStatus.Active)
+            {
+                throw new ValidationException("Payment link can only be generated for Active rentals");
+            }
+
+            // Generate PayPal payment order and get approval URL
+            var returnUrl = _configuration["PayPal:ReturnUrl"] ?? $"{baseUrl}/api/payment/paypal/return?rentalId={rental.Id}";
+            var cancelUrl = _configuration["PayPal:CancelUrl"] ?? $"{baseUrl}/api/payment/paypal/cancel?rentalId={rental.Id}";
+
+            var paymentLink = await _payPalService.CreatePaymentOrderAsync(
+                rental.TotalAmount,
+                "EUR",
+                rental.Id,
+                returnUrl,
+                cancelUrl
+            );
+
+            if (string.IsNullOrEmpty(paymentLink))
+            {
+                throw new Exception("Failed to create PayPal payment order");
+            }
+
+            return new
+            {
+                rentalId = rental.Id,
+                amount = rental.TotalAmount,
+                paymentLink = paymentLink,
+                currency = "EUR"
+            };
         }
     }
 }

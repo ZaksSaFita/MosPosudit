@@ -37,24 +37,6 @@
     }
 
     /// <summary>
-    /// Exception thrown when a user is not authorized to perform an action
-    /// </summary>
-    public class UnauthorizedException : BusinessException
-    {
-        public UnauthorizedException()
-        {
-        }
-
-        public UnauthorizedException(string message) : base(message)
-        {
-        }
-
-        public UnauthorizedException(string message, Exception innerException) : base(message, innerException)
-        {
-        }
-    }
-
-    /// <summary>
     /// Exception thrown when a validation error occurs
     /// </summary>
     public class ValidationException : BusinessException

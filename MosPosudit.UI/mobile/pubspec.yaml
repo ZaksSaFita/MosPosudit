@@ -39,6 +39,7 @@ dependencies:
   file_picker: ^8.0.0+1
   carousel_slider: ^5.0.0
   table_calendar: ^3.1.2
+  url_launcher: ^6.2.5
   mosposudit_shared:
     path: ../shared
 

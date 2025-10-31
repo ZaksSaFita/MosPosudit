@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using MosPosudit.Model.Enums;
 using MosPosudit.Model.Exceptions;
 using MosPosudit.Model.Requests.Tool;
 using MosPosudit.Model.Responses.Tool;
@@ -106,14 +105,10 @@ namespace MosPosudit.Services.Services
                 Description = entity.Description,
                 CategoryId = entity.CategoryId,
                 CategoryName = entity.Category?.Name,
-                ConditionId = entity.ConditionId,
                 DailyRate = entity.DailyRate,
                 Quantity = entity.Quantity,
-                CreatedAt = entity.CreatedAt,
                 IsAvailable = entity.IsAvailable,
                 DepositAmount = entity.DepositAmount,
-                LastMaintenanceDate = entity.LastMaintenanceDate,
-                NextMaintenanceDate = entity.NextMaintenanceDate,
                 ImageBase64 = entity.ImageBase64
             };
         }
@@ -125,13 +120,11 @@ namespace MosPosudit.Services.Services
                 Name = insert.Name,
                 Description = insert.Description,
                 CategoryId = insert.CategoryId,
-                ConditionId = insert.ConditionId,
                 DailyRate = insert.DailyRate,
                 Quantity = insert.Quantity,
                 DepositAmount = insert.DepositAmount,
                 IsAvailable = insert.IsAvailable,
-                ImageBase64 = insert.ImageBase64,
-                CreatedAt = DateTime.UtcNow
+                ImageBase64 = insert.ImageBase64
             };
         }
 
@@ -143,8 +136,6 @@ namespace MosPosudit.Services.Services
                 entity.Description = update.Description;
             if (update.CategoryId.HasValue)
                 entity.CategoryId = update.CategoryId.Value;
-            if (update.ConditionId.HasValue)
-                entity.ConditionId = update.ConditionId.Value;
             if (update.DailyRate.HasValue)
                 entity.DailyRate = update.DailyRate.Value;
             if (update.Quantity.HasValue)
@@ -165,8 +156,6 @@ namespace MosPosudit.Services.Services
                 entity.Description = patch.Description;
             if (patch.CategoryId.HasValue)
                 entity.CategoryId = patch.CategoryId.Value;
-            if (patch.ConditionId.HasValue)
-                entity.ConditionId = patch.ConditionId.Value;
             if (patch.DailyRate.HasValue)
                 entity.DailyRate = patch.DailyRate.Value;
             if (patch.Quantity.HasValue)

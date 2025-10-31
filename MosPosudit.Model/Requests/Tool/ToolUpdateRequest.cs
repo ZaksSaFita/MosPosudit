@@ -12,8 +12,6 @@ namespace MosPosudit.Model.Requests.Tool
 
         public int? CategoryId { get; set; }
 
-        public int? ConditionId { get; set; }
-
         [Range(0.01, 10000, ErrorMessage = "Daily rate must be between 0.01 and 10000")]
         public decimal? DailyRate { get; set; }
 

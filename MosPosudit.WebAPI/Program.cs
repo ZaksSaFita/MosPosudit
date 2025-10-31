@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using MosPosudit.Services.DataBase;
+using MosPosudit.Services.DataBase.Extensions;
 using MosPosudit.Services.Interfaces;
 using MosPosudit.Services.Services;
 using System.Security.Claims;
@@ -39,6 +40,12 @@ builder.Services.AddScoped<IToolService, ToolService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IChatService, ChatService>();
 builder.Services.AddScoped<IRentalService, RentalService>();
+builder.Services.AddScoped<IReviewService, ReviewService>();
+builder.Services.AddScoped<IUserFavoriteService, UserFavoriteService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<MosPosudit.Services.Services.IPayPalService, MosPosudit.Services.Services.PayPalService>();
 
 // Configure JWT Authentication
 builder.Services.AddAuthentication(options =>
@@ -120,52 +127,12 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// Migracije i seeding izvršavaju se pre pokretanja servera
-try
-{
-    using (var scope = app.Services.CreateScope())
-    {
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-        var masterConnectionString = connectionString?.Replace("Database=220116;", "Database=master;");
-        
-        // Wait for SQL Server to be ready
-        var maxRetries = 30;
-        var retryCount = 0;
-        while (retryCount < maxRetries)
-        {
-            try
-            {
-                var optionsBuilder = new DbContextOptionsBuilder<ApplicationDbContext>();
-                optionsBuilder.UseSqlServer(masterConnectionString);
-                using (var testContext = new ApplicationDbContext(optionsBuilder.Options))
-                {
-                    if (testContext.Database.CanConnect())
-                        break;
-                }
-            }
-            catch
-            {
-                retryCount++;
-                if (retryCount >= maxRetries)
-                    throw;
-                Thread.Sleep(2000);
-            }
-        }
-        
-        // Run migrations (EF Core will create database if it doesn't exist)
-        db.Database.Migrate();
-        
-        // Seed database
-        var seeder = scope.ServiceProvider.GetRequiredService<ISeedService>();
-        seeder.SeedIfEmpty(db, builder.Environment.ContentRootPath);
-    }
-}
-catch (Exception ex)
-{
-    var logger = app.Services.GetRequiredService<ILogger<Program>>();
-    logger.LogError(ex, "An error occurred while setting up the database.");
-    throw;
-}
+// Initialize database (migrations and seeding)
+var logger = app.Services.GetRequiredService<ILogger<Program>>();
+await DatabaseInitializer.InitializeDatabaseAsync(
+    app.Services,
+    builder.Configuration,
+    logger,
+    builder.Environment.ContentRootPath);
 
 app.Run();

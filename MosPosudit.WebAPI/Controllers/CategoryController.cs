@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MosPosudit.Model.Exceptions;
 using MosPosudit.Model.Messages;
@@ -10,6 +11,7 @@ namespace MosPosudit.WebAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class CategoryController : ControllerBase
     {
         protected readonly ICategoryService _service;
@@ -20,6 +22,7 @@ namespace MosPosudit.WebAPI.Controllers
         }
 
         [HttpGet]
+        [AllowAnonymous]
         public virtual async Task<ActionResult<IEnumerable<CategoryResponse>>> Get([FromQuery] CategorySearchObject? search = null)
         {
             try
@@ -31,13 +34,14 @@ namespace MosPosudit.WebAPI.Controllers
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return StatusCode(500, ErrorMessages.ServerError);
             }
         }
 
         [HttpGet("{id}")]
+        [AllowAnonymous]
         public virtual async Task<ActionResult<CategoryResponse>> GetById(int id)
         {
             try
@@ -53,13 +57,14 @@ namespace MosPosudit.WebAPI.Controllers
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return StatusCode(500, ErrorMessages.ServerError);
             }
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public virtual async Task<ActionResult<CategoryResponse>> Insert([FromBody] CategoryInsertRequest insert)
         {
             try
@@ -74,13 +79,14 @@ namespace MosPosudit.WebAPI.Controllers
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return StatusCode(500, ErrorMessages.ServerError);
             }
         }
 
         [HttpPut("{id}")]
+        [Authorize(Roles = "Admin")]
         public virtual async Task<ActionResult<CategoryResponse>> Update(int id, [FromBody] CategoryUpdateRequest update)
         {
             try
@@ -99,13 +105,14 @@ namespace MosPosudit.WebAPI.Controllers
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return StatusCode(500, ErrorMessages.ServerError);
             }
         }
 
         [HttpPatch("{id}")]
+        [Authorize(Roles = "Admin")]
         public virtual async Task<ActionResult<CategoryResponse>> Patch(int id, [FromBody] CategoryPatchRequest patch)
         {
             try
@@ -124,13 +131,14 @@ namespace MosPosudit.WebAPI.Controllers
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return StatusCode(500, ErrorMessages.ServerError);
             }
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public virtual async Task<ActionResult<CategoryResponse>> Delete(int id)
         {
             try
@@ -146,7 +154,7 @@ namespace MosPosudit.WebAPI.Controllers
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return StatusCode(500, ErrorMessages.ServerError);
             }

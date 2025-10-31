@@ -10,49 +10,30 @@ namespace MosPosudit.Services.DataBase.Data
 
         public int RentalId { get; set; }
 
-        public int PaymentMethodId { get; set; }
+        public string PaymentMethod { get; set; } = string.Empty; // Only PayPal is supported
 
-        public int StatusId { get; set; }
+        public string Status { get; set; } = string.Empty; // Pending, Completed, Cancelled, Refunded
+
+        // Terms of Service acceptance (tracked at payment time)
+        public bool TermsAccepted { get; set; }
+        public DateTime? TermsAcceptedAt { get; set; }
 
         public decimal Amount { get; set; }
 
         public DateTime TransactionDate { get; set; }
 
-        public string? TransactionReference { get; set; }
-
-        public string? Notes { get; set; }
-
-        public string? TransactionId { get; set; }
-
-        public string? PaymentReference { get; set; }
-
-        public string? RefundReason { get; set; }
+        public string? TransactionId { get; set; } // PayPal order ID
 
         public int UserId { get; set; }
 
-        public int OrderId { get; set; }
-
         // Navigation properties
         [ForeignKey("RentalId")]
-        public Rental Rental { get; set; }
-
-        [ForeignKey("PaymentMethodId")]
-        public PaymentMethod PaymentMethod { get; set; }
-
-        [ForeignKey("StatusId")]
-        public PaymentStatus Status { get; set; }
+        public Rental Rental { get; set; } = null!;
 
         [ForeignKey("UserId")]
-        public User User { get; set; }
-
-        [ForeignKey("OrderId")]
-        public Order Order { get; set; }
+        public User User { get; set; } = null!;
 
         public DateTime CreatedAt { get; set; }
-        public DateTime? UpdatedAt { get; set; }
         public DateTime? ProcessedAt { get; set; }
-        public DateTime? RefundedAt { get; set; }
-
-        public string? Description { get; set; }
     }
 }

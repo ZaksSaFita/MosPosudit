@@ -19,6 +19,7 @@ namespace MosPosudit.WebAPI.Controllers
         }
 
         [HttpPost("login")]
+        [AllowAnonymous]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
             try
@@ -45,8 +46,8 @@ namespace MosPosudit.WebAPI.Controllers
         }
 
 
-        // [Authorize(Roles = "Admin")] // Zakomentarisano za testiranje
         [HttpPost("logout")]
+        [Authorize]
         public IActionResult Logout()
         {
             // JWT logout - we can't actually invalidate the token on the server side

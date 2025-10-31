@@ -12,7 +12,7 @@ namespace MosPosudit.WebAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    // [Authorize] // Commented for testing
+    [Authorize]
     public class RentalController : ControllerBase
     {
         private readonly IRentalService _rentalService;
@@ -34,7 +34,7 @@ namespace MosPosudit.WebAPI.Controllers
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return StatusCode(500, ErrorMessages.ServerError);
             }
@@ -56,7 +56,7 @@ namespace MosPosudit.WebAPI.Controllers
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return StatusCode(500, ErrorMessages.ServerError);
             }
@@ -93,7 +93,30 @@ namespace MosPosudit.WebAPI.Controllers
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception ex)
+            catch (Exception)
+            {
+                return StatusCode(500, ErrorMessages.ServerError);
+            }
+        }
+
+        [HttpPost("{id}/payment-link")]
+        public async Task<ActionResult<object>> GeneratePaymentLink(int id)
+        {
+            try
+            {
+                var baseUrl = $"{Request.Scheme}://{Request.Host}";
+                var result = await _rentalService.GeneratePaymentLinkAsync(id, baseUrl);
+                return Ok(result);
+            }
+            catch (Model.Exceptions.NotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (Model.Exceptions.ValidationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception)
             {
                 return StatusCode(500, ErrorMessages.ServerError);
             }
@@ -119,7 +142,7 @@ namespace MosPosudit.WebAPI.Controllers
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return StatusCode(500, ErrorMessages.ServerError);
             }
@@ -145,7 +168,7 @@ namespace MosPosudit.WebAPI.Controllers
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return StatusCode(500, ErrorMessages.ServerError);
             }
@@ -168,7 +191,7 @@ namespace MosPosudit.WebAPI.Controllers
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return StatusCode(500, ErrorMessages.ServerError);
             }
@@ -197,7 +220,7 @@ namespace MosPosudit.WebAPI.Controllers
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return StatusCode(500, ErrorMessages.ServerError);
             }
@@ -218,7 +241,7 @@ namespace MosPosudit.WebAPI.Controllers
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return StatusCode(500, ErrorMessages.ServerError);
             }
@@ -232,18 +255,14 @@ namespace MosPosudit.WebAPI.Controllers
         {
             try
             {
-                // Default to next 365 days if not specified
-                var start = startDate ?? DateTime.Now;
-                var end = endDate ?? DateTime.Now.AddDays(365);
-
-                var bookedDates = await _rentalService.GetBookedDates(toolId, start, end);
+                var bookedDates = await _rentalService.GetBookedDates(toolId, startDate, endDate);
                 return Ok(bookedDates);
             }
             catch (ValidationException ex)
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return StatusCode(500, ErrorMessages.ServerError);
             }

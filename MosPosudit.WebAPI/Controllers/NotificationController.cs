@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using MosPosudit.Services.DataBase;
+using MosPosudit.Model.Exceptions;
 using MosPosudit.Services.Interfaces;
 using System.Security.Claims;
 
@@ -9,94 +8,95 @@ namespace MosPosudit.WebAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    // [Authorize] // Zakomentarisano za testiranje
+    [Authorize]
     public class NotificationController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
-        private readonly IMessageService _messageService;
+        private readonly INotificationService _notificationService;
 
-        public NotificationController(ApplicationDbContext context, IMessageService messageService)
+        public NotificationController(INotificationService notificationService)
         {
-            _context = context;
-            _messageService = messageService;
+            _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
         }
 
         [HttpGet]
         public async Task<IActionResult> GetNotifications()
         {
-            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-            
-            var notifications = await _context.Notifications
-                .Where(n => n.UserId == userId)
-                .OrderByDescending(n => n.CreatedAt)
-                .Take(50)
-                .ToListAsync();
-
-            return Ok(notifications);
+            try
+            {
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var notifications = await _notificationService.GetNotificationsForUser(userId, 50);
+                return Ok(notifications);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.Message });
+            }
         }
 
         [HttpGet("unread")]
         public async Task<IActionResult> GetUnreadCount()
         {
-            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-            
-            var count = await _context.Notifications
-                .CountAsync(n => n.UserId == userId && !n.IsRead);
-
-            return Ok(new { unreadCount = count });
+            try
+            {
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var count = await _notificationService.GetUnreadCountForUser(userId);
+                return Ok(new { unreadCount = count });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.Message });
+            }
         }
 
         [HttpPut("{id}/read")]
         public async Task<IActionResult> MarkAsRead(int id)
         {
-            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-            
-            var notification = await _context.Notifications
-                .FirstOrDefaultAsync(n => n.Id == id && n.UserId == userId);
-
-            if (notification == null)
-                return NotFound();
-
-            notification.IsRead = true;
-            await _context.SaveChangesAsync();
-
-            return Ok();
+            try
+            {
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                await _notificationService.MarkAsRead(id, userId);
+                return Ok();
+            }
+            catch (NotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.Message });
+            }
         }
 
         [HttpPut("read-all")]
         public async Task<IActionResult> MarkAllAsRead()
         {
-            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-            
-            var unreadNotifications = await _context.Notifications
-                .Where(n => n.UserId == userId && !n.IsRead)
-                .ToListAsync();
-
-            foreach (var notification in unreadNotifications)
+            try
             {
-                notification.IsRead = true;
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                await _notificationService.MarkAllAsRead(userId);
+                return Ok();
             }
-
-            await _context.SaveChangesAsync();
-
-            return Ok();
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.Message });
+            }
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteNotification(int id)
         {
-            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-            
-            var notification = await _context.Notifications
-                .FirstOrDefaultAsync(n => n.Id == id && n.UserId == userId);
-
-            if (notification == null)
-                return NotFound();
-
-            _context.Notifications.Remove(notification);
-            await _context.SaveChangesAsync();
-
-            return Ok();
+            try
+            {
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var deleted = await _notificationService.DeleteNotification(id, userId);
+                if (!deleted)
+                    return NotFound();
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.Message });
+            }
         }
     }
 } 

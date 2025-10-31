@@ -1,4 +1,5 @@
 ﻿using MosPosudit.Model.Requests.User;
+using MosPosudit.Model.Responses.User;
 using MosPosudit.Model.SearchObjects;
 using MosPosudit.Services.DataBase.Data;
 
@@ -20,6 +21,12 @@ namespace MosPosudit.Services.Interfaces
 
         // Profile management
         Task<User> UpdateProfile(int userId, UserProfileUpdateRequest request);
+        Task<UserResponse> UpdateProfileAsResponse(int userId, UserProfileUpdateRequest request);
+        Task<UserResponse> GetUserDetailsAsResponse(int id);
+        Task<UserResponse> GetMeAsResponse(int userId);
+        Task<UserResponse> UploadPictureAsResponse(int userId, byte[] picture);
+        Task<bool> DeletePictureAsResponse(int userId);
+        Task<UserResponse> RegisterAsResponse(UserRegisterRequest request);
 
         // Validation methods
         Task<bool> CheckUsernameExists(string username);

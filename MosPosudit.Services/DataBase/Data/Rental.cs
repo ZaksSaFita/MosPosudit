@@ -17,29 +17,33 @@ namespace MosPosudit.Services.DataBase.Data
 
         public int StatusId { get; set; }
 
-        public decimal TotalPrice { get; set; }
+        public decimal TotalAmount { get; set; }
 
         public DateTime CreatedAt { get; set; }
 
         public string? Notes { get; set; }
 
-        public int ToolId { get; set; }
-        [ForeignKey("ToolId")]
-        public Tool Tool { get; set; }
-
         public bool IsReturned { get; set; }
         public DateTime? ReturnDate { get; set; }
         public string? ReturnNotes { get; set; }
 
-        public decimal TotalAmount { get; set; }
+        // Terms of Service acceptance
+        public bool TermsAccepted { get; set; }
+        public DateTime? TermsAcceptedAt { get; set; }
+
+        // Email confirmation
+        public bool ConfirmationEmailSent { get; set; }
+        public DateTime? ConfirmationEmailSentAt { get; set; }
+
         public DateTime? UpdatedAt { get; set; }
 
         // Navigation properties
         [ForeignKey("UserId")]
-        public User User { get; set; }
+        public User User { get; set; } = null!;
         [ForeignKey("StatusId")]
         public RentalStatus Status { get; set; }
-        public ICollection<RentalItem> RentalItems { get; set; }
-        public ICollection<PaymentTransaction> Payments { get; set; }
+        public ICollection<RentalItem> RentalItems { get; set; } = new List<RentalItem>();
+        public ICollection<PaymentTransaction> Payments { get; set; } = new List<PaymentTransaction>();
+        public ICollection<Review> Reviews { get; set; } = new List<Review>();
     }
 }

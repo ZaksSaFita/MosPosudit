@@ -14,9 +14,6 @@ namespace MosPosudit.Model.Requests.Tool
         [Required(ErrorMessage = "Category ID is required")]
         public int CategoryId { get; set; }
 
-        [Required(ErrorMessage = "Condition ID is required")]
-        public int ConditionId { get; set; }
-
         [Required(ErrorMessage = "Daily rate is required")]
         [Range(0.01, 10000, ErrorMessage = "Daily rate must be between 0.01 and 10000")]
         public decimal DailyRate { get; set; }

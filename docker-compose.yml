@@ -55,6 +55,11 @@ services:
       - JWT__Key=your-super-secret-key-with-at-least-32-characters-for-jwt-signing
       - JWT__Issuer=MosPosudit
       - JWT__Audience=MosPosuditUsers
+      - PayPal__ClientId=AWqqXS_Ajm-bKV0J3bxC6wkGwybqHkWtI1Ry77Po6cYbPdX8Od6QR-WLg3Z2VvDSPGvn8_wZCaGdtwei
+      - PayPal__Secret=ECQ7TCBhQRGP2_nq_cS7A2q8r83xxBd4ZyA4bisiVugUwphQhKgSpx92ZJAxcNvV7k0D6i41_s5o3pek
+      - PayPal__Mode=sandbox
+      - PayPal__ReturnUrl=http://localhost:5001/api/payment/paypal/return
+      - PayPal__CancelUrl=http://localhost:5001/api/payment/paypal/cancel
     ports:
       - "5001:5000"
     depends_on:

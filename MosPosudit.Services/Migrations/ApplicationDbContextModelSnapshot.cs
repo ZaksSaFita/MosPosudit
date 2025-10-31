@@ -22,72 +22,6 @@ namespace MosPosudit.Services.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("MosPosudit.Services.DataBase.Data.Cart", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("LastModifiedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Notes")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("Carts");
-                });
-
-            modelBuilder.Entity("MosPosudit.Services.DataBase.Data.CartItem", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("CartId")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("DailyRate")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime>("EndDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Notes")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("Quantity")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("StartDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("ToolId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CartId");
-
-                    b.HasIndex("ToolId");
-
-                    b.ToTable("CartItems");
-                });
-
             modelBuilder.Entity("MosPosudit.Services.DataBase.Data.Category", b =>
                 {
                     b.Property<int>("Id")
@@ -108,50 +42,6 @@ namespace MosPosudit.Services.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Categories");
-                });
-
-            modelBuilder.Entity("MosPosudit.Services.DataBase.Data.MaintenanceLog", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<decimal>("Cost")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("MaintenanceDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("MaintenanceType")
-                        .HasColumnType("int");
-
-                    b.Property<int>("MaintenanceTypeId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("NextMaintenanceDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Notes")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("PerformedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("ToolId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ToolId");
-
-                    b.ToTable("MaintenanceLogs");
                 });
 
             modelBuilder.Entity("MosPosudit.Services.DataBase.Data.Message", b =>
@@ -231,151 +121,6 @@ namespace MosPosudit.Services.Migrations
                     b.ToTable("Notifications");
                 });
 
-            modelBuilder.Entity("MosPosudit.Services.DataBase.Data.Order", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("EndDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Notes")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("OrderDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("OrderNumber")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("PaymentMethodId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("StartDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
-
-                    b.Property<int>("StatusId")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("TotalAmount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PaymentMethodId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("Orders");
-                });
-
-            modelBuilder.Entity("MosPosudit.Services.DataBase.Data.OrderItem", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<decimal>("DailyRate")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime>("EndDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Notes")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("OrderId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Quantity")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("StartDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("ToolId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("OrderId");
-
-                    b.HasIndex("ToolId");
-
-                    b.ToTable("OrderItems");
-                });
-
-            modelBuilder.Entity("MosPosudit.Services.DataBase.Data.PaymentMethod", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("PaymentMethods");
-                });
-
-            modelBuilder.Entity("MosPosudit.Services.DataBase.Data.PaymentStatus", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("PaymentStatuses");
-                });
-
             modelBuilder.Entity("MosPosudit.Services.DataBase.Data.PaymentTransaction", b =>
                 {
                     b.Property<int>("Id")
@@ -391,35 +136,25 @@ namespace MosPosudit.Services.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("Description")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Notes")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("OrderId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("PaymentMethodId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("PaymentReference")
+                    b.Property<string>("PaymentMethod")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("ProcessedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("RefundReason")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("RefundedAt")
-                        .HasColumnType("datetime2");
-
                     b.Property<int>("RentalId")
                         .HasColumnType("int");
 
-                    b.Property<int>("StatusId")
-                        .HasColumnType("int");
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("TermsAccepted")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("TermsAcceptedAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime>("TransactionDate")
                         .HasColumnType("datetime2");
@@ -427,24 +162,12 @@ namespace MosPosudit.Services.Migrations
                     b.Property<string>("TransactionId")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("TransactionReference")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
                     b.Property<int>("UserId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OrderId");
-
-                    b.HasIndex("PaymentMethodId");
-
                     b.HasIndex("RentalId");
-
-                    b.HasIndex("StatusId");
 
                     b.HasIndex("UserId");
 
@@ -458,6 +181,12 @@ namespace MosPosudit.Services.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("ConfirmationEmailSent")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ConfirmationEmailSentAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -486,14 +215,13 @@ namespace MosPosudit.Services.Migrations
                     b.Property<int>("StatusId")
                         .HasColumnType("int");
 
-                    b.Property<int>("ToolId")
-                        .HasColumnType("int");
+                    b.Property<bool>("TermsAccepted")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("TermsAcceptedAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<decimal>("TotalAmount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("TotalPrice")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
@@ -504,8 +232,6 @@ namespace MosPosudit.Services.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("ToolId");
 
                     b.HasIndex("UserId");
 
@@ -562,6 +288,9 @@ namespace MosPosudit.Services.Migrations
                     b.Property<int>("Rating")
                         .HasColumnType("int");
 
+                    b.Property<int>("RentalId")
+                        .HasColumnType("int");
+
                     b.Property<int>("ToolId")
                         .HasColumnType("int");
 
@@ -572,6 +301,8 @@ namespace MosPosudit.Services.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("RentalId");
 
                     b.HasIndex("ToolId");
 
@@ -600,52 +331,6 @@ namespace MosPosudit.Services.Migrations
                     b.ToTable("Roles");
                 });
 
-            modelBuilder.Entity("MosPosudit.Services.DataBase.Data.SystemLog", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Action")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("AdditionalInfo")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Details")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Entity")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int?>("EntityId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("IpAddress")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("LogLevel")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Message")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("StackTrace")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("Timestamp")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Username")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("SystemLogs");
-                });
-
             modelBuilder.Entity("MosPosudit.Services.DataBase.Data.Tool", b =>
                 {
                     b.Property<int>("Id")
@@ -656,15 +341,6 @@ namespace MosPosudit.Services.Migrations
 
                     b.Property<int>("CategoryId")
                         .HasColumnType("int");
-
-                    b.Property<int>("Condition")
-                        .HasColumnType("int");
-
-                    b.Property<int>("ConditionId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
 
                     b.Property<decimal>("DailyRate")
                         .HasPrecision(18, 2)
@@ -683,14 +359,8 @@ namespace MosPosudit.Services.Migrations
                     b.Property<bool>("IsAvailable")
                         .HasColumnType("bit");
 
-                    b.Property<DateTime?>("LastMaintenanceDate")
-                        .HasColumnType("datetime2");
-
                     b.Property<string>("Name")
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("NextMaintenanceDate")
-                        .HasColumnType("datetime2");
 
                     b.Property<int>("Quantity")
                         .HasColumnType("int");
@@ -700,121 +370,6 @@ namespace MosPosudit.Services.Migrations
                     b.HasIndex("CategoryId");
 
                     b.ToTable("Tools");
-                });
-
-            modelBuilder.Entity("MosPosudit.Services.DataBase.Data.ToolDamageReport", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("DamageDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("DamageDescription")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("RentalId")
-                        .HasColumnType("int");
-
-                    b.Property<decimal?>("RepairCost")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("RepairStatus")
-                        .HasColumnType("int");
-
-                    b.Property<int>("RepairStatusId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("ReportedById")
-                        .HasColumnType("int");
-
-                    b.Property<int>("SeverityLevel")
-                        .HasColumnType("int");
-
-                    b.Property<int>("ToolId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("RentalId");
-
-                    b.HasIndex("ReportedById");
-
-                    b.HasIndex("ToolId");
-
-                    b.ToTable("ToolDamageReports");
-                });
-
-            modelBuilder.Entity("MosPosudit.Services.DataBase.Data.ToolImage", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("ImageUrl")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsPrimary")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("ToolId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ToolId");
-
-                    b.ToTable("ToolImages");
-                });
-
-            modelBuilder.Entity("MosPosudit.Services.DataBase.Data.ToolMaintenanceSchedule", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int?>("AssignedToId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("MaintenanceType")
-                        .HasColumnType("int");
-
-                    b.Property<int>("MaintenanceTypeId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Notes")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("PlannedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("ToolId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AssignedToId");
-
-                    b.HasIndex("ToolId");
-
-                    b.ToTable("ToolMaintenanceSchedules");
                 });
 
             modelBuilder.Entity("MosPosudit.Services.DataBase.Data.User", b =>
@@ -885,9 +440,6 @@ namespace MosPosudit.Services.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("Notes")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<int>("ToolId")
                         .HasColumnType("int");
 
@@ -901,47 +453,6 @@ namespace MosPosudit.Services.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("UserFavorites");
-                });
-
-            modelBuilder.Entity("MosPosudit.Services.DataBase.Data.Cart", b =>
-                {
-                    b.HasOne("MosPosudit.Services.DataBase.Data.User", "User")
-                        .WithMany("Carts")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("MosPosudit.Services.DataBase.Data.CartItem", b =>
-                {
-                    b.HasOne("MosPosudit.Services.DataBase.Data.Cart", "Cart")
-                        .WithMany("Items")
-                        .HasForeignKey("CartId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.HasOne("MosPosudit.Services.DataBase.Data.Tool", "Tool")
-                        .WithMany("CartItems")
-                        .HasForeignKey("ToolId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.Navigation("Cart");
-
-                    b.Navigation("Tool");
-                });
-
-            modelBuilder.Entity("MosPosudit.Services.DataBase.Data.MaintenanceLog", b =>
-                {
-                    b.HasOne("MosPosudit.Services.DataBase.Data.Tool", "Tool")
-                        .WithMany("MaintenanceLogs")
-                        .HasForeignKey("ToolId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Tool");
                 });
 
             modelBuilder.Entity("MosPosudit.Services.DataBase.Data.Message", b =>
@@ -980,67 +491,11 @@ namespace MosPosudit.Services.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("MosPosudit.Services.DataBase.Data.Order", b =>
-                {
-                    b.HasOne("MosPosudit.Services.DataBase.Data.PaymentMethod", "PaymentMethod")
-                        .WithMany()
-                        .HasForeignKey("PaymentMethodId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("MosPosudit.Services.DataBase.Data.User", "User")
-                        .WithMany("Orders")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("PaymentMethod");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("MosPosudit.Services.DataBase.Data.OrderItem", b =>
-                {
-                    b.HasOne("MosPosudit.Services.DataBase.Data.Order", "Order")
-                        .WithMany("OrderItems")
-                        .HasForeignKey("OrderId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.HasOne("MosPosudit.Services.DataBase.Data.Tool", "Tool")
-                        .WithMany("OrderItems")
-                        .HasForeignKey("ToolId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.Navigation("Order");
-
-                    b.Navigation("Tool");
-                });
-
             modelBuilder.Entity("MosPosudit.Services.DataBase.Data.PaymentTransaction", b =>
                 {
-                    b.HasOne("MosPosudit.Services.DataBase.Data.Order", "Order")
-                        .WithMany("Payments")
-                        .HasForeignKey("OrderId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.HasOne("MosPosudit.Services.DataBase.Data.PaymentMethod", "PaymentMethod")
-                        .WithMany()
-                        .HasForeignKey("PaymentMethodId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
                     b.HasOne("MosPosudit.Services.DataBase.Data.Rental", "Rental")
                         .WithMany("Payments")
                         .HasForeignKey("RentalId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.HasOne("MosPosudit.Services.DataBase.Data.PaymentStatus", "Status")
-                        .WithMany()
-                        .HasForeignKey("StatusId")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
@@ -1050,32 +505,18 @@ namespace MosPosudit.Services.Migrations
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
-                    b.Navigation("Order");
-
-                    b.Navigation("PaymentMethod");
-
                     b.Navigation("Rental");
-
-                    b.Navigation("Status");
 
                     b.Navigation("User");
                 });
 
             modelBuilder.Entity("MosPosudit.Services.DataBase.Data.Rental", b =>
                 {
-                    b.HasOne("MosPosudit.Services.DataBase.Data.Tool", "Tool")
-                        .WithMany()
-                        .HasForeignKey("ToolId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("MosPosudit.Services.DataBase.Data.User", "User")
                         .WithMany("Rentals")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Tool");
 
                     b.Navigation("User");
                 });
@@ -1101,6 +542,12 @@ namespace MosPosudit.Services.Migrations
 
             modelBuilder.Entity("MosPosudit.Services.DataBase.Data.Review", b =>
                 {
+                    b.HasOne("MosPosudit.Services.DataBase.Data.Rental", "Rental")
+                        .WithMany("Reviews")
+                        .HasForeignKey("RentalId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
                     b.HasOne("MosPosudit.Services.DataBase.Data.Tool", "Tool")
                         .WithMany("Reviews")
                         .HasForeignKey("ToolId")
@@ -1112,6 +559,8 @@ namespace MosPosudit.Services.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
+
+                    b.Navigation("Rental");
 
                     b.Navigation("Tool");
 
@@ -1127,62 +576,6 @@ namespace MosPosudit.Services.Migrations
                         .IsRequired();
 
                     b.Navigation("Category");
-                });
-
-            modelBuilder.Entity("MosPosudit.Services.DataBase.Data.ToolDamageReport", b =>
-                {
-                    b.HasOne("MosPosudit.Services.DataBase.Data.Rental", "Rental")
-                        .WithMany()
-                        .HasForeignKey("RentalId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("MosPosudit.Services.DataBase.Data.User", "ReportedBy")
-                        .WithMany("ReportedDamages")
-                        .HasForeignKey("ReportedById")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.HasOne("MosPosudit.Services.DataBase.Data.Tool", "Tool")
-                        .WithMany("DamageReports")
-                        .HasForeignKey("ToolId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.Navigation("Rental");
-
-                    b.Navigation("ReportedBy");
-
-                    b.Navigation("Tool");
-                });
-
-            modelBuilder.Entity("MosPosudit.Services.DataBase.Data.ToolImage", b =>
-                {
-                    b.HasOne("MosPosudit.Services.DataBase.Data.Tool", "Tool")
-                        .WithMany("Images")
-                        .HasForeignKey("ToolId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.Navigation("Tool");
-                });
-
-            modelBuilder.Entity("MosPosudit.Services.DataBase.Data.ToolMaintenanceSchedule", b =>
-                {
-                    b.HasOne("MosPosudit.Services.DataBase.Data.User", "AssignedTo")
-                        .WithMany("AssignedMaintenance")
-                        .HasForeignKey("AssignedToId")
-                        .OnDelete(DeleteBehavior.NoAction);
-
-                    b.HasOne("MosPosudit.Services.DataBase.Data.Tool", "Tool")
-                        .WithMany("MaintenanceSchedules")
-                        .HasForeignKey("ToolId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.Navigation("AssignedTo");
-
-                    b.Navigation("Tool");
                 });
 
             modelBuilder.Entity("MosPosudit.Services.DataBase.Data.User", b =>
@@ -1215,21 +608,9 @@ namespace MosPosudit.Services.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("MosPosudit.Services.DataBase.Data.Cart", b =>
-                {
-                    b.Navigation("Items");
-                });
-
             modelBuilder.Entity("MosPosudit.Services.DataBase.Data.Category", b =>
                 {
                     b.Navigation("Tools");
-                });
-
-            modelBuilder.Entity("MosPosudit.Services.DataBase.Data.Order", b =>
-                {
-                    b.Navigation("OrderItems");
-
-                    b.Navigation("Payments");
                 });
 
             modelBuilder.Entity("MosPosudit.Services.DataBase.Data.Rental", b =>
@@ -1237,6 +618,8 @@ namespace MosPosudit.Services.Migrations
                     b.Navigation("Payments");
 
                     b.Navigation("RentalItems");
+
+                    b.Navigation("Reviews");
                 });
 
             modelBuilder.Entity("MosPosudit.Services.DataBase.Data.Role", b =>
@@ -1246,19 +629,7 @@ namespace MosPosudit.Services.Migrations
 
             modelBuilder.Entity("MosPosudit.Services.DataBase.Data.Tool", b =>
                 {
-                    b.Navigation("CartItems");
-
-                    b.Navigation("DamageReports");
-
                     b.Navigation("Favorites");
-
-                    b.Navigation("Images");
-
-                    b.Navigation("MaintenanceLogs");
-
-                    b.Navigation("MaintenanceSchedules");
-
-                    b.Navigation("OrderItems");
 
                     b.Navigation("RentalItems");
 
@@ -1267,23 +638,15 @@ namespace MosPosudit.Services.Migrations
 
             modelBuilder.Entity("MosPosudit.Services.DataBase.Data.User", b =>
                 {
-                    b.Navigation("AssignedMaintenance");
-
-                    b.Navigation("Carts");
-
                     b.Navigation("Favorites");
 
                     b.Navigation("Notifications");
-
-                    b.Navigation("Orders");
 
                     b.Navigation("PaymentTransactions");
 
                     b.Navigation("ReceivedMessages");
 
                     b.Navigation("Rentals");
-
-                    b.Navigation("ReportedDamages");
 
                     b.Navigation("Reviews");
 

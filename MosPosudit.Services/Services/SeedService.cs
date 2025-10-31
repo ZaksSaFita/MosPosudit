@@ -1,7 +1,6 @@
 using System.Text.Json;
 using System.IO;
 using System.Linq;
-using MosPosudit.Model.Enums;
 using MosPosudit.Services.DataBase;
 using MosPosudit.Services.DataBase.Data;
 using MosPosudit.Services.Interfaces;
@@ -25,21 +24,7 @@ namespace MosPosudit.Services.Services
                 didChange = true;
             }
 
-            if (!db.PaymentMethods.Any())
-            {
-                db.PaymentMethods.AddRange(new PaymentMethod { Name = "Credit Card", Description = "Credit card" }, new PaymentMethod { Name = "Cash", Description = "Cash" });
-                didChange = true;
-            }
-
-            if (!db.PaymentStatuses.Any())
-            {
-                db.PaymentStatuses.AddRange(
-                    new PaymentStatus { Name = "Pending", Description = "Pending" },
-                    new PaymentStatus { Name = "Completed", Description = "Completed" },
-                    new PaymentStatus { Name = "Cancelled", Description = "Cancelled" }
-                );
-                didChange = true;
-            }
+            // PaymentMethod and PaymentStatus removed - using string fields in PaymentTransaction instead
 
             if (!db.Users.Any())
             {
@@ -175,10 +160,8 @@ namespace MosPosudit.Services.Services
                         Name = t.name,
                         Description = t.description,
                         CategoryId = mappedCatId,
-                        ConditionId = (int)ToolCondition.Good,
                         DailyRate = t.dailyPrice,
                         Quantity = 1,
-                        CreatedAt = DateTime.UtcNow,
                         IsAvailable = t.available,
                         DepositAmount = 0
                         // ImageBase64 remains null - Flutter will load from assets based on name

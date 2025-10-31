@@ -9,9 +9,9 @@ namespace MosPosudit.Services.DataBase.Data
 
         public string? Name { get; set; }
 
-        public string Description { get; set; }
+        public string Description { get; set; } = string.Empty;
 
         // Navigation properties
-        public ICollection<User> Users { get; set; }
+        public ICollection<User> Users { get; set; } = new List<User>();
     }
 } 

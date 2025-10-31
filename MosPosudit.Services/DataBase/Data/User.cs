@@ -8,52 +8,48 @@ namespace MosPosudit.Services.DataBase.Data
         [Key]
         public int Id { get; set; }
 
-        public string? FirstName { get; set; } = null;
+        public string? FirstName { get; set; }
 
-        public string? LastName { get; set; } = null;
+        public string? LastName { get; set; }
 
-        public string? Email { get; set; } = null;
+        public string? Email { get; set; }
 
-        public string? PhoneNumber { get; set; } = null;
+        public string? PhoneNumber { get; set; }
 
-        public string? Username { get; set; } = null;
+        public string? Username { get; set; }
 
-        public string? PasswordHash { get; set; } = null;
+        public string? PasswordHash { get; set; }
 
         public DateTime? PasswordUpdateDate { get; set; }
 
         [ForeignKey("Role")]
-        public int RoleId { get; set; } = 2; // Default to User role
-        public Role Role { get; set; }
+        public int RoleId { get; set; }
+        public Role Role { get; set; } = null!;
 
         public byte[]? Picture { get; set; }
 
 
         // information about the user
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime CreatedAt { get; set; }
 
-        public DateTime UpdateDate { get; set; } = DateTime.UtcNow;
+        public DateTime UpdateDate { get; set; }
 
         public DateTime? LastLogin { get; set; }
 
-        public bool IsActive { get; set; } = true;
+        public bool IsActive { get; set; }
 
         public DateTime? DeactivationDate { get; set; }
 
         // Navigation properties
 
-        public virtual ICollection<Rental> Rentals { get; set; }
-        public virtual ICollection<Review> Reviews { get; set; }
-        public virtual ICollection<PaymentTransaction> PaymentTransactions { get; set; }
-        public virtual ICollection<Cart> Carts { get; set; }
-        public virtual ICollection<Order> Orders { get; set; }
-        public virtual ICollection<Notification> Notifications { get; set; }
-        public virtual ICollection<UserFavorite> Favorites { get; set; }
-        public virtual ICollection<ToolDamageReport> ReportedDamages { get; set; }
-        public virtual ICollection<ToolMaintenanceSchedule> AssignedMaintenance { get; set; }
-        public virtual ICollection<Message> SentMessages { get; set; }
-        public virtual ICollection<Message> ReceivedMessages { get; set; }
-        public virtual ICollection<Message> StartedChats { get; set; }
+        public virtual ICollection<Rental> Rentals { get; set; } = new List<Rental>();
+        public virtual ICollection<PaymentTransaction> PaymentTransactions { get; set; } = new List<PaymentTransaction>();
+        public virtual ICollection<Review> Reviews { get; set; } = new List<Review>();
+        public virtual ICollection<UserFavorite> Favorites { get; set; } = new List<UserFavorite>();
+        public virtual ICollection<Notification> Notifications { get; set; } = new List<Notification>();
+        public virtual ICollection<Message> SentMessages { get; set; } = new List<Message>();
+        public virtual ICollection<Message> ReceivedMessages { get; set; } = new List<Message>();
+        public virtual ICollection<Message> StartedChats { get; set; } = new List<Message>();
 
         [NotMapped]
         public string FullName => $"{FirstName} {LastName}";

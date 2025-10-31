@@ -22,6 +22,6 @@ namespace MosPosudit.Services.DataBase.Data
 
         // Navigation properties
         [ForeignKey("UserId")]
-        public User User { get; set; }
+        public User User { get; set; } = null!;
     }
 } 

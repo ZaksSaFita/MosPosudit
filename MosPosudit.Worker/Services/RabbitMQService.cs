@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
+using RabbitMQ.Client.Exceptions;
 using System.Text;
 
 namespace MosPosudit.Worker.Services
@@ -21,16 +22,53 @@ namespace MosPosudit.Worker.Services
             {
                 HostName = configuration["RabbitMQ:Host"],
                 UserName = configuration["RabbitMQ:Username"],
-                Password = configuration["RabbitMQ:Password"]
+                Password = configuration["RabbitMQ:Password"],
+                AutomaticRecoveryEnabled = true,
+                NetworkRecoveryInterval = TimeSpan.FromSeconds(10)
             };
 
-            _connection = factory.CreateConnection();
+            // Retry logic for connecting to RabbitMQ
+            var maxRetries = 30;
+            var retryDelay = TimeSpan.FromSeconds(2);
+            IConnection? connection = null;
+
+            for (int i = 0; i < maxRetries; i++)
+            {
+                try
+                {
+                    _logger.LogInformation("Attempting to connect to RabbitMQ (attempt {Attempt}/{MaxRetries})...", i + 1, maxRetries);
+                    connection = factory.CreateConnection();
+                    _logger.LogInformation("Successfully connected to RabbitMQ");
+                    break;
+                }
+                catch (BrokerUnreachableException ex)
+                {
+                    if (i == maxRetries - 1)
+                    {
+                        _logger.LogError(ex, "Failed to connect to RabbitMQ after {MaxRetries} attempts", maxRetries);
+                        throw;
+                    }
+                    _logger.LogWarning("RabbitMQ not ready yet, waiting {Delay} seconds before retry...", retryDelay.TotalSeconds);
+                    Thread.Sleep(retryDelay);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Unexpected error connecting to RabbitMQ");
+                    if (i == maxRetries - 1)
+                        throw;
+                    Thread.Sleep(retryDelay);
+                }
+            }
+
+            _connection = connection ?? throw new InvalidOperationException("Failed to establish RabbitMQ connection");
             _channel = _connection.CreateModel();
 
             // Declare queues
             _channel.QueueDeclare("notifications", durable: true, exclusive: false, autoDelete: false);
             _channel.QueueDeclare("emails", durable: true, exclusive: false, autoDelete: false);
             _channel.QueueDeclare("rental_reminders", durable: true, exclusive: false, autoDelete: false);
+            
+            _logger.LogInformation("RabbitMQ queues declared successfully");
         }
 
         public void PublishMessage<T>(string queueName, T message)

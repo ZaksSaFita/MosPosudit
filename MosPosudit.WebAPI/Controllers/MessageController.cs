@@ -9,7 +9,7 @@ namespace MosPosudit.WebAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    // [Authorize] // Commented for testing
+    [Authorize]
     public class MessageController : ControllerBase
     {
         private readonly IChatService _chatService;

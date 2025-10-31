@@ -20,8 +20,8 @@ namespace MosPosudit.Services.DataBase.Data
 
         // Navigation properties
         [ForeignKey("RentalId")]
-        public Rental Rental { get; set; }
+        public Rental Rental { get; set; } = null!;
         [ForeignKey("ToolId")]
-        public Tool Tool { get; set; }
+        public Tool Tool { get; set; } = null!;
     }
 } 

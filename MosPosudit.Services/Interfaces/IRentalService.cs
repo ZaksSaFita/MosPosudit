@@ -15,7 +15,8 @@ namespace MosPosudit.Services.Interfaces
         Task<RentalResponse> DeleteAsResponse(int id);
         Task<IEnumerable<RentalResponse>> GetByUserId(int userId);
         Task<bool> CheckAvailability(int toolId, DateTime startDate, DateTime endDate);
-        Task<IEnumerable<DateTime>> GetBookedDates(int toolId, DateTime startDate, DateTime endDate);
+        Task<IEnumerable<DateTime>> GetBookedDates(int toolId, DateTime? startDate, DateTime? endDate);
+        Task<object> GeneratePaymentLinkAsync(int rentalId, string baseUrl);
     }
 }
 

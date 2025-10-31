@@ -17,6 +17,10 @@ namespace MosPosudit.Model.Responses.Rental
         public bool IsReturned { get; set; }
         public DateTime? ReturnDate { get; set; }
         public string? ReturnNotes { get; set; }
+        public bool TermsAccepted { get; set; }
+        public DateTime? TermsAcceptedAt { get; set; }
+        public bool ConfirmationEmailSent { get; set; }
+        public DateTime? ConfirmationEmailSentAt { get; set; }
         public List<RentalItemResponse> Items { get; set; } = new();
     }
 

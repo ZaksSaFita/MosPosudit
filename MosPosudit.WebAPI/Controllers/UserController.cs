@@ -12,6 +12,7 @@ namespace MosPosudit.WebAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class UserController : BaseCrudController<User, UserSearchObject, UserInsertRequest, UserUpdateRequest, UserPatchRequest>
     {
         private readonly IUserService _userService;
@@ -25,33 +26,25 @@ namespace MosPosudit.WebAPI.Controllers
         // Public endpoints
         [HttpPost("register")]
         [AllowAnonymous]
-        public async Task<ActionResult<User>> Register([FromBody] UserRegisterRequest request)
+        public async Task<ActionResult<UserResponse>> Register([FromBody] UserRegisterRequest request)
         {
             try
             {
                 if (request == null)
                     return BadRequest(ErrorMessages.InvalidRequest);
 
-                // Konvertujemo RegisterRequest u InsertRequest i postavljamo RoleId na User
-                var insertRequest = new UserInsertRequest
-                {
-                    FirstName = request.FirstName,
-                    LastName = request.LastName,
-                    Email = request.Email,
-                    PhoneNumber = request.PhoneNumber,
-                    Username = request.Username,
-                    Password = request.Password,
-                    RoleId = 2 // Pretpostavljamo da je 2 ID za User rolu
-                };
-
-                var result = await _userService.Insert(insertRequest);
-                return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
+                var result = await _userService.RegisterAsResponse(request);
+                return CreatedAtAction(nameof(GetUserDetails), new { id = result.Id }, result);
             }
             catch (ValidationException ex)
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception ex)
+            catch (ConflictException ex)
+            {
+                return Conflict(ex.Message);
+            }
+            catch (Exception)
             {
                 return StatusCode(500, ErrorMessages.ServerError);
             }
@@ -59,14 +52,14 @@ namespace MosPosudit.WebAPI.Controllers
 
         // Admin only endpoints
         [HttpPost]
-        // [Authorize(Roles = "Admin")] // Zakomentarisano za testiranje
+        [Authorize(Roles = "Admin")]
         public override async Task<ActionResult<User>> Insert([FromBody] UserInsertRequest request)
         {
             return await base.Insert(request);
         }
 
         [HttpPut("{id}")]
-        // [Authorize(Roles = "Admin")] // Zakomentarisano za testiranje
+        [Authorize(Roles = "Admin")]
         public override async Task<ActionResult<User>> Update(int id, [FromBody] UserUpdateRequest request)
         {
             return await base.Update(id, request);
@@ -95,22 +88,8 @@ namespace MosPosudit.WebAPI.Controllers
         {
             try
             {
-                var user = await _userService.GetById(id);
-                return Ok(new UserResponse
-                {
-                    Id = user.Id,
-                    FirstName = user.FirstName,
-                    LastName = user.LastName,
-                    Email = user.Email,
-                    PhoneNumber = user.PhoneNumber,
-                    Username = user.Username,
-                    Picture = user.Picture != null ? Convert.ToBase64String(user.Picture) : null,
-                    RoleId = user.RoleId,
-                    RoleName = user.Role?.Name,
-                    IsActive = user.IsActive,
-                    CreatedAt = user.CreatedAt,
-                    LastLogin = user.LastLogin
-                });
+                var result = await _userService.GetUserDetailsAsResponse(id);
+                return Ok(result);
             }
             catch (NotFoundException ex)
             {
@@ -120,14 +99,14 @@ namespace MosPosudit.WebAPI.Controllers
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return StatusCode(500, ErrorMessages.ServerError);
             }
         }
 
         [HttpPost("{id}/deactivate")]
-        // [Authorize(Roles = "Admin")] // Zakomentarisano za testiranje
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult> DeactivateUser(int id)
         {
             try
@@ -142,7 +121,7 @@ namespace MosPosudit.WebAPI.Controllers
         }
 
         [HttpPost("{id}/activate")]
-        // [Authorize(Roles = "Admin")] // Zakomentarisano za testiranje
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult> ActivateUser(int id)
         {
             try
@@ -167,22 +146,8 @@ namespace MosPosudit.WebAPI.Controllers
                     return Unauthorized();
                 }
 
-                var updatedUser = await _userService.UpdateProfile(userId, request);
-                return Ok(new UserResponse
-                {
-                    Id = updatedUser.Id,
-                    FirstName = updatedUser.FirstName,
-                    LastName = updatedUser.LastName,
-                    Email = updatedUser.Email,
-                    PhoneNumber = updatedUser.PhoneNumber,
-                    Username = updatedUser.Username,
-                    Picture = updatedUser.Picture != null ? Convert.ToBase64String(updatedUser.Picture) : null,
-                    RoleId = updatedUser.RoleId,
-                    RoleName = updatedUser.Role?.Name,
-                    IsActive = updatedUser.IsActive,
-                    CreatedAt = updatedUser.CreatedAt,
-                    LastLogin = updatedUser.LastLogin
-                });
+                var result = await _userService.UpdateProfileAsResponse(userId, request);
+                return Ok(result);
             }
             catch (NotFoundException ex)
             {
@@ -196,7 +161,7 @@ namespace MosPosudit.WebAPI.Controllers
             {
                 return Conflict(ex.Message);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return StatusCode(500, ErrorMessages.ServerError);
             }
@@ -247,13 +212,14 @@ namespace MosPosudit.WebAPI.Controllers
                 }
                 return Ok("If the email exists in our system, you will receive a password reset link.");
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return StatusCode(500, ErrorMessages.ServerError);
             }
         }
 
         [HttpGet("check-username/{username}")]
+        [AllowAnonymous]
         public async Task<ActionResult<bool>> CheckUsernameExists(string username)
         {
             var exists = await _userService.CheckUsernameExists(username);
@@ -261,6 +227,7 @@ namespace MosPosudit.WebAPI.Controllers
         }
 
         [HttpGet("check-email/{email}")]
+        [AllowAnonymous]
         public async Task<ActionResult<bool>> CheckEmailExists(string email)
         {
             var exists = await _userService.CheckEmailExists(email);
@@ -268,7 +235,7 @@ namespace MosPosudit.WebAPI.Controllers
         }
 
         [HttpGet("active")]
-        // [Authorize(Roles = "Admin")] // Zakomentarisano za testiranje
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<IEnumerable<User>>> GetActiveUsers()
         {
             var users = await _userService.GetActiveUsers();
@@ -276,7 +243,7 @@ namespace MosPosudit.WebAPI.Controllers
         }
 
         [HttpGet("inactive")]
-        // [Authorize(Roles = "Admin")] // Zakomentarisano za testiranje
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<IEnumerable<User>>> GetInactiveUsers()
         {
             var users = await _userService.GetInactiveUsers();
@@ -293,38 +260,33 @@ namespace MosPosudit.WebAPI.Controllers
         [HttpPost("{id}/upload-picture")]
         public async Task<ActionResult<UserResponse>> UploadPicture(int id, IFormFile file)
         {
-            if (file == null || file.Length == 0)
-                return BadRequest("Nema slike za upload.");
+            try
+            {
+                if (file == null || file.Length == 0)
+                    return BadRequest("Nema slike za upload.");
 
-            var user = await _userService.GetById(id);
-            using (var ms = new MemoryStream())
-            {
-                await file.CopyToAsync(ms);
-                user.Picture = ms.ToArray();
+                byte[] pictureBytes;
+                using (var ms = new MemoryStream())
+                {
+                    await file.CopyToAsync(ms);
+                    pictureBytes = ms.ToArray();
+                }
+
+                var result = await _userService.UploadPictureAsResponse(id, pictureBytes);
+                return Ok(result);
             }
-            await _userService.Update(user.Id, new MosPosudit.Model.Requests.User.UserUpdateRequest
+            catch (NotFoundException ex)
             {
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                Email = user.Email,
-                PhoneNumber = user.PhoneNumber,
-                Username = user.Username,
-                RoleId = user.RoleId,
-                Picture = user.Picture
-            });
-            // Pretpostavljamo da postoji metoda/mapiranje za UserResponse
-            return Ok(new UserResponse
+                return NotFound(ex.Message);
+            }
+            catch (ValidationException ex)
             {
-                Id = user.Id,
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                Email = user.Email,
-                PhoneNumber = user.PhoneNumber,
-                Username = user.Username,
-                RoleId = user.RoleId,
-                Picture = user.Picture != null ? Convert.ToBase64String(user.Picture) : null,
-                RoleName = user.Role?.Name
-            });
+                return BadRequest(ex.Message);
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, ErrorMessages.ServerError);
+            }
         }
 
         [HttpDelete("{id}/picture")]
@@ -332,23 +294,20 @@ namespace MosPosudit.WebAPI.Controllers
         {
             try
             {
-                var user = await _userService.GetById(id);
-                user.Picture = null;
-                await _userService.Update(user.Id, new MosPosudit.Model.Requests.User.UserUpdateRequest
-                {
-                    FirstName = user.FirstName,
-                    LastName = user.LastName,
-                    Email = user.Email,
-                    PhoneNumber = user.PhoneNumber,
-                    Username = user.Username,
-                    RoleId = user.RoleId,
-                    Picture = null
-                });
+                await _userService.DeletePictureAsResponse(id);
                 return Ok("Slika uspješno uklonjena.");
             }
             catch (NotFoundException ex)
             {
                 return NotFound(ex.Message);
+            }
+            catch (ValidationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, ErrorMessages.ServerError);
             }
         }
 
@@ -362,22 +321,9 @@ namespace MosPosudit.WebAPI.Controllers
                 {
                     return Unauthorized();
                 }
-                var user = await _userService.GetById(userId);
-                return Ok(new UserResponse
-                {
-                    Id = user.Id,
-                    FirstName = user.FirstName,
-                    LastName = user.LastName,
-                    Email = user.Email,
-                    PhoneNumber = user.PhoneNumber,
-                    Username = user.Username,
-                    Picture = user.Picture != null ? Convert.ToBase64String(user.Picture) : null,
-                    RoleId = user.RoleId,
-                    RoleName = user.Role?.Name,
-                    IsActive = user.IsActive,
-                    CreatedAt = user.CreatedAt,
-                    LastLogin = user.LastLogin
-                });
+
+                var result = await _userService.GetMeAsResponse(userId);
+                return Ok(result);
             }
             catch (NotFoundException ex)
             {
@@ -387,7 +333,7 @@ namespace MosPosudit.WebAPI.Controllers
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return StatusCode(500, ErrorMessages.ServerError);
             }

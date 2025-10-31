@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace MosPosudit.Services.DataBase.Data
@@ -12,7 +12,9 @@ namespace MosPosudit.Services.DataBase.Data
 
         public int ToolId { get; set; }
 
-        public int Rating { get; set; }
+        public int RentalId { get; set; } // Link to rental that was reviewed
+
+        public int Rating { get; set; } // 1-5 stars
 
         public string? Comment { get; set; }
 
@@ -22,8 +24,13 @@ namespace MosPosudit.Services.DataBase.Data
 
         // Navigation properties
         [ForeignKey("UserId")]
-        public User User { get; set; }
+        public User User { get; set; } = null!;
+        
         [ForeignKey("ToolId")]
-        public Tool Tool { get; set; }
+        public Tool Tool { get; set; } = null!;
+        
+        [ForeignKey("RentalId")]
+        public Rental Rental { get; set; } = null!;
     }
-} 
+}
+

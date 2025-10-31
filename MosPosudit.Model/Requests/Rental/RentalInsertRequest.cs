@@ -16,6 +16,9 @@ namespace MosPosudit.Model.Requests.Rental
         [MinLength(1, ErrorMessage = "At least one rental item is required")]
         public List<RentalItemInsertRequest> Items { get; set; } = new();
 
+        [Required(ErrorMessage = "Terms of Service must be accepted")]
+        public bool TermsAccepted { get; set; }
+
         // UserId will be set from authenticated user context, not from request
         public int UserId { get; set; }
     }

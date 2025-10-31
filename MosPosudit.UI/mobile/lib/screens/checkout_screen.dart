@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:mosposudit_shared/models/cart.dart';
 import 'package:mosposudit_shared/services/rental_service.dart';
 import 'package:mosposudit_shared/services/cart_service.dart';
@@ -195,12 +196,79 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       await _cartService.clearCart();
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Rental request created successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        // Check rental status
+        // StatusId: 0 = Pending, 1 = Active
+        final isActive = rental.statusId == 1; // Active status
+        
+        if (isActive) {
+          // Generate payment link and redirect to PayPal
+          final paymentData = await _rentalService.generatePaymentLink(rental.id);
+          
+          if (paymentData != null && paymentData['paymentLink'] != null) {
+            final paymentLink = paymentData['paymentLink'] as String;
+            
+            // Show dialog asking to proceed to payment
+            final shouldProceed = await showDialog<bool>(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Reservation Created'),
+                content: Text(
+                  'Your reservation has been confirmed!\n\n'
+                  'Total: €${rental.totalAmount.toStringAsFixed(2)}\n\n'
+                  'Proceed to PayPal payment?',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: const Text('Pay Later'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () => Navigator.of(context).pop(true),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text('Pay Now'),
+                  ),
+                ],
+              ),
+            );
+            
+            if (shouldProceed == true) {
+              // Open PayPal payment link
+              final uri = Uri.parse(paymentLink);
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              } else {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Could not open payment link'),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                }
+              }
+            }
+          } else {
+            // Active but payment link generation failed
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Reservation created successfully! Please contact support for payment.'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        } else {
+          // Pending status - requires admin approval
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Reservation request submitted! Waiting for admin approval.'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 5),
+            ),
+          );
+        }
 
         // Navigate back to home/cart screen
         Navigator.of(context).popUntil((route) => route.isFirst);

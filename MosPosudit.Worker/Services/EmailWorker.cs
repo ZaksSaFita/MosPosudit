@@ -60,10 +60,11 @@ namespace MosPosudit.Worker.Services
 
         private async Task SendEmailAsync(EmailMessage message)
         {
-            var smtpHost = _configuration["SMTP:Host"];
-            var smtpPort = int.Parse(_configuration["SMTP:Port"]);
-            var smtpUsername = _configuration["SMTP:Username"];
-            var smtpPassword = _configuration["SMTP:Password"];
+            var smtpHost = _configuration["SMTP:Host"] ?? throw new InvalidOperationException("SMTP:Host is not configured");
+            var smtpPortString = _configuration["SMTP:Port"] ?? throw new InvalidOperationException("SMTP:Port is not configured");
+            var smtpPort = int.Parse(smtpPortString);
+            var smtpUsername = _configuration["SMTP:Username"] ?? throw new InvalidOperationException("SMTP:Username is not configured");
+            var smtpPassword = _configuration["SMTP:Password"] ?? throw new InvalidOperationException("SMTP:Password is not configured");
             var enableSsl = bool.Parse(_configuration["SMTP:EnableSsl"] ?? "true");
 
             using var client = new SmtpClient(smtpHost, smtpPort)
