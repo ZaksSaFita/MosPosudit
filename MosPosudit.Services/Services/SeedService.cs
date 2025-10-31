@@ -65,6 +65,34 @@ namespace MosPosudit.Services.Services
                         CreatedAt = now,
                         UpdateDate = now,
                         PasswordUpdateDate = now
+                    },
+                    new User
+                    {
+                        FirstName = "Desktop",
+                        LastName = "Admin",
+                        Username = "desktop",
+                        Email = "desktop@mosposudit.com",
+                        PhoneNumber = "111111111",
+                        PasswordHash = BCrypt.Net.BCrypt.HashPassword("test"),
+                        RoleId = adminRoleId,
+                        IsActive = true,
+                        CreatedAt = now,
+                        UpdateDate = now,
+                        PasswordUpdateDate = now
+                    },
+                    new User
+                    {
+                        FirstName = "Mobile",
+                        LastName = "User",
+                        Username = "mobile",
+                        Email = "mobile@mosposudit.com",
+                        PhoneNumber = "222222222",
+                        PasswordHash = BCrypt.Net.BCrypt.HashPassword("test"),
+                        RoleId = userRoleId,
+                        IsActive = true,
+                        CreatedAt = now,
+                        UpdateDate = now,
+                        PasswordUpdateDate = now
                     }
                 );
                 didChange = true;

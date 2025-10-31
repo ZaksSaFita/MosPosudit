@@ -1,11 +1,12 @@
 // API Configuration
-// Using emulator IP address (10.0.2.2 maps to host's localhost)
-const String _apiHost = '10.0.2.2';
-const int _apiPort = 5001;
+// Uses --dart-define=API_URL=http://10.0.2.2:5001/api for Android emulator
+// Or use --dart-define=API_URL=http://YOUR_IP:5001/api for physical device
+const String _defaultApiUrl = 'http://10.0.2.2:5001/api';
+const String _apiUrlFromEnv = String.fromEnvironment('API_URL', defaultValue: _defaultApiUrl);
 
-// Get API base URL - always uses emulator IP
+// Get API base URL - uses dart-define or default
 String getApiBaseUrl() {
-  final url = 'http://$_apiHost:$_apiPort/api';
+  final url = _apiUrlFromEnv;
   print('Using API URL: $url');
   return url;
 }

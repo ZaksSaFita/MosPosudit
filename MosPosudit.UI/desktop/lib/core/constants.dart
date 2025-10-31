@@ -1,6 +1,8 @@
 // API Configuration
-// For Docker setup, use the API service name
-const String apiBaseUrl = 'http://localhost:5001/api';
+// Uses --dart-define=API_URL=http://localhost:5001/api
+// Or use --dart-define=API_URL=http://YOUR_IP:5001/api if needed
+const String _defaultApiUrl = 'http://localhost:5001/api';
+const String apiBaseUrl = String.fromEnvironment('API_URL', defaultValue: _defaultApiUrl);
 
 // App Configuration
 const String appName = 'MosPosudit Desktop';

@@ -22,18 +22,28 @@ git clone <repository-url>
 cd MosPosudit
 ```
 
-### 2. Update configuration
-Before running, update the following:
+### 2. Configure environment variables
+
+Copy `.env.example` to `.env` and update the configuration:
+
+```bash
+cp .env.example .env
+```
+
+**Edit `.env` file with your configuration:**
+
+- **Database**: Update `SQL_SERVER_PASSWORD` and `DATABASE_NAME` if needed
+- **RabbitMQ**: Update `RABBITMQ_USERNAME` and `RABBITMQ_PASSWORD` if needed
+- **JWT**: Update `JWT_KEY` (must be at least 32 characters)
+- **PayPal**: Update `PAYPAL_CLIENT_ID` and `PAYPAL_SECRET` with your PayPal credentials
+- **SMTP**: Update `SMTP_USERNAME` and `SMTP_PASSWORD` with your email credentials
+  - For Gmail, you'll need to generate an App Password
+- **API**: Update `API_PORT` if needed (default: 5001)
 
 **For Mobile App**: 
-- Open `MosPosudit.UI/mobile/lib/core/constants.dart`
-- Replace `192.168.1.100` with your computer's actual IP address
+- When running on physical device, use `--dart-define=API_URL=http://YOUR_IP:5001/api`
+- For Android emulator, default `10.0.2.2` is used automatically
 - To find your IP address, run `ipconfig` in Command Prompt and look for "IPv4 Address"
-
-**For Email Service**:
-- Open `MosPosudit.Worker/appsettings.json`
-- Update SMTP settings with your email credentials
-- For Gmail, you'll need to generate an App Password
 
 ### 3. Start all services
 ```bash
@@ -167,7 +177,7 @@ cd MosPosudit.UI/mobile && flutter run
 4. **Worker**: Run `dotnet run` in `MosPosudit.Worker`
    - Worker will process background tasks
 
-**Note**: For mobile development, you'll still need to update the IP address in `constants.dart`
+**Note**: For mobile development on physical devices, use `--dart-define=API_URL=http://YOUR_IP:5001/api` when running Flutter. For emulator, default `10.0.2.2` is used automatically.
 
 ### Flutter Development
 
@@ -175,13 +185,18 @@ cd MosPosudit.UI/mobile && flutter run
 # Desktop
 cd MosPosudit.UI/desktop
 flutter pub get
-flutter run -d windows
+flutter run -d windows --dart-define=API_URL=http://localhost:5001/api
 
-# Mobile
+# Mobile (Android Emulator - 10.0.2.2 maps to host's localhost)
 cd MosPosudit.UI/mobile
 flutter pub get
-flutter run
+flutter run --dart-define=API_URL=http://10.0.2.2:5001/api
+
+# Mobile (Physical Device - replace YOUR_IP with your computer's IP)
+flutter run --dart-define=API_URL=http://YOUR_IP:5001/api
 ```
+
+**Note**: API URL can be configured via `--dart-define` parameter. Default values are set in `constants.dart` files.
 
 ## 📋 Features
 
@@ -251,11 +266,24 @@ If you're getting "check your internet connection" error on mobile:
 
 ## 📝 Notes
 
-- All configuration is externalized in appsettings.json files
+- All configuration is externalized in `.env` file for Docker deployment
+- For local development without Docker, use `appsettings.json` files
+- `.env` file is in `.gitignore` - copy `.env.example` and configure your values
 - No hardcoded values in the application
 - Follows microservices best practices
 - Implements proper error handling and validation
 - Uses English language for all user-facing text
 - Mobile app requires your computer's IP address for network connectivity
 - Docker setup provides complete isolation and easy deployment
-- RabbitMQ enables reliable message queuing between services 
+- RabbitMQ enables reliable message queuing between services
+
+## 🔒 Environment Variables
+
+All sensitive configuration is stored in `.env` file (not committed to git):
+- Database credentials
+- JWT secret key
+- PayPal API credentials
+- SMTP email credentials
+- RabbitMQ credentials
+
+Make sure to create `.env` from `.env.example` and update with your values before running `docker-compose up`. 

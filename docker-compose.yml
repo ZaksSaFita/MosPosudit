@@ -4,9 +4,11 @@ services:
   # SQL Server Database
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
+    env_file:
+      - .env
     environment:
       - ACCEPT_EULA=Y
-      - SA_PASSWORD=YourStrong@Passw0rd
+      - SA_PASSWORD=${SQL_SERVER_PASSWORD}
       - MSSQL_PID=Express
     ports:
       - "1433:1433"
@@ -15,7 +17,7 @@ services:
     networks:
       - mosposudit-network
     healthcheck:
-      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'YourStrong@Passw0rd' -Q 'SELECT 1' -C || exit 1"]
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P '${SQL_SERVER_PASSWORD}' -Q 'SELECT 1' -C || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 30
@@ -24,9 +26,11 @@ services:
   # RabbitMQ for inter-service communication
   rabbitmq:
     image: rabbitmq:3-management
+    env_file:
+      - .env
     environment:
-      - RABBITMQ_DEFAULT_USER=admin
-      - RABBITMQ_DEFAULT_PASS=admin123
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USERNAME}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD}
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -46,22 +50,24 @@ services:
     build:
       context: .
       dockerfile: MosPosudit.WebAPI/Dockerfile
+    env_file:
+      - .env
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=220116;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=true
+      - ASPNETCORE_ENVIRONMENT=${API_ENVIRONMENT}
+      - ConnectionStrings__DefaultConnection=${DB_CONNECTION_STRING}
       - RabbitMQ__Host=rabbitmq
-      - RabbitMQ__Username=admin
-      - RabbitMQ__Password=admin123
-      - JWT__Key=your-super-secret-key-with-at-least-32-characters-for-jwt-signing
-      - JWT__Issuer=MosPosudit
-      - JWT__Audience=MosPosuditUsers
-      - PayPal__ClientId=AWqqXS_Ajm-bKV0J3bxC6wkGwybqHkWtI1Ry77Po6cYbPdX8Od6QR-WLg3Z2VvDSPGvn8_wZCaGdtwei
-      - PayPal__Secret=ECQ7TCBhQRGP2_nq_cS7A2q8r83xxBd4ZyA4bisiVugUwphQhKgSpx92ZJAxcNvV7k0D6i41_s5o3pek
-      - PayPal__Mode=sandbox
-      - PayPal__ReturnUrl=http://localhost:5001/api/payment/paypal/return
-      - PayPal__CancelUrl=http://localhost:5001/api/payment/paypal/cancel
+      - RabbitMQ__Username=${RABBITMQ_USERNAME}
+      - RabbitMQ__Password=${RABBITMQ_PASSWORD}
+      - JWT__Key=${JWT_KEY}
+      - JWT__Issuer=${JWT_ISSUER}
+      - JWT__Audience=${JWT_AUDIENCE}
+      - PayPal__ClientId=${PAYPAL_CLIENT_ID}
+      - PayPal__Secret=${PAYPAL_SECRET}
+      - PayPal__Mode=${PAYPAL_MODE}
+      - PayPal__ReturnUrl=${PAYPAL_RETURN_URL}
+      - PayPal__CancelUrl=${PAYPAL_CANCEL_URL}
     ports:
-      - "5001:5000"
+      - "${API_PORT}:5000"
     depends_on:
       sqlserver:
         condition: service_healthy
@@ -75,16 +81,19 @@ services:
     build:
       context: .
       dockerfile: MosPosudit.Worker/Dockerfile
+    env_file:
+      - .env
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=220116;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=true
+      - ASPNETCORE_ENVIRONMENT=${API_ENVIRONMENT}
+      - ConnectionStrings__DefaultConnection=${DB_CONNECTION_STRING}
       - RabbitMQ__Host=rabbitmq
-      - RabbitMQ__Username=admin
-      - RabbitMQ__Password=admin123
-      - SMTP__Host=smtp.gmail.com
-      - SMTP__Port=587
-      - SMTP__Username=your-email@gmail.com
-      - SMTP__Password=your-app-password
+      - RabbitMQ__Username=${RABBITMQ_USERNAME}
+      - RabbitMQ__Password=${RABBITMQ_PASSWORD}
+      - SMTP__Host=${SMTP_HOST}
+      - SMTP__Port=${SMTP_PORT}
+      - SMTP__Username=${SMTP_USERNAME}
+      - SMTP__Password=${SMTP_PASSWORD}
+      - SMTP__EnableSsl=${SMTP_ENABLE_SSL}
     depends_on:
       sqlserver:
         condition: service_healthy

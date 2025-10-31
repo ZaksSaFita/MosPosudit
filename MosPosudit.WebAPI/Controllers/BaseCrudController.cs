@@ -9,7 +9,7 @@ namespace MosPosudit.WebAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    // [Authorize] // Zakomentarisano za testiranje
+    [Authorize]
     public abstract class BaseCrudController<T, TSearch, TInsert, TUpdate, TPatch> : ControllerBase
         where T : class
         where TSearch : BaseSearchObject
@@ -133,7 +133,7 @@ namespace MosPosudit.WebAPI.Controllers
         }
 
         [HttpDelete("{id}")]
-        // [Authorize(Roles = "Admin")] // Zakomentarisano za testiranje
+        [Authorize(Roles = "Admin")]
         public virtual async Task<ActionResult<T>> Delete(int id)
         {
             try
