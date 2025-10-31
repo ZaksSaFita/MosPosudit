@@ -14,9 +14,11 @@ namespace MosPosudit.Model.Requests.User
         public string? Username { get; set; }
 
         [StringLength(100)]
+        [EmailAddress]
         public string? Email { get; set; }
 
         [StringLength(20)]
+        [Phone]
         public string? PhoneNumber { get; set; }
 
 

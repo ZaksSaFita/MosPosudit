@@ -8,10 +8,8 @@ namespace MosPosudit.Services.DataBase.Data
         [Key]
         public int Id { get; set; }
 
-        [Required]
         public int UserId { get; set; }
 
-        [Required]
         public DateTime CreatedAt { get; set; }
 
         public DateTime? LastModifiedAt { get; set; }

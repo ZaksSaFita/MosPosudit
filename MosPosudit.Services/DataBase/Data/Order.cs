@@ -9,25 +9,18 @@ namespace MosPosudit.Services.DataBase.Data
         [Key]
         public int Id { get; set; }
 
-        [Required]
         public int UserId { get; set; }
 
-        [Required]
         public DateTime OrderDate { get; set; }
 
-        [Required]
         public DateTime StartDate { get; set; }
 
-        [Required]
         public DateTime EndDate { get; set; }
 
-        [Required]
         public decimal TotalAmount { get; set; }
 
-        [Required]
         public int StatusId { get; set; }
 
-        [Required]
         public int PaymentMethodId { get; set; }
 
         public string? OrderNumber { get; set; }
@@ -42,12 +35,5 @@ namespace MosPosudit.Services.DataBase.Data
         public PaymentMethod PaymentMethod { get; set; }
         public ICollection<OrderItem> OrderItems { get; set; }
         public ICollection<PaymentTransaction> Payments { get; set; }
-
-        // Logging properties
-        [NotMapped]
-        public string EntityName => "Order";
-
-        [NotMapped]
-        public string DisplayName => $"Order #{Id} - {User?.Username}";
     }
 }

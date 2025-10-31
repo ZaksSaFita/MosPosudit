@@ -9,28 +9,20 @@ namespace MosPosudit.Services.DataBase.Data
         [Key]
         public int Id { get; set; }
 
-        [Required]
         public int UserId { get; set; }
 
-        [Required]
         public DateTime StartDate { get; set; }
 
-        [Required]
         public DateTime EndDate { get; set; }
 
-        [Required]
         public int StatusId { get; set; }
 
-        [Required]
-        [Range(0.01, double.MaxValue)]
         public decimal TotalPrice { get; set; }
 
         public DateTime CreatedAt { get; set; }
 
-        [MaxLength(500)]
         public string? Notes { get; set; }
 
-        [Required]
         public int ToolId { get; set; }
         [ForeignKey("ToolId")]
         public Tool Tool { get; set; }

@@ -1,13 +1,35 @@
-import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:typed_data';
+import 'dart:ui';
+import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:mosposudit_shared/services/auth_service.dart';
+import 'package:mosposudit_shared/services/tool_service.dart';
+import 'package:mosposudit_shared/models/tool.dart';
+import 'package:mosposudit_shared/models/category.dart';
+import 'package:mosposudit_shared/core/config.dart';
 import 'core/constants.dart';
-import 'services/auth_service.dart';
 import 'screens/edit_profile_screen.dart';
+import 'screens/home_screen.dart';
 
 void main() {
+  // Add error handling
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+    print('Flutter Error: ${details.exception}');
+    print('Stack trace: ${details.stack}');
+  };
+
+  // Handle errors from async operations
+  PlatformDispatcher.instance.onError = (error, stack) {
+    print('Platform Error: $error');
+    print('Stack trace: $stack');
+    return true;
+  };
+
+  AppConfig.instance = AppConfig(apiBaseUrl: apiBaseUrl); // apiBaseUrl from constants.dart
   runApp(const MosPosuditMobileApp());
 }
 
@@ -17,7 +39,7 @@ class MosPosuditMobileApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: '$appName - Klijent',
+      title: 'MosPosudit - Klijent',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
@@ -45,27 +67,71 @@ class _AuthWrapperState extends State<AuthWrapper> {
   }
 
   Future<void> _checkAuthStatus() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
-    final user = prefs.getString('user');
-    
-    setState(() {
-      _isLoggedIn = token != null && user != null;
-      _isLoading = false;
-    });
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      final user = prefs.getString('user');
+      
+      if (mounted) {
+        setState(() {
+          _isLoggedIn = token != null && user != null;
+          _isLoading = false;
+        });
+      }
+    } catch (e, stackTrace) {
+      print('Error checking auth status: $e');
+      print('Stack trace: $stackTrace');
+      if (mounted) {
+        setState(() {
+          _isLoggedIn = false;
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Scaffold(
+        backgroundColor: Colors.white,
         body: Center(
           child: CircularProgressIndicator(),
         ),
       );
     }
     
-    return _isLoggedIn ? const ClientHomeScreen() : const LoginScreen();
+    try {
+      return _isLoggedIn ? const ClientHomeScreen() : const LoginScreen();
+    } catch (e, stackTrace) {
+      print('Error building AuthWrapper: $e');
+      print('Stack trace: $stackTrace');
+      return Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 64, color: Colors.red),
+              const SizedBox(height: 16),
+              const Text('Error loading app'),
+              const SizedBox(height: 8),
+              Text(e.toString(), textAlign: TextAlign.center),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    _isLoading = true;
+                  });
+                  _checkAuthStatus();
+                },
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
   }
 }
 
@@ -123,7 +189,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse('$apiBaseUrl/Auth/login'),
+        Uri.parse('${AppConfig.instance.apiBaseUrl}/Auth/login'),
         headers: {
           'Content-Type': 'application/json',
         },
@@ -153,7 +219,7 @@ class _LoginScreenState extends State<LoginScreen> {
         
         // Get complete user data including role from /User/me endpoint
         final userResponse = await http.get(
-          Uri.parse('$apiBaseUrl/User/me'),
+          Uri.parse('${AppConfig.instance.apiBaseUrl}/User/me'),
           headers: {
             'Authorization': 'Bearer ${data['token']}',
           },
@@ -373,9 +439,10 @@ class ClientHomeScreen extends StatefulWidget {
 }
 
 class _ClientHomeScreenState extends State<ClientHomeScreen> {
-  int _selectedIndex = 0;
+  int _selectedIndex = 0; // Back to HomeScreen
 
   final List<Widget> _pages = [
+    const HomeScreen(),
     const ToolsPage(),
     const MyRentalsPage(),
     const ProfilePage(),
@@ -383,113 +450,415 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Use same colors as desktop (Colors.blue)
+    const primaryBlue = Colors.blue;
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('MošPosudit'),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              final prefs = await SharedPreferences.getInstance();
-              await prefs.clear();
-              if (context.mounted) {
-                Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(builder: (context) => const AuthWrapper()),
-                );
-              }
-            },
-          ),
-        ],
-      ),
       body: _pages[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.build),
-            label: 'Tools',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.assignment),
-            label: 'My Rentals',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-        ],
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          color: primaryBlue,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 4,
+              offset: Offset(0, -2),
+            ),
+          ],
+        ),
+        child: BottomNavigationBar(
+          currentIndex: _selectedIndex,
+          onTap: (index) {
+            setState(() {
+              _selectedIndex = index;
+            });
+          },
+          backgroundColor: Colors.transparent,
+          selectedItemColor: Colors.white,
+          unselectedItemColor: Colors.white70,
+          selectedFontSize: 12,
+          unselectedFontSize: 12,
+          type: BottomNavigationBarType.fixed,
+          elevation: 0,
+          items: [
+            BottomNavigationBarItem(
+              icon: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _selectedIndex == 0 ? Colors.white.withOpacity(0.2) : Colors.transparent,
+                ),
+                child: Icon(
+                  _selectedIndex == 0 ? Icons.home : Icons.home_outlined,
+                  size: 24,
+                ),
+              ),
+              label: 'Početna',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(
+                _selectedIndex == 1 ? Icons.build : Icons.build_outlined,
+                size: 24,
+              ),
+              label: 'Alati',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(
+                _selectedIndex == 2 ? Icons.assignment : Icons.assignment_outlined,
+                size: 24,
+              ),
+              label: 'Moja iznajmljivanja',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(
+                _selectedIndex == 3 ? Icons.person : Icons.person_outline,
+                size: 24,
+              ),
+              label: 'Profil',
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-class ToolsPage extends StatelessWidget {
+class ToolsPage extends StatefulWidget {
   const ToolsPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Available Tools',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+  State<ToolsPage> createState() => _ToolsPageState();
+}
+
+class _ToolsPageState extends State<ToolsPage> {
+  final _toolService = ToolService();
+  List<ToolModel> _tools = [];
+  List<CategoryModel> _categories = [];
+  bool _isLoading = true;
+  String? _error;
+  int? _selectedCategoryId;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final results = await Future.wait([
+        _toolService.fetchTools(),
+        _toolService.fetchCategories(),
+      ]);
+
+      setState(() {
+        _tools = results[0] as List<ToolModel>;
+        _categories = results[1] as List<CategoryModel>;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  List<ToolModel> get _filteredTools {
+    if (_selectedCategoryId == null) return _tools.where((t) => t.isAvailable == true).toList();
+    return _tools.where((tool) => tool.categoryId == _selectedCategoryId && tool.isAvailable == true).toList();
+  }
+
+  String? _getCategoryName(int? categoryId) {
+    if (categoryId == null) return null;
+    final category = _categories.firstWhere(
+      (c) => c.id == categoryId,
+      orElse: () => CategoryModel(id: 0),
+    );
+    return category.id != 0 ? category.name : null;
+  }
+
+  String _generateImageFileName(String? name) {
+    if (name == null || name.isEmpty) return '';
+    return name.toLowerCase().replaceAll(' ', '_').replaceAll(RegExp(r'[^a-z0-9_]'), '') + '.jpg';
+  }
+
+  Widget _buildToolImage(ToolModel tool) {
+    // Priority: base64 > asset filename (generated from name) > default icon
+    if (tool.imageBase64 != null && tool.imageBase64!.isNotEmpty) {
+      try {
+        final bytes = base64Decode(tool.imageBase64!);
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Image.memory(
+            bytes,
+            width: 60,
+            height: 60,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              print('Error loading base64 image: $error');
+              return _defaultIcon();
+            },
           ),
-          const SizedBox(height: 16),
-          Expanded(
-            child: ListView(
-              children: [
-                                  Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.build, size: 40, color: Colors.blue),
-                      title: const Text('Grinder'),
-                      subtitle: const Text('Professional metal grinder'),
-                      trailing: ElevatedButton(
-                        onPressed: () {
-                          // Navigate to tool details
-                        },
-                        child: const Text('Rent'),
+        );
+      } catch (e) {
+        print('Exception loading base64 image: $e');
+        return _defaultIcon();
+      }
+    } else if (tool.name != null && tool.name!.isNotEmpty) {
+      final fileName = _generateImageFileName(tool.name);
+      if (fileName.isNotEmpty) {
+        final assetPath = 'packages/mosposudit_shared/assets/images/tools/$fileName';
+        print('Attempting to load asset: $assetPath');
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Image.asset(
+            assetPath,
+            width: 60,
+            height: 60,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              print('Error loading asset image: $assetPath, error: $error');
+              return _defaultIcon();
+            },
+          ),
+        );
+      }
+    }
+    print('No image for tool: ${tool.name}, imageBase64: ${tool.imageBase64 != null ? "exists" : "null"}');
+    return _defaultIcon();
+  }
+
+  Widget _defaultIcon() {
+    return Container(
+      width: 60,
+      height: 60,
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Icon(Icons.build, size: 32, color: Colors.blue.shade700),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return RefreshIndicator(
+      onRefresh: _loadData,
+      child: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Dostupni alati',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  // Category filter chips
+                  if (_categories.isNotEmpty)
+                    SizedBox(
+                      height: 50,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(right: 8.0),
+                            child: FilterChip(
+                              label: const Text('Sve'),
+                              selected: _selectedCategoryId == null,
+                              onSelected: (selected) {
+                                if (selected) {
+                                  setState(() => _selectedCategoryId = null);
+                                }
+                              },
+                            ),
+                          ),
+                          ..._categories.map((category) => Padding(
+                            padding: const EdgeInsets.only(right: 8.0),
+                            child: FilterChip(
+                              label: Text(category.name ?? 'Nepoznato'),
+                              selected: _selectedCategoryId == category.id,
+                              onSelected: (selected) {
+                                setState(() => _selectedCategoryId = selected ? category.id : null);
+                              },
+                            ),
+                          )),
+                        ],
                       ),
                     ),
-                  ),
-                                  Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.build, size: 40, color: Colors.green),
-                      title: const Text('Drill'),
-                      subtitle: const Text('Electric drill 18V'),
-                      trailing: ElevatedButton(
-                        onPressed: () {
-                          // Navigate to tool details
-                        },
-                        child: const Text('Rent'),
-                      ),
-                    ),
-                  ),
-                                  Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.build, size: 40, color: Colors.orange),
-                      title: const Text('Hammer'),
-                      subtitle: const Text('Hammer 2kg'),
-                      trailing: ElevatedButton(
-                        onPressed: () {
-                          // Navigate to tool details
-                        },
-                        child: const Text('Rent'),
-                      ),
-                    ),
-                  ),
-              ],
+                  const SizedBox(height: 16),
+                ],
+              ),
             ),
           ),
+          if (_isLoading)
+            const SliverFillRemaining(
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (_error != null)
+            SliverFillRemaining(
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                    const SizedBox(height: 16),
+                    Text('Greška: $_error', style: const TextStyle(color: Colors.red)),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: _loadData,
+                      child: const Text('Pokušaj ponovo'),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else if (_filteredTools.isEmpty)
+            const SliverFillRemaining(
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.build_circle_outlined, size: 64, color: Colors.grey),
+                    SizedBox(height: 16),
+                    Text('Nema dostupnih alata', style: TextStyle(color: Colors.grey, fontSize: 18)),
+                  ],
+                ),
+              ),
+            )
+          else
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final tool = _filteredTools[index];
+                    final categoryName = _getCategoryName(tool.categoryId);
+                    
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: InkWell(
+                        onTap: () {
+                          // TODO: Navigate to tool details
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Row(
+                            children: [
+                              _buildToolImage(tool),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      tool.name ?? 'Nepoznat alat',
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    if (categoryName != null) ...[
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        categoryName,
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                      ),
+                                    ],
+                                    if (tool.description != null && tool.description!.isNotEmpty) ...[
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        tool.description!,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        Text(
+                                          '${tool.dailyRate?.toStringAsFixed(2) ?? '0.00'} KM',
+                                          style: const TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.blue,
+                                          ),
+                                        ),
+                                        const Text(
+                                          ' / dan',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.grey,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Column(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.green.shade100,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.check_circle, size: 16, color: Colors.green.shade700),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          'Dostupno',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.green.shade700,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      // TODO: Navigate to rental
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.blue,
+                                      foregroundColor: Colors.white,
+                                    ),
+                                    child: const Text('Rezerviši'),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                  childCount: _filteredTools.length,
+                ),
+              ),
+            ),
         ],
       ),
     );

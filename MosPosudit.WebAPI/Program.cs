@@ -11,7 +11,13 @@ using System.Security.Claims;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+        options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+        options.JsonSerializerOptions.WriteIndented = true;
+    });
 
 // Configure DbContext
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -28,6 +34,9 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddSingleton<IMessageService, MessageService>();
+builder.Services.AddScoped<ISeedService, SeedService>();
+builder.Services.AddScoped<IToolService, ToolService>();
+builder.Services.AddScoped<ICategoryService, CategoryService>();
 
 // Configure JWT Authentication
 builder.Services.AddAuthentication(options =>
@@ -37,15 +46,21 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
+    var jwtKey = builder.Configuration["Jwt:Key"] 
+        ?? throw new InvalidOperationException("JWT Key is not configured. Please set Jwt:Key in configuration.");
+    
+    if (jwtKey.Length < 32)
+        throw new InvalidOperationException("JWT Key must be at least 32 characters long.");
+    
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
         ValidateAudience = true,
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
-        ValidIssuer = builder.Configuration["Jwt:Issuer"],
-        ValidAudience = builder.Configuration["Jwt:Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"])),
+        ValidIssuer = builder.Configuration["Jwt:Issuer"] ?? "MosPosudit",
+        ValidAudience = builder.Configuration["Jwt:Audience"] ?? "MosPosuditUsers",
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
         RoleClaimType = ClaimTypes.Role
     };
 });
@@ -103,11 +118,52 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// Automatsko pokretanje migracija baze
-using (var scope = app.Services.CreateScope())
+// Migracije i seeding izvršavaju se pre pokretanja servera
+try
 {
-    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    db.Database.Migrate();
+    using (var scope = app.Services.CreateScope())
+    {
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+        var masterConnectionString = connectionString?.Replace("Database=220116;", "Database=master;");
+        
+        // Wait for SQL Server to be ready
+        var maxRetries = 30;
+        var retryCount = 0;
+        while (retryCount < maxRetries)
+        {
+            try
+            {
+                var optionsBuilder = new DbContextOptionsBuilder<ApplicationDbContext>();
+                optionsBuilder.UseSqlServer(masterConnectionString);
+                using (var testContext = new ApplicationDbContext(optionsBuilder.Options))
+                {
+                    if (testContext.Database.CanConnect())
+                        break;
+                }
+            }
+            catch
+            {
+                retryCount++;
+                if (retryCount >= maxRetries)
+                    throw;
+                Thread.Sleep(2000);
+            }
+        }
+        
+        // Run migrations (EF Core will create database if it doesn't exist)
+        db.Database.Migrate();
+        
+        // Seed database
+        var seeder = scope.ServiceProvider.GetRequiredService<ISeedService>();
+        seeder.SeedIfEmpty(db, builder.Environment.ContentRootPath);
+    }
+}
+catch (Exception ex)
+{
+    var logger = app.Services.GetRequiredService<ILogger<Program>>();
+    logger.LogError(ex, "An error occurred while setting up the database.");
+    throw;
 }
 
 app.Run();

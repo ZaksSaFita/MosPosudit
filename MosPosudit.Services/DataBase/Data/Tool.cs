@@ -9,39 +9,29 @@ namespace MosPosudit.Services.DataBase.Data
         [Key]
         public int Id { get; set; }
 
-        [Required]
-        [StringLength(100)]
         public string? Name { get; set; }
 
-        [Required]
-        [StringLength(1000)]
         public string? Description { get; set; }
 
-        [Required]
         public int CategoryId { get; set; }
 
-        [Required]
         public int ConditionId { get; set; }
 
-        [Required]
-        [Range(0.01, double.MaxValue)]
         public decimal DailyRate { get; set; }
 
-        [Required]
         public int Quantity { get; set; }
 
-        [Required]
         public DateTime CreatedAt { get; set; }
 
-        [Required]
         public bool IsAvailable { get; set; }
 
         // Add missing properties
-        [Required]
-        [Range(0, double.MaxValue)]
         public decimal DepositAmount { get; set; }
         public DateTime? LastMaintenanceDate { get; set; }
         public DateTime? NextMaintenanceDate { get; set; }
+
+        // Image stored as base64 (null for seeded data - Flutter will load from assets based on name)
+        public string? ImageBase64 { get; set; }
 
         // Navigation properties
         [ForeignKey("CategoryId")]
@@ -56,12 +46,5 @@ namespace MosPosudit.Services.DataBase.Data
         public ICollection<MaintenanceLog> MaintenanceLogs { get; set; }
         public ICollection<ToolMaintenanceSchedule> MaintenanceSchedules { get; set; }
         public ICollection<ToolImage> Images { get; set; }
-
-        // Logging properties
-        [NotMapped]
-        public string EntityName => "Tool";
-
-        [NotMapped]
-        public string DisplayName => $"{Name} ({Category?.Name})";
     }
 }

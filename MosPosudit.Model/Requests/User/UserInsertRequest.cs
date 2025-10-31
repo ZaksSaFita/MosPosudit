@@ -22,6 +22,7 @@ namespace MosPosudit.Model.Requests.User
         public string? PhoneNumber { get; set; }
 
         [StringLength(100, ErrorMessage = "Password cannot be longer than 100 characters")]
+        [MinLength(8, ErrorMessage = "Password must be at least 8 characters long")]
         public string? Password { get; set; }
 
         public byte[]? Picture { get; set; }

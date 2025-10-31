@@ -14,6 +14,12 @@ services:
       - sqlserver_data:/var/opt/mssql
     networks:
       - mosposudit-network
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'YourStrong@Passw0rd' -Q 'SELECT 1' -C || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
 
   # RabbitMQ for inter-service communication
   rabbitmq:
@@ -28,6 +34,12 @@ services:
       - rabbitmq_data:/var/lib/rabbitmq
     networks:
       - mosposudit-network
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
 
   # Main API Service
   api:
@@ -40,14 +52,16 @@ services:
       - RabbitMQ__Host=rabbitmq
       - RabbitMQ__Username=admin
       - RabbitMQ__Password=admin123
-      - JWT__SecretKey=your-super-secret-key-with-at-least-32-characters
+      - JWT__Key=your-super-secret-key-with-at-least-32-characters-for-jwt-signing
       - JWT__Issuer=MosPosudit
       - JWT__Audience=MosPosuditUsers
     ports:
       - "5001:5000"
     depends_on:
-      - sqlserver
-      - rabbitmq
+      sqlserver:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     networks:
       - mosposudit-network
 
@@ -67,8 +81,10 @@ services:
       - SMTP__Username=your-email@gmail.com
       - SMTP__Password=your-app-password
     depends_on:
-      - sqlserver
-      - rabbitmq
+      sqlserver:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     networks:
       - mosposudit-network
 

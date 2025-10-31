@@ -8,23 +8,16 @@ namespace MosPosudit.Services.DataBase.Data
         [Key]
         public int Id { get; set; }
 
-        [StringLength(50)]
         public string? FirstName { get; set; } = null;
 
-        [StringLength(50)]
         public string? LastName { get; set; } = null;
 
-        [EmailAddress]
-        [StringLength(100)]
         public string? Email { get; set; } = null;
 
-        [StringLength(20)]
         public string? PhoneNumber { get; set; } = null;
 
-        [StringLength(50)]
         public string? Username { get; set; } = null;
 
-        [StringLength(100)]
         public string? PasswordHash { get; set; } = null;
 
         public DateTime? PasswordUpdateDate { get; set; }
@@ -58,10 +51,6 @@ namespace MosPosudit.Services.DataBase.Data
         public virtual ICollection<UserFavorite> Favorites { get; set; }
         public virtual ICollection<ToolDamageReport> ReportedDamages { get; set; }
         public virtual ICollection<ToolMaintenanceSchedule> AssignedMaintenance { get; set; }
-
-        // Logging properties
-        [NotMapped]
-        public string EntityName => "User";
 
         [NotMapped]
         public string FullName => $"{FirstName} {LastName}";

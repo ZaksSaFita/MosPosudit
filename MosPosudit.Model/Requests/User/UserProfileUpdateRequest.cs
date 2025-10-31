@@ -18,6 +18,7 @@ namespace MosPosudit.Model.Requests.User
         public string? Email { get; set; }
 
         [StringLength(20)]
+        [Phone]
         public string? PhoneNumber { get; set; }
 
         public byte[]? Picture { get; set; }

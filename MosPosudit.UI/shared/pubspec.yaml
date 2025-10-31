@@ -1,0 +1,21 @@
+name: mosposudit_shared
+description: Shared UI code for MosPosudit (models, services, config)
+publish_to: 'none'
+
+environment:
+  sdk: ^3.8.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.1.0
+  shared_preferences: ^2.2.2
+
+flutter:
+  uses-material-design: false
+  
+  # Assets for tool and category images (seeded data)
+  assets:
+    - assets/images/tools/
+    - assets/images/categories/
+

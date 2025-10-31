@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../services/dashboard_service.dart';
+import 'package:mosposudit_shared/services/dashboard_service.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});

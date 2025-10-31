@@ -5,7 +5,7 @@ import 'dart:typed_data';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
-import '../services/user_service.dart';
+import 'package:mosposudit_shared/services/user_service.dart';
 import '../core/constants.dart';
 
 class EditProfileScreen extends StatefulWidget {

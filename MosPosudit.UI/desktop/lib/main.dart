@@ -3,10 +3,14 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/users_screen.dart';
+import 'screens/tools_screen.dart';
+import 'screens/categories_screen.dart';
+import 'package:mosposudit_shared/core/config.dart';
 import 'widgets/sidebar.dart';
 import 'core/constants.dart';
 
 void main() {
+  AppConfig.instance = AppConfig(apiBaseUrl: apiBaseUrl);
   runApp(const MosPosuditDesktopApp());
 }
 
@@ -383,26 +387,25 @@ class AdminDashboard extends StatefulWidget {
 }
 
 class _AdminDashboardState extends State<AdminDashboard> {
-  int _selectedIndex = 0;
+int _selectedIndex = 0;
 
   final List<Widget> _pages = [
     const DashboardPage(),
-    const ToolsManagementPage(),
-    const CategoriesManagementPage(),
-    const UsersManagementPage(),
-    const RentalsManagementPage(),
-    const ReportsPage(),
+    const ToolsManagementPage(), // All Tools
+    const CategoriesManagementPage(), // Add Tools (temporary, should be Add Tool page)
+    const ToolsManagementPage(), // Reviews (temporary)
+    const UsersManagementPage(), // All Users
+    const UsersManagementPage(), // Add User (temporary, should be Add User page)
+    const RentalsManagementPage(), // Active Reservations
+    const RentalsManagementPage(), // History
+    const ReportsPage(), // Reports
+    const SettingsPage(), // Settings
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('MosPosudit - Administration'),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
-        elevation: 4,
-      ),
+      backgroundColor: Colors.white,
       body: Row(
         children: [
           Sidebar(
@@ -491,73 +494,8 @@ class DashboardPage extends StatelessWidget {
   }
 }
 
-class ToolsManagementPage extends StatelessWidget {
-  const ToolsManagementPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.all(24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Tools management',
-            style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-          ),
-          SizedBox(height: 24),
-          Card(
-            child: Padding(
-              padding: EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  Icon(Icons.build, size: 64, color: Colors.blue),
-                  SizedBox(height: 16),
-                  Text('Feature in development', style: TextStyle(fontSize: 18)),
-                  Text('CRUD operations for tools will be implemented', style: TextStyle(color: Colors.grey)),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class CategoriesManagementPage extends StatelessWidget {
-  const CategoriesManagementPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.all(24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Categories management',
-            style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-          ),
-          SizedBox(height: 24),
-          Card(
-            child: Padding(
-              padding: EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  Icon(Icons.category, size: 64, color: Colors.green),
-                  SizedBox(height: 16),
-                  Text('Feature in development', style: TextStyle(fontSize: 18)),
-                  Text('CRUD operations for categories will be implemented', style: TextStyle(color: Colors.grey)),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+// ToolsManagementPage is now imported from screens/tools_screen.dart
+// CategoriesManagementPage is now imported from screens/categories_screen.dart
 
 class RentalsManagementPage extends StatelessWidget {
   const RentalsManagementPage({super.key});
@@ -617,6 +555,40 @@ class ReportsPage extends StatelessWidget {
                   SizedBox(height: 16),
                   Text('Feature in development', style: TextStyle(fontSize: 18)),
                   Text('Reports will be implemented', style: TextStyle(color: Colors.grey)),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class SettingsPage extends StatelessWidget {
+  const SettingsPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.all(24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Settings',
+            style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+          ),
+          SizedBox(height: 24),
+          Card(
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: Column(
+                children: [
+                  Icon(Icons.settings, size: 64, color: Colors.grey),
+                  SizedBox(height: 16),
+                  Text('Feature in development', style: TextStyle(fontSize: 18)),
+                  Text('Settings will be implemented', style: TextStyle(color: Colors.grey)),
                 ],
               ),
             ),
