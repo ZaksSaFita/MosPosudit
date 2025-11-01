@@ -45,8 +45,11 @@ namespace MosPosudit.Services.Services
 
             // 2. Get popular/trending tools (40%)
             var popularCount = (int)(count * 0.4);
-            var popular = await GetPopularRecommendationsAsync(popularCount, addedToolIds);
-            recommendations.AddRange(popular);
+            if (popularCount > 0)
+            {
+                var popular = await GetPopularRecommendationsAsync(popularCount, addedToolIds);
+                recommendations.AddRange(popular);
+            }
 
             // 3. Get top rated tools (30%)
             var topRatedCount = count - recommendations.Count;
@@ -64,7 +67,25 @@ namespace MosPosudit.Services.Services
                 recommendations.AddRange(fillers);
             }
 
-            return recommendations.Take(count).ToList();
+            // If still no recommendations (user has no history or no data in system), return default recommendations
+            // This ensures we always return something if there are tools available
+            if (recommendations.Count == 0)
+            {
+                var defaultRecommendations = await GetDefaultRecommendationsAsync(count);
+                // Final safety check: if default also returns empty, try any available tools without exclusions
+                if (defaultRecommendations.Count == 0)
+                {
+                    defaultRecommendations = await GetAvailableToolsAsync(count, new HashSet<int>());
+                }
+                // If we got something from defaults, return it
+                if (defaultRecommendations.Count > 0)
+                {
+                    return defaultRecommendations;
+                }
+                // Last resort: return empty list (no tools in system)
+            }
+
+            return recommendations.Count > 0 ? recommendations.Take(count).ToList() : new List<ToolResponse>();
         }
 
         /// <summary>
@@ -94,6 +115,14 @@ namespace MosPosudit.Services.Services
             {
                 var remaining = count - recommendations.Count;
                 var fillers = await GetAvailableToolsFromSameCategoryAsync(toolId, remaining, addedToolIds);
+                recommendations.AddRange(fillers);
+            }
+
+            // If still not enough, fill with any available tools from any category
+            if (recommendations.Count < count)
+            {
+                var remaining = count - recommendations.Count;
+                var fillers = await GetAvailableToolsAsync(remaining, addedToolIds);
                 recommendations.AddRange(fillers);
             }
 
@@ -379,6 +408,48 @@ namespace MosPosudit.Services.Services
                 .ToListAsync();
 
             return tools.Select(t => _mapper.Map<ToolResponse>(t)).ToList();
+        }
+
+        /// <summary>
+        /// Gets default recommendations when user has no history (popular and top rated tools)
+        /// </summary>
+        private async Task<List<ToolResponse>> GetDefaultRecommendationsAsync(int count)
+        {
+            var recommendations = new List<ToolResponse>();
+            var addedToolIds = new HashSet<int>();
+
+            // Try to get popular tools first (40%)
+            var popularCount = (int)(count * 0.4);
+            if (popularCount > 0)
+            {
+                var popular = await GetPopularRecommendationsAsync(popularCount, addedToolIds);
+                recommendations.AddRange(popular);
+            }
+
+            // Fill with top rated (30%)
+            if (recommendations.Count < count)
+            {
+                var remaining = count - recommendations.Count;
+                var topRated = await GetTopRatedRecommendationsAsync(remaining, addedToolIds);
+                recommendations.AddRange(topRated);
+            }
+
+            // If still not enough (or both popular and top rated returned empty), get any available tools
+            // This ensures we always return something if there are any tools in the system
+            if (recommendations.Count < count)
+            {
+                var remaining = count - recommendations.Count;
+                var fillers = await GetAvailableToolsAsync(remaining, addedToolIds);
+                recommendations.AddRange(fillers);
+            }
+
+            // Final fallback: if we still have nothing, try without exclusions
+            if (recommendations.Count == 0)
+            {
+                recommendations = await GetAvailableToolsAsync(count, new HashSet<int>());
+            }
+
+            return recommendations.Take(count).ToList();
         }
     }
 }

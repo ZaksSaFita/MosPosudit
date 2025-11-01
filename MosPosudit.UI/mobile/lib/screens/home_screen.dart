@@ -54,6 +54,10 @@ class _HomeScreenState extends State<HomeScreen> {
           _tools = tools;
           _categories = categories;
           _recommendedTools = recommendations;
+          // If recommendations are empty, fallback to available tools
+          if (_recommendedTools.isEmpty) {
+            _recommendedTools = tools.where((t) => t.isAvailable == true && (t.quantity ?? 0) > 0).take(6).toList();
+          }
           // Reset carousel index ako je veći od broja kategorija
           if (_currentCarouselIndex >= categories.length) {
             _currentCarouselIndex = 0;
@@ -68,8 +72,10 @@ class _HomeScreenState extends State<HomeScreen> {
         setState(() {
           _isLoading = false;
           _isLoadingRecommendations = false;
-          // Fallback to first 4 available tools if recommendations fail
-          _recommendedTools = _tools.where((t) => t.isAvailable == true).take(4).toList();
+          // Fallback to first 6 available tools if recommendations fail or are empty
+          if (_recommendedTools.isEmpty) {
+            _recommendedTools = _tools.where((t) => t.isAvailable == true && (t.quantity ?? 0) > 0).take(6).toList();
+          }
         });
       }
     }

@@ -1,10 +1,12 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:mosposudit_shared/models/tool.dart';
 import 'package:mosposudit_shared/services/cart_service.dart';
 import 'dart:convert';
 import 'package:mosposudit_shared/services/utility_service.dart';
+import '../screens/cart_screen.dart';
 
-class CartRecommendationsDialog extends StatelessWidget {
+class CartRecommendationsDialog extends StatefulWidget {
   final List<ToolModel> recommendations;
   final VoidCallback onCartUpdated;
 
@@ -13,6 +15,46 @@ class CartRecommendationsDialog extends StatelessWidget {
     required this.recommendations,
     required this.onCartUpdated,
   });
+
+  @override
+  State<CartRecommendationsDialog> createState() => _CartRecommendationsDialogState();
+}
+
+class _CartRecommendationsDialogState extends State<CartRecommendationsDialog> {
+  Timer? _autoDismissTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    // Auto-dismiss after 3 seconds
+    _autoDismissTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _autoDismissTimer?.cancel();
+    super.dispose();
+  }
+
+  void _closeDialog() {
+    _autoDismissTimer?.cancel();
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
+  }
+
+  void _navigateToCart() {
+    _closeDialog();
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const CartScreen(),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,13 +79,13 @@ class CartRecommendationsDialog extends StatelessWidget {
                 ),
                 IconButton(
                   icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.of(context).pop(),
+                  onPressed: _closeDialog,
                 ),
               ],
             ),
             const SizedBox(height: 16),
             Flexible(
-              child: recommendations.isEmpty
+              child: widget.recommendations.isEmpty
                   ? const Center(
                       child: Padding(
                         padding: EdgeInsets.all(20),
@@ -52,10 +94,10 @@ class CartRecommendationsDialog extends StatelessWidget {
                     )
                   : ListView.separated(
                       shrinkWrap: true,
-                      itemCount: recommendations.length,
+                      itemCount: widget.recommendations.length,
                       separatorBuilder: (_, __) => const Divider(height: 1),
                       itemBuilder: (context, index) {
-                        final tool = recommendations[index];
+                        final tool = widget.recommendations[index];
                         return _RecommendationItem(
                           tool: tool,
                           onAddToCart: () async {
@@ -70,8 +112,8 @@ class CartRecommendationsDialog extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Continue Shopping'),
+                  onPressed: _closeDialog,
+                  child: const Text('Continue'),
                 ),
               ],
             ),
@@ -107,7 +149,7 @@ class CartRecommendationsDialog extends StatelessWidget {
       );
 
       if (success && context.mounted) {
-        onCartUpdated();
+        widget.onCartUpdated();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('${tool.name} added to cart'),
@@ -115,6 +157,8 @@ class CartRecommendationsDialog extends StatelessWidget {
             duration: const Duration(seconds: 2),
           ),
         );
+        // Close dialog and navigate to cart screen
+        _navigateToCart();
       }
     } catch (e) {
       if (context.mounted) {

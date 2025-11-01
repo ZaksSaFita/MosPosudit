@@ -149,8 +149,9 @@ class _PayPalPaymentScreenState extends State<PayPalPaymentScreen> {
 
       // Platform-specific Android configuration to prevent crashes
       if (_controller!.platform is AndroidWebViewController) {
+        final androidController = _controller!.platform as AndroidWebViewController;
         AndroidWebViewController.enableDebugging(kDebugMode);
-        (_controller!.platform as AndroidWebViewController).setMediaPlaybackRequiresUserGesture(false);
+        androidController.setMediaPlaybackRequiresUserGesture(false);
       }
 
       // Load the PayPal approval URL
@@ -266,6 +267,7 @@ class _PayPalPaymentScreenState extends State<PayPalPaymentScreen> {
       Navigator.of(context).pop();
     }
   }
+
 
 
   @override
