@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:mosposudit_shared/services/tool_service.dart';
 import 'package:mosposudit_shared/services/category_service.dart';
+import 'package:mosposudit_shared/services/recommendation_service.dart';
 import 'package:mosposudit_shared/services/utility_service.dart';
 import 'package:mosposudit_shared/models/tool.dart';
 import 'package:mosposudit_shared/models/category.dart';
@@ -21,9 +22,12 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final _toolService = ToolService();
   final _categoryService = CategoryService();
+  final _recommendationService = RecommendationService();
   List<ToolModel> _tools = [];
   List<CategoryModel> _categories = [];
+  List<ToolModel> _recommendedTools = [];
   bool _isLoading = true;
+  bool _isLoadingRecommendations = true;
   int _currentCarouselIndex = 0;
 
   @override
@@ -35,21 +39,27 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadData() async {
     setState(() {
       _isLoading = true;
+      _isLoadingRecommendations = true;
     });
 
     try {
       final tools = await _toolService.fetchTools();
       final categories = await _categoryService.fetchCategories();
+      
+      // Load recommendations in parallel
+      final recommendations = await _recommendationService.getHomeRecommendations(count: 6);
 
       if (mounted) {
         setState(() {
           _tools = tools;
           _categories = categories;
+          _recommendedTools = recommendations;
           // Reset carousel index ako je veći od broja kategorija
           if (_currentCarouselIndex >= categories.length) {
             _currentCarouselIndex = 0;
           }
           _isLoading = false;
+          _isLoadingRecommendations = false;
         });
       }
     } catch (e) {
@@ -57,16 +67,12 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) {
         setState(() {
           _isLoading = false;
+          _isLoadingRecommendations = false;
+          // Fallback to first 4 available tools if recommendations fail
+          _recommendedTools = _tools.where((t) => t.isAvailable == true).take(4).toList();
         });
       }
     }
-  }
-
-  List<ToolModel> get _recommendedTools {
-    // For now, return default recommendations (first 4 available tools)
-    // TODO: Implement recommendation system based on user rental history
-    if (_tools.isEmpty) return [];
-    return _tools.take(4).toList();
   }
 
 
@@ -327,7 +333,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-            if (_recommendedTools.isNotEmpty)
+            if (_isLoadingRecommendations)
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.all(32.0),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+              )
+            else if (_recommendedTools.isNotEmpty)
               SliverPadding(
                 padding: const EdgeInsets.all(16),
                 sliver: SliverGrid(

@@ -14,6 +14,7 @@ import 'package:mosposudit_shared/services/utility_service.dart';
 import 'package:mosposudit_shared/services/message_service.dart';
 import 'package:mosposudit_shared/services/cart_service.dart';
 import 'package:mosposudit_shared/services/notification_service.dart';
+import 'package:mosposudit_shared/services/recommendation_service.dart';
 import 'package:mosposudit_shared/models/tool.dart';
 import 'package:mosposudit_shared/models/category.dart';
 import 'package:mosposudit_shared/core/config.dart';
@@ -24,6 +25,7 @@ import 'screens/chat_screen.dart';
 import 'screens/registration_screen.dart';
 import 'screens/cart_screen.dart';
 import 'screens/orders_screen.dart';
+import 'widgets/cart_recommendations_dialog.dart';
 
 void main() {
   // Add error handling
@@ -991,6 +993,9 @@ class _ToolsPageState extends State<ToolsPage> {
             backgroundColor: Colors.green,
           ),
         );
+        
+        // Show recommendations popup after successfully adding to cart
+        _showCartRecommendations(context, toolId);
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -1008,6 +1013,32 @@ class _ToolsPageState extends State<ToolsPage> {
           ),
         );
       }
+    }
+  }
+
+  Future<void> _showCartRecommendations(BuildContext context, int toolId) async {
+    try {
+      final recommendationService = RecommendationService();
+      final recommendations = await recommendationService.getCartRecommendations(toolId, count: 3);
+      
+      if (recommendations.isNotEmpty && mounted) {
+        await Future.delayed(const Duration(milliseconds: 500)); // Small delay for smooth UX
+        
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (context) => CartRecommendationsDialog(
+              recommendations: recommendations,
+              onCartUpdated: () async {
+                await _refreshCartStatus();
+              },
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print('Error showing cart recommendations: $e');
+      // Don't show error to user, just log it
     }
   }
 

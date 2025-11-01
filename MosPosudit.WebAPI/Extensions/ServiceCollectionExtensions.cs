@@ -34,6 +34,7 @@ namespace MosPosudit.WebAPI.Extensions
             services.AddScoped<INotificationService, NotificationService>();
             services.AddScoped<IOrderService, OrderService>();
             services.AddScoped<IPaymentService, PaymentService>();
+            services.AddScoped<IRecommendationService, RecommendationService>();
 
             services.AddHttpClient();
 
