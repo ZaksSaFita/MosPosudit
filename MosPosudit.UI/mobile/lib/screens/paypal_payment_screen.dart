@@ -8,6 +8,7 @@ import 'package:mosposudit_shared/dtos/payment/paypal_order_response.dart';
 import 'package:mosposudit_shared/dtos/order/order_insert_request.dart';
 import 'package:mosposudit_shared/services/cart_service.dart';
 import 'dart:async';
+import '../../main.dart';
 
 class PayPalPaymentScreen extends StatefulWidget {
   final OrderInsertRequest orderData;
@@ -213,8 +214,16 @@ class _PayPalPaymentScreenState extends State<PayPalPaymentScreen> {
           await Future.delayed(const Duration(seconds: 2));
 
           if (mounted) {
-            // Navigate back to orders or home
+            // Pop all routes back to ClientHomeScreen
             Navigator.of(context).popUntil((route) => route.isFirst);
+            
+            // After popping, switch to Orders tab using the GlobalKey
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              final homeState = ClientHomeScreen.navigatorKey.currentState;
+              if (homeState != null) {
+                homeState.switchToOrders();
+              }
+            });
           }
         }
       } else {
@@ -257,6 +266,7 @@ class _PayPalPaymentScreenState extends State<PayPalPaymentScreen> {
       Navigator.of(context).pop();
     }
   }
+
 
   @override
   Widget build(BuildContext context) {

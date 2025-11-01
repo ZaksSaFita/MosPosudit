@@ -114,7 +114,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
     
     try {
       return _isLoggedIn 
-          ? const ClientHomeScreen() 
+          ? ClientHomeScreen(key: ClientHomeScreen.navigatorKey) 
           : const LoginScreen();
     } catch (e, stackTrace) {
       print('Error building AuthWrapper: $e');
@@ -488,6 +488,8 @@ class ClientHomeScreen extends StatefulWidget {
 
   @override
   State<ClientHomeScreen> createState() => _ClientHomeScreenState();
+  
+  static final GlobalKey<_ClientHomeScreenState> navigatorKey = GlobalKey<_ClientHomeScreenState>();
 }
 
 class _ClientHomeScreenState extends State<ClientHomeScreen> {
@@ -497,6 +499,12 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
   int _cartItemCount = 0;
   Timer? _messageCountTimer;
   final _cartService = CartService();
+  
+  void switchToOrders() {
+    setState(() {
+      _selectedIndex = 4; // Orders tab
+    });
+  }
 
   @override
   void initState() {
