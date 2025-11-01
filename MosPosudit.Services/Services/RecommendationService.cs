@@ -349,7 +349,7 @@ namespace MosPosudit.Services.Services
                     t.IsAvailable &&
                     t.Quantity > 0 &&
                     !excludeToolIds.Contains(t.Id))
-                .OrderByDescending(t => t.CreatedAt)
+                .OrderByDescending(t => t.Id) // Order by ID (newest first)
                 .Take(count)
                 .ToListAsync();
 
