@@ -21,50 +21,26 @@ namespace MosPosudit.WebAPI.Controllers
 
         // Get all messages for current user (client)
         [HttpGet("user")]
-        public async Task<IActionResult> GetUserMessages()
+        public async Task<IEnumerable<Model.Responses.Message.MessageResponse>> GetUserMessages()
         {
-            try
-            {
-                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-                var messages = await _chatService.GetUserMessages(userId);
-                return Ok(messages);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = ex.Message });
-            }
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            return await _chatService.GetUserMessages(userId);
         }
 
         // Get all pending messages (for admin)
         [HttpGet("pending")]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> GetPendingMessages()
+        public async Task<IEnumerable<Model.Responses.Message.MessageResponse>> GetPendingMessages()
         {
-            try
-            {
-                var messages = await _chatService.GetPendingMessages();
-                return Ok(messages);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = ex.Message });
-            }
+            return await _chatService.GetPendingMessages();
         }
 
         // Send message (user sends to admin)
         [HttpPost("send")]
-        public async Task<IActionResult> SendMessage([FromBody] MessageSendRequest request)
+        public async Task<Model.Responses.Message.MessageResponse> SendMessage([FromBody] MessageSendRequest request)
         {
-            try
-            {
-                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-                var response = await _chatService.SendMessage(userId, request);
-                return Ok(response);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = ex.Message });
-            }
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            return await _chatService.SendMessage(userId, request);
         }
 
         // Start chat (admin responds to user's first message)
@@ -72,56 +48,43 @@ namespace MosPosudit.WebAPI.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> StartChat(int messageId)
         {
+            var adminId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            await _chatService.StartChat(messageId, adminId);
+            return Ok(new { message = "Chat started successfully" });
+        }
+
+        // Start chat with user directly (admin initiates chat)
+        [HttpPost("start-with-user/{userId}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> StartChatWithUser(int userId)
+        {
             try
             {
                 var adminId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-                await _chatService.StartChat(messageId, adminId);
+                await _chatService.StartChatWithUser(adminId, userId);
                 return Ok(new { message = "Chat started successfully" });
             }
             catch (Exception ex)
             {
-                if (ex.Message.Contains("not found"))
-                    return NotFound(new { message = ex.Message });
-                if (ex.Message.Contains("already active"))
-                    return BadRequest(new { message = ex.Message });
-                return StatusCode(500, new { message = ex.Message });
+                return BadRequest(new { message = ex.Message });
             }
         }
 
         // Send reply (admin or user)
         [HttpPost("reply")]
-        public async Task<IActionResult> SendReply([FromBody] MessageSendRequest request, [FromQuery] int conversationUserId)
+        public async Task<Model.Responses.Message.MessageResponse> SendReply([FromBody] MessageSendRequest request, [FromQuery] int conversationUserId)
         {
-            try
-            {
-                var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-                var response = await _chatService.SendReply(currentUserId, conversationUserId, request);
-                return Ok(response);
-            }
-            catch (Exception ex)
-            {
-                if (ex.Message.Contains("not found"))
-                    return BadRequest(new { message = ex.Message });
-                return StatusCode(500, new { message = ex.Message });
-            }
+            var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            return await _chatService.SendReply(currentUserId, conversationUserId, request);
         }
 
         // Mark message as read
         [HttpPut("{id}/read")]
         public async Task<IActionResult> MarkAsRead(int id)
         {
-            try
-            {
-                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-                await _chatService.MarkAsRead(id, userId);
-                return Ok();
-            }
-            catch (Exception ex)
-            {
-                if (ex.Message.Contains("not found"))
-                    return NotFound(new { message = ex.Message });
-                return StatusCode(500, new { message = ex.Message });
-            }
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            await _chatService.MarkAsRead(id, userId);
+            return Ok();
         }
 
     }

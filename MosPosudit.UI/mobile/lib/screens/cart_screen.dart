@@ -338,22 +338,26 @@ class _CartScreenState extends State<CartScreen> {
                             width: double.infinity,
                             height: 50,
                             child: ElevatedButton(
-                              onPressed: () {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (context) => CheckoutScreen(cartItems: _cartItems),
-                                  ),
-                                );
-                              },
+                              onPressed: _cartItems.isEmpty
+                                  ? null
+                                  : () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (context) => const CheckoutScreen(),
+                                        ),
+                                      );
+                                    },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.blue,
                                 foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8),
                                 ),
+                                disabledBackgroundColor: Colors.grey.shade300,
+                                disabledForegroundColor: Colors.white,
                               ),
                               child: const Text(
-                                'Proceed to checkout',
+                                'Proceed to Checkout',
                                 style: TextStyle(fontSize: 16),
                               ),
                             ),

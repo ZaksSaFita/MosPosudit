@@ -8,34 +8,29 @@ class CategoryService {
 
   Future<List<CategoryModel>> fetchCategories({Map<String, dynamic>? query}) async {
     try {
-      final res = await _api.get('/Category', query: query);
-      print('Category API Response Status: ${res.statusCode}');
-      print('Category API Response Body: ${res.body.substring(0, res.body.length > 200 ? 200 : res.body.length)}');
+      final res = await _api.get('/Category', query: query, auth: false);
       
       if (res.statusCode == 200) {
         try {
           final decoded = jsonDecode(res.body);
-          // Handle both array and object with "value" property
+          // Backend vraća PagedResult<T> sa items i totalCount
           final List<dynamic> data;
-          if (decoded is List) {
+          if (decoded is Map && decoded.containsKey('items')) {
+            data = decoded['items'] as List<dynamic>;
+          } else if (decoded is List) {
             data = decoded;
-          } else if (decoded is Map && decoded.containsKey('value')) {
-            data = decoded['value'] as List<dynamic>;
           } else {
             throw Exception('Unexpected response format: $decoded');
           }
           
-          print('Parsed ${data.length} categories');
-          final categories = data.map((e) {
+          return data.map((e) {
             try {
               return CategoryModel.fromJson(e);
             } catch (e) {
               print('Error parsing single category: $e');
-              print('Category JSON: $e');
               rethrow;
             }
           }).toList();
-          return categories;
         } catch (e, stackTrace) {
           print('Error parsing categories JSON: $e');
           print('Stack trace: $stackTrace');
@@ -52,13 +47,9 @@ class CategoryService {
   }
 
   Future<CategoryModel?> getById(int id) async {
-    final res = await _api.get('/Category/$id');
+    final res = await _api.get('/Category/$id', auth: false);
     if (res.statusCode == 200) {
       final decoded = jsonDecode(res.body);
-      // Handle both object and object wrapped in "value"
-      if (decoded is Map && decoded.containsKey('value')) {
-        return CategoryModel.fromJson(decoded['value']);
-      }
       return CategoryModel.fromJson(decoded);
     }
     return null;
@@ -68,9 +59,6 @@ class CategoryService {
     final res = await _api.post('/Category', body: data);
     if (res.statusCode == 201 || res.statusCode == 200) {
       final decoded = jsonDecode(res.body);
-      if (decoded is Map && decoded.containsKey('value')) {
-        return CategoryModel.fromJson(decoded['value']);
-      }
       return CategoryModel.fromJson(decoded);
     }
     throw Exception('Failed to create category: ${res.statusCode} - ${res.body}');
@@ -80,9 +68,6 @@ class CategoryService {
     final res = await _api.put('/Category/$id', body: data);
     if (res.statusCode == 200) {
       final decoded = jsonDecode(res.body);
-      if (decoded is Map && decoded.containsKey('value')) {
-        return CategoryModel.fromJson(decoded['value']);
-      }
       return CategoryModel.fromJson(decoded);
     }
     throw Exception('Failed to update category: ${res.statusCode} - ${res.body}');

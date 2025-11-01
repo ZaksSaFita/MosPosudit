@@ -7,9 +7,6 @@ namespace MosPosudit.Model.Requests.Review
         [Required(ErrorMessage = "Tool ID is required")]
         public int ToolId { get; set; }
 
-        [Required(ErrorMessage = "Rental ID is required")]
-        public int RentalId { get; set; }
-
         [Required(ErrorMessage = "Rating is required")]
         [Range(1, 5, ErrorMessage = "Rating must be between 1 and 5")]
         public int Rating { get; set; }

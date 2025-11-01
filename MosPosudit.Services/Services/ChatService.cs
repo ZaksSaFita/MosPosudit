@@ -4,6 +4,7 @@ using MosPosudit.Model.Responses.Message;
 using MosPosudit.Services.DataBase;
 using MosPosudit.Services.DataBase.Data;
 using MosPosudit.Services.Interfaces;
+using MapsterMapper;
 
 namespace MosPosudit.Services.Services
 {
@@ -11,11 +12,13 @@ namespace MosPosudit.Services.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly IMessageService _messageService;
+        private readonly IMapper _mapper;
 
-        public ChatService(ApplicationDbContext context, IMessageService messageService)
+        public ChatService(ApplicationDbContext context, IMessageService messageService, IMapper mapper)
         {
             _context = context;
             _messageService = messageService;
+            _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
         }
 
         public async Task<IEnumerable<MessageResponse>> GetUserMessages(int userId)
@@ -28,20 +31,13 @@ namespace MosPosudit.Services.Services
                 .OrderBy(m => m.SentAt)
                 .ToListAsync();
 
-            return messages.Select(m => new MessageResponse
+            return messages.Select(m =>
             {
-                Id = m.Id,
-                FromUserId = m.FromUserId,
-                FromUserName = m.FromUser?.FullName ?? "Unknown",
-                ToUserId = m.ToUserId,
-                ToUserName = m.ToUser?.FullName,
-                Content = m.Content,
-                SentAt = m.SentAt,
-                ReadAt = m.ReadAt,
-                IsRead = m.IsRead,
-                IsActive = m.IsActive,
-                StartedByAdminId = m.StartedByAdminId,
-                StartedByAdminName = m.StartedByAdmin?.FullName
+                var response = _mapper.Map<MessageResponse>(m);
+                response.FromUserName = m.FromUser?.FullName ?? "Unknown";
+                response.ToUserName = m.ToUser?.FullName;
+                response.StartedByAdminName = m.StartedByAdmin?.FullName;
+                return response;
             });
         }
 
@@ -55,20 +51,13 @@ namespace MosPosudit.Services.Services
                 .OrderByDescending(m => m.SentAt)
                 .ToListAsync();
 
-            return messages.Select(m => new MessageResponse
+            return messages.Select(m =>
             {
-                Id = m.Id,
-                FromUserId = m.FromUserId,
-                FromUserName = m.FromUser?.FullName ?? "Unknown",
-                ToUserId = m.ToUserId,
-                ToUserName = m.ToUser?.FullName,
-                Content = m.Content,
-                SentAt = m.SentAt,
-                ReadAt = m.ReadAt,
-                IsRead = m.IsRead,
-                IsActive = m.IsActive,
-                StartedByAdminId = m.StartedByAdminId,
-                StartedByAdminName = m.StartedByAdmin?.FullName
+                var response = _mapper.Map<MessageResponse>(m);
+                response.FromUserName = m.FromUser?.FullName ?? "Unknown";
+                response.ToUserName = m.ToUser?.FullName;
+                response.StartedByAdminName = m.StartedByAdmin?.FullName;
+                return response;
             });
         }
 
@@ -114,17 +103,9 @@ namespace MosPosudit.Services.Services
                 }
             }
 
-            return new MessageResponse
-            {
-                Id = message.Id,
-                FromUserId = message.FromUserId,
-                FromUserName = message.FromUser?.FullName ?? "Unknown",
-                ToUserId = message.ToUserId,
-                Content = message.Content,
-                SentAt = message.SentAt,
-                IsRead = message.IsRead,
-                IsActive = message.IsActive
-            };
+            var response = _mapper.Map<MessageResponse>(message);
+            response.FromUserName = message.FromUser?.FullName ?? "Unknown";
+            return response;
         }
 
         public async Task<MessageResponse> SendReply(int fromUserId, int toUserId, MessageSendRequest request)
@@ -169,18 +150,10 @@ namespace MosPosudit.Services.Services
                 "NewMessage"
             );
 
-            return new MessageResponse
-            {
-                Id = message.Id,
-                FromUserId = message.FromUserId,
-                FromUserName = message.FromUser?.FullName ?? "Unknown",
-                ToUserId = message.ToUserId,
-                ToUserName = message.ToUser?.FullName,
-                Content = message.Content,
-                SentAt = message.SentAt,
-                IsRead = message.IsRead,
-                IsActive = message.IsActive
-            };
+            var response = _mapper.Map<MessageResponse>(message);
+            response.FromUserName = message.FromUser?.FullName ?? "Unknown";
+            response.ToUserName = message.ToUser?.FullName;
+            return response;
         }
 
         public async Task StartChat(int messageId, int adminId)
@@ -212,6 +185,47 @@ namespace MosPosudit.Services.Services
             // Send notification to user via RabbitMQ (asynchronous)
             _messageService.PublishNotification(
                 firstMessage.FromUserId,
+                "Chat Started",
+                "An administrator has started chatting with you.",
+                "ChatStarted"
+            );
+        }
+
+        public async Task StartChatWithUser(int adminId, int userId)
+        {
+            // Check if user exists
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+                throw new Exception("User not found");
+
+            // Check if there's already an active chat between admin and user
+            var existingActiveChat = await _context.Messages
+                .Where(m => ((m.FromUserId == adminId && m.ToUserId == userId) ||
+                            (m.FromUserId == userId && m.ToUserId == adminId)) &&
+                            m.IsActive)
+                .FirstOrDefaultAsync();
+
+            if (existingActiveChat != null)
+                throw new Exception("Chat is already active with this user");
+
+            // Create an initial message from admin to start the chat
+            var initialMessage = new Message
+            {
+                FromUserId = adminId,
+                ToUserId = userId,
+                Content = "Chat started", // Initial message content
+                SentAt = DateTime.UtcNow,
+                IsActive = true,
+                IsRead = false,
+                StartedByAdminId = adminId
+            };
+
+            _context.Messages.Add(initialMessage);
+            await _context.SaveChangesAsync();
+
+            // Send notification to user via RabbitMQ (asynchronous)
+            _messageService.PublishNotification(
+                userId,
                 "Chat Started",
                 "An administrator has started chatting with you.",
                 "ChatStarted"

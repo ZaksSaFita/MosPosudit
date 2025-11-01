@@ -13,13 +13,19 @@ class ApiClient {
     if (withAuth) {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('token');
-      if (token != null) headers['Authorization'] = 'Bearer $token';
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+      } else {
+        print('Warning: Token is null or empty but auth is required');
+      }
     }
     return headers;
   }
 
   Uri _uri(String path, [Map<String, dynamic>? query]) {
-    return Uri.parse('$baseUrl$path').replace(queryParameters: query?.map((k, v) => MapEntry(k, '$v')));
+    // Ensure path starts with / if it doesn't already
+    final normalizedPath = path.startsWith('/') ? path : '/$path';
+    return Uri.parse('$baseUrl$normalizedPath').replace(queryParameters: query?.map((k, v) => MapEntry(k, '$v')));
   }
 
   Future<http.Response> get(String path, {Map<String, dynamic>? query, bool auth = true}) async {

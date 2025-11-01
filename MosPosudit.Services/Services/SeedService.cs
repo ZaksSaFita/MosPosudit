@@ -24,77 +24,70 @@ namespace MosPosudit.Services.Services
                 didChange = true;
             }
 
-            // PaymentMethod and PaymentStatus removed - using string fields in PaymentTransaction instead
+            // Seed default users (admin and user) - update if exists, create if not
+            var adminRole = db.Roles.FirstOrDefault(x => x.Name == "Admin");
+            var userRole = db.Roles.FirstOrDefault(x => x.Name == "User");
+            
+            if (adminRole == null || userRole == null)
+                throw new InvalidOperationException("Roles must be seeded before users can be created.");
+            
+            var now = DateTime.UtcNow;
+            var adminRoleId = adminRole.Id;
+            var userRoleId = userRole.Id;
 
-            if (!db.Users.Any())
+            // Ensure admin user exists with correct email
+            var adminUser = db.Users.FirstOrDefault(x => x.Username == "admin");
+            if (adminUser == null)
             {
-                var now = DateTime.UtcNow;
-                var adminRole = db.Roles.FirstOrDefault(x => x.Name == "Admin");
-                var userRole = db.Roles.FirstOrDefault(x => x.Name == "User");
-                
-                if (adminRole == null || userRole == null)
-                    throw new InvalidOperationException("Roles must be seeded before users can be created.");
-                
-                var adminRoleId = adminRole.Id;
-                var userRoleId = userRole.Id;
-                db.Users.AddRange(
-                    new User
-                    {
-                        FirstName = "Admin",
-                        LastName = "User",
-                        Username = "admin",
-                        Email = "admin@mosposudit.com",
-                        PhoneNumber = "123456789",
-                        PasswordHash = BCrypt.Net.BCrypt.HashPassword("test"),
-                        RoleId = adminRoleId,
-                        IsActive = true,
-                        CreatedAt = now,
-                        UpdateDate = now,
-                        PasswordUpdateDate = now
-                    },
-                    new User
-                    {
-                        FirstName = "Regular",
-                        LastName = "User",
-                        Username = "user",
-                        Email = "user@mosposudit.com",
-                        PhoneNumber = "987654321",
-                        PasswordHash = BCrypt.Net.BCrypt.HashPassword("test"),
-                        RoleId = userRoleId,
-                        IsActive = true,
-                        CreatedAt = now,
-                        UpdateDate = now,
-                        PasswordUpdateDate = now
-                    },
-                    new User
-                    {
-                        FirstName = "Desktop",
-                        LastName = "Admin",
-                        Username = "desktop",
-                        Email = "desktop@mosposudit.com",
-                        PhoneNumber = "111111111",
-                        PasswordHash = BCrypt.Net.BCrypt.HashPassword("test"),
-                        RoleId = adminRoleId,
-                        IsActive = true,
-                        CreatedAt = now,
-                        UpdateDate = now,
-                        PasswordUpdateDate = now
-                    },
-                    new User
-                    {
-                        FirstName = "Mobile",
-                        LastName = "User",
-                        Username = "mobile",
-                        Email = "mobile@mosposudit.com",
-                        PhoneNumber = "222222222",
-                        PasswordHash = BCrypt.Net.BCrypt.HashPassword("test"),
-                        RoleId = userRoleId,
-                        IsActive = true,
-                        CreatedAt = now,
-                        UpdateDate = now,
-                        PasswordUpdateDate = now
-                    }
-                );
+                db.Users.Add(new User
+                {
+                    FirstName = "Admin",
+                    LastName = "User",
+                    Username = "admin",
+                    Email = "mosposudit2@gmail.com",
+                    PhoneNumber = "123456789",
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("test"),
+                    RoleId = adminRoleId,
+                    IsActive = true,
+                    CreatedAt = now,
+                    UpdateDate = now,
+                    PasswordUpdateDate = now
+                });
+                didChange = true;
+            }
+            else if (adminUser.Email != "mosposudit2@gmail.com")
+            {
+                // Update email if different
+                adminUser.Email = "mosposudit2@gmail.com";
+                adminUser.UpdateDate = now;
+                didChange = true;
+            }
+
+            // Ensure regular user exists with correct email
+            var regularUser = db.Users.FirstOrDefault(x => x.Username == "user");
+            if (regularUser == null)
+            {
+                db.Users.Add(new User
+                {
+                    FirstName = "Regular",
+                    LastName = "User",
+                    Username = "user",
+                    Email = "mosposudit3@gmail.com",
+                    PhoneNumber = "987654321",
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("test"),
+                    RoleId = userRoleId,
+                    IsActive = true,
+                    CreatedAt = now,
+                    UpdateDate = now,
+                    PasswordUpdateDate = now
+                });
+                didChange = true;
+            }
+            else if (regularUser.Email != "mosposudit3@gmail.com")
+            {
+                // Update email if different
+                regularUser.Email = "mosposudit3@gmail.com";
+                regularUser.UpdateDate = now;
                 didChange = true;
             }
 
@@ -189,7 +182,7 @@ namespace MosPosudit.Services.Services
                         Description = t.description,
                         CategoryId = mappedCatId,
                         DailyRate = t.dailyPrice,
-                        Quantity = 1,
+                        Quantity = 10,
                         IsAvailable = t.available,
                         DepositAmount = 0
                         // ImageBase64 remains null - Flutter will load from assets based on name

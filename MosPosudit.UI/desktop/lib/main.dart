@@ -135,8 +135,8 @@ class _LoginScreenState extends State<LoginScreen> {
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
-          'Username': _usernameController.text,
-          'Password': _passwordController.text,
+          'username': _usernameController.text,
+          'password': _passwordController.text,
         }),
       );
 
@@ -403,8 +403,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
     const ToolsManagementPage(), // Reviews (temporary)
     const UsersManagementPage(), // All Users
     const UsersManagementPage(), // Add User (temporary, should be Add User page)
-    const RentalsManagementPage(), // Active Reservations
-    const RentalsManagementPage(), // History
     const ReportsPage(), // Reports
     const ChatScreen(), // Chat
     const SettingsPage(), // Settings
@@ -463,7 +461,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       }
       
       // Show notification if new messages arrived and user is not on chat screen
-      if (mounted && currentUnreadCount > _lastUnreadCount && _selectedIndex != 9) {
+      if (mounted && currentUnreadCount > _lastUnreadCount && _selectedIndex != 7) {
         final newMessagesCount = currentUnreadCount - _lastUnreadCount;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -479,13 +477,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     style: const TextStyle(color: Colors.white),
                   ),
                 ),
-                TextButton(
-                  onPressed: () {
-                    setState(() {
-                      _selectedIndex = 9; // Navigate to chat screen
-                    });
-                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                  },
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _selectedIndex = 7; // Navigate to chat screen
+                      });
+                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                    },
                   child: const Text(
                     'Otvori Chat',
                     style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
@@ -521,7 +519,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             onItemSelected: (int index) {
               setState(() => _selectedIndex = index);
               // Refresh notification check when navigating
-              if (index == 9) {
+              if (index == 7) {
                 _checkForNewMessages();
               }
             },
@@ -591,10 +589,6 @@ class DashboardPage extends StatelessWidget {
                     padding: EdgeInsets.all(24),
                     child: Column(
                       children: [
-                        Icon(Icons.assignment, size: 48, color: Colors.orange),
-                        SizedBox(height: 16),
-                        Text('Active rentals', style: TextStyle(fontSize: 18)),
-                        Text('0', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
                       ],
                     ),
                   ),
@@ -610,40 +604,7 @@ class DashboardPage extends StatelessWidget {
 
 // ToolsManagementPage is now imported from screens/tools_screen.dart
 // CategoriesManagementPage is now imported from screens/categories_screen.dart
-
-class RentalsManagementPage extends StatelessWidget {
-  const RentalsManagementPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.all(24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Rentals management',
-            style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-          ),
-          SizedBox(height: 24),
-          Card(
-            child: Padding(
-              padding: EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  Icon(Icons.assignment, size: 64, color: Colors.purple),
-                  SizedBox(height: 16),
-                  Text('Feature in development', style: TextStyle(fontSize: 18)),
-                  Text('Rental management will be implemented', style: TextStyle(color: Colors.grey)),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+// RentalsManagementPage is now imported from screens/reservations_screen.dart
 
 class ReportsPage extends StatelessWidget {
   const ReportsPage({super.key});

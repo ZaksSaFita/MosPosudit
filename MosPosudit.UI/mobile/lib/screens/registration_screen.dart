@@ -67,12 +67,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
-          'FirstName': _firstNameController.text,
-          'LastName': _lastNameController.text,
-          'Email': _emailController.text,
-          'PhoneNumber': _phoneController.text,
-          'Username': _usernameController.text,
-          'Password': _passwordController.text,
+          'firstName': _firstNameController.text,
+          'lastName': _lastNameController.text,
+          'email': _emailController.text,
+          'phoneNumber': _phoneController.text,
+          'username': _usernameController.text,
+          'password': _passwordController.text,
         }),
       );
 
@@ -88,8 +88,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               'Content-Type': 'application/json',
             },
             body: jsonEncode({
-              'Username': _usernameController.text,
-              'Password': _passwordController.text,
+              'username': _usernameController.text,
+              'password': _passwordController.text,
             }),
           );
 

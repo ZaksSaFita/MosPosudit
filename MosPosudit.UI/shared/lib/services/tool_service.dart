@@ -11,34 +11,29 @@ class ToolService {
 
   Future<List<ToolModel>> fetchTools({Map<String, dynamic>? query}) async {
     try {
-      final res = await _api.get('/Tool', query: query);
-      print('Tool API Response Status: ${res.statusCode}');
-      print('Tool API Response Body: ${res.body.substring(0, res.body.length > 200 ? 200 : res.body.length)}');
+      final res = await _api.get('/Tool', query: query, auth: false);
       
       if (res.statusCode == 200) {
         try {
           final decoded = jsonDecode(res.body);
-          // Handle both array and object with "value" property
+          // Backend vraća PagedResult<T> sa items i totalCount
           final List<dynamic> data;
-          if (decoded is List) {
+          if (decoded is Map && decoded.containsKey('items')) {
+            data = decoded['items'] as List<dynamic>;
+          } else if (decoded is List) {
             data = decoded;
-          } else if (decoded is Map && decoded.containsKey('value')) {
-            data = decoded['value'] as List<dynamic>;
           } else {
             throw Exception('Unexpected response format: $decoded');
           }
           
-          print('Parsed ${data.length} tools');
-          final tools = data.map((e) {
+          return data.map((e) {
             try {
               return ToolModel.fromJson(e);
             } catch (e) {
               print('Error parsing single tool: $e');
-              print('Tool JSON: $e');
               rethrow;
             }
           }).toList();
-          return tools;
         } catch (e, stackTrace) {
           print('Error parsing tools JSON: $e');
           print('Stack trace: $stackTrace');
@@ -55,13 +50,9 @@ class ToolService {
   }
 
   Future<ToolModel?> getById(int id) async {
-    final res = await _api.get('/Tool/$id');
+    final res = await _api.get('/Tool/$id', auth: false);
     if (res.statusCode == 200) {
       final decoded = jsonDecode(res.body);
-      // Handle both object and object wrapped in "value"
-      if (decoded is Map && decoded.containsKey('value')) {
-        return ToolModel.fromJson(decoded['value']);
-      }
       return ToolModel.fromJson(decoded);
     }
     return null;
@@ -71,9 +62,6 @@ class ToolService {
     final res = await _api.post('/Tool', body: data);
     if (res.statusCode == 201 || res.statusCode == 200) {
       final decoded = jsonDecode(res.body);
-      if (decoded is Map && decoded.containsKey('value')) {
-        return ToolModel.fromJson(decoded['value']);
-      }
       return ToolModel.fromJson(decoded);
     }
     throw Exception('Failed to create tool: ${res.statusCode} - ${res.body}');
@@ -83,9 +71,6 @@ class ToolService {
     final res = await _api.put('/Tool/$id', body: data);
     if (res.statusCode == 200) {
       final decoded = jsonDecode(res.body);
-      if (decoded is Map && decoded.containsKey('value')) {
-        return ToolModel.fromJson(decoded['value']);
-      }
       return ToolModel.fromJson(decoded);
     }
     throw Exception('Failed to update tool: ${res.statusCode} - ${res.body}');
@@ -97,15 +82,15 @@ class ToolService {
   }
 
   Future<List<CategoryModel>> fetchCategories() async {
-    final res = await _api.get('/Category');
+    final res = await _api.get('/Category', auth: false);
     if (res.statusCode == 200) {
       final decoded = jsonDecode(res.body);
-      // Handle both array and object with "value" property
+      // Backend vraća PagedResult<T> sa items i totalCount
       final List<dynamic> data;
-      if (decoded is List) {
+      if (decoded is Map && decoded.containsKey('items')) {
+        data = decoded['items'] as List<dynamic>;
+      } else if (decoded is List) {
         data = decoded;
-      } else if (decoded is Map && decoded.containsKey('value')) {
-        data = decoded['value'] as List<dynamic>;
       } else {
         throw Exception('Unexpected response format: $decoded');
       }

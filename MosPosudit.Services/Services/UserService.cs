@@ -7,60 +7,103 @@ using MosPosudit.Model.SearchObjects;
 using MosPosudit.Services.DataBase;
 using MosPosudit.Services.DataBase.Data;
 using MosPosudit.Services.Interfaces;
+using MapsterMapper;
 
 namespace MosPosudit.Services.Services
 {
-    // User service implementation that handles user-specific operations
-    public class UserService : BaseCrudService<User, UserSearchObject, UserInsertRequest, UserUpdateRequest, UserPatchRequest>, IUserService
+    public class UserService : BaseCrudService<UserResponse, UserSearchObject, User, UserInsertRequest, UserUpdateRequest>, IUserService
     {
-        public UserService(ApplicationDbContext context) : base(context)
+        public UserService(ApplicationDbContext context, IMapper mapper) : base(context, mapper)
         {
         }
 
-        public override async Task<IEnumerable<User>> Get(UserSearchObject? search = null)
+        protected override IQueryable<User> ApplyFilter(IQueryable<User> query, UserSearchObject search)
         {
-            var query = _dbSet.AsQueryable();
+            if (!string.IsNullOrWhiteSpace(search.Username))
+                query = query.Where(x => x.Username != null && x.Username.Contains(search.Username));
 
-            // Uklonjen filter za ne-admin korisnike
+            if (!string.IsNullOrWhiteSpace(search.Email))
+                query = query.Where(x => x.Email != null && x.Email.Contains(search.Email));
 
-            if (search != null)
+            return query;
+        }
+
+        public override async Task<UserResponse?> GetByIdAsync(int id)
+        {
+            var entity = await _context.Set<User>()
+                .Include(u => u.Role)
+                .FirstOrDefaultAsync(u => u.Id == id);
+
+            if (entity == null)
+                return null;
+
+            return MapToResponse(entity);
+        }
+
+        public override async Task<UserResponse> CreateAsync(UserInsertRequest request)
+        {
+            if (request.Username != null && await CheckUsernameExists(request.Username))
+                throw new ConflictException(ErrorMessages.UsernameExists);
+
+            if (request.Email != null && await CheckEmailExists(request.Email))
+                throw new ConflictException(ErrorMessages.EmailExists);
+
+            var now = DateTime.UtcNow;
+            var entity = _mapper.Map<User>(request);
+            entity.PasswordHash = !string.IsNullOrEmpty(request.Password) ? BCrypt.Net.BCrypt.HashPassword(request.Password) : null;
+            entity.RoleId = request.RoleId > 0 ? request.RoleId : 2; // Default to User role (ID 2)
+            entity.PasswordUpdateDate = !string.IsNullOrEmpty(request.Password) ? now : null;
+            entity.CreatedAt = now;
+            entity.UpdateDate = now;
+            entity.IsActive = true;
+            entity.DeactivationDate = null;
+
+            _context.Set<User>().Add(entity);
+            await _context.SaveChangesAsync();
+
+            // Reload with includes
+            return await GetByIdAsync(entity.Id) ?? throw new Exception("Failed to retrieve created user");
+        }
+
+        protected override async Task BeforeUpdate(User entity, UserUpdateRequest request)
+        {
+            if (request.Username != null && await CheckUsernameExists(request.Username) && entity.Username != request.Username)
+                throw new ConflictException(ErrorMessages.UsernameExists);
+
+            if (request.Email != null && await CheckEmailExists(request.Email) && entity.Email != request.Email)
+                throw new ConflictException(ErrorMessages.EmailExists);
+
+            entity.UpdateDate = DateTime.UtcNow;
+
+            if (!string.IsNullOrEmpty(request.Password))
             {
-                if (!string.IsNullOrWhiteSpace(search.Username))
-                    query = query.Where(x => x.Username != null && x.Username.Contains(search.Username));
-
-                if (!string.IsNullOrWhiteSpace(search.Email))
-                    query = query.Where(x => x.Email != null && x.Email.Contains(search.Email));
+                entity.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
+                entity.PasswordUpdateDate = DateTime.UtcNow;
             }
-
-            if (search?.Page.HasValue == true && search?.PageSize.HasValue == true)
-            {
-                query = query.Skip((search.Page.Value - 1) * search.PageSize.Value)
-                            .Take(search.PageSize.Value);
-            }
-
-            return await query.ToListAsync();
         }
 
-        public override async Task<User> GetById(int id)
+        protected override void MapUpdateToEntity(User entity, UserUpdateRequest request)
         {
-            if (id <= 0)
-                throw new ValidationException(ErrorMessages.InvalidRequest);
-
-            var user = await _dbSet.Include(u => u.Role).FirstOrDefaultAsync(u => u.Id == id);
-            if (user == null)
-                throw new NotFoundException(ErrorMessages.EntityNotFound);
-
-            return user;
+            _mapper.Map(request, entity);
+            if (request.RoleId > 0) entity.RoleId = request.RoleId;
+            if (request.Picture != null) entity.Picture = request.Picture;
         }
 
-        public async Task<IEnumerable<User>> GetNonAdminUsers()
+        public async Task<IEnumerable<UserResponse>> GetNonAdminUsers()
         {
-            return await _dbSet.Where(x => x.RoleId != 1).ToListAsync();
+            var users = await _context.Set<User>()
+                .Include(u => u.Role)
+                .Where(x => x.RoleId != 1)
+                .ToListAsync();
+            return users.Select(MapToResponse);
         }
 
         public async Task<bool> DeactivateUser(int id)
         {
-            var user = await GetById(id);
+            var user = await _context.Set<User>().FindAsync(id);
+            if (user == null)
+                throw new NotFoundException(ErrorMessages.EntityNotFound);
+
             user.IsActive = false;
             user.DeactivationDate = DateTime.UtcNow;
             await _context.SaveChangesAsync();
@@ -69,18 +112,22 @@ namespace MosPosudit.Services.Services
 
         public async Task<bool> ActivateUser(int id)
         {
-            var user = await GetById(id);
+            var user = await _context.Set<User>().FindAsync(id);
+            if (user == null)
+                throw new NotFoundException(ErrorMessages.EntityNotFound);
+
             user.IsActive = true;
-            user.DeactivationDate = DateTime.UtcNow;
+            user.DeactivationDate = null;
             await _context.SaveChangesAsync();
             return true;
         }
 
         public async Task<bool> ChangePassword(int id, string currentPassword, string newPassword)
         {
-            var user = await GetById(id);
+            var user = await _context.Set<User>().FindAsync(id);
+            if (user == null)
+                throw new NotFoundException(ErrorMessages.EntityNotFound);
 
-            // Verify current password
             if (user.PasswordHash == null || !BCrypt.Net.BCrypt.Verify(currentPassword, user.PasswordHash))
                 throw new ValidationException(ErrorMessages.InvalidCredentials);
 
@@ -92,13 +139,16 @@ namespace MosPosudit.Services.Services
 
         public async Task<bool> VerifyCurrentPassword(int id, string currentPassword)
         {
-            var user = await GetById(id);
+            var user = await _context.Set<User>().FindAsync(id);
+            if (user == null)
+                throw new NotFoundException(ErrorMessages.EntityNotFound);
+
             return user.PasswordHash != null && BCrypt.Net.BCrypt.Verify(currentPassword, user.PasswordHash);
         }
 
         public async Task<bool> SendPasswordResetEmail(string email)
         {
-            var user = await _dbSet.FirstOrDefaultAsync(x => x.Email == email);
+            var user = await _context.Set<User>().FirstOrDefaultAsync(x => x.Email == email);
             if (user == null)
                 return false; // Don't reveal if email exists or not
 
@@ -111,28 +161,30 @@ namespace MosPosudit.Services.Services
             return true;
         }
 
-        public async Task<User> UpdateProfile(int userId, UserProfileUpdateRequest request)
+        public async Task<UserResponse> UpdateProfile(int userId, UserProfileUpdateRequest request)
         {
-            var user = await GetById(userId);
-            
-            // Validate username uniqueness - case insensitive check
+            var user = await _context.Set<User>().Include(u => u.Role).FirstOrDefaultAsync(u => u.Id == userId);
+            if (user == null)
+                throw new NotFoundException(ErrorMessages.EntityNotFound);
+
+            // Validate username uniqueness
             if (request.Username != null)
             {
-                var usernameExists = await _dbSet.AnyAsync(x => 
+                var usernameExists = await _context.Set<User>().AnyAsync(x =>
                     x.Username != null && x.Username.ToLower() == request.Username.ToLower() && x.Id != userId);
                 if (usernameExists)
                     throw new ConflictException(ErrorMessages.UsernameExists);
             }
-            
-            // Validate email uniqueness - case insensitive check
+
+            // Validate email uniqueness
             if (request.Email != null)
             {
-                var emailExists = await _dbSet.AnyAsync(x => 
+                var emailExists = await _context.Set<User>().AnyAsync(x =>
                     x.Email != null && x.Email.ToLower() == request.Email.ToLower() && x.Id != userId);
                 if (emailExists)
                     throw new ConflictException(ErrorMessages.EmailExists);
             }
-            
+
             // Update fields
             if (request.FirstName != null) user.FirstName = request.FirstName;
             if (request.LastName != null) user.LastName = request.LastName;
@@ -140,229 +192,78 @@ namespace MosPosudit.Services.Services
             if (request.Email != null) user.Email = request.Email;
             if (request.PhoneNumber != null) user.PhoneNumber = request.PhoneNumber;
             if (request.Picture != null) user.Picture = request.Picture;
-            
-            user.UpdateDate = DateTime.UtcNow;
-            
-            await _context.SaveChangesAsync();
-            return user;
-        }
 
+            user.UpdateDate = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+            return MapToResponse(user);
+        }
 
         public async Task<bool> CheckUsernameExists(string username)
         {
-            return await _dbSet.AnyAsync(x => x.Username == username);
+            return await _context.Set<User>().AnyAsync(x => x.Username == username);
         }
 
         public async Task<bool> CheckEmailExists(string email)
         {
-            return await _dbSet.AnyAsync(x => x.Email == email);
+            return await _context.Set<User>().AnyAsync(x => x.Email == email);
         }
 
-        public async Task<IEnumerable<User>> GetActiveUsers()
+        public async Task<IEnumerable<UserResponse>> GetActiveUsers()
         {
-            return await _dbSet.Where(x => x.IsActive).ToListAsync();
+            var users = await _context.Set<User>()
+                .Include(u => u.Role)
+                .Where(x => x.IsActive)
+                .ToListAsync();
+            return users.Select(MapToResponse);
         }
 
-        public async Task<IEnumerable<User>> GetInactiveUsers()
+        public async Task<IEnumerable<UserResponse>> GetInactiveUsers()
         {
-            return await _dbSet.Where(x => !x.IsActive).ToListAsync();
+            var users = await _context.Set<User>()
+                .Include(u => u.Role)
+                .Where(x => !x.IsActive)
+                .ToListAsync();
+            return users.Select(MapToResponse);
         }
 
-        protected override User MapToEntity(UserInsertRequest insert)
+        public async Task<UserResponse> GetUserDetails(int id)
         {
-            if (insert.Username != null && CheckUsernameExists(insert.Username).Result)
-                throw new ConflictException(ErrorMessages.UsernameExists);
-
-            if (insert.Email != null && CheckEmailExists(insert.Email).Result)
-                throw new ConflictException(ErrorMessages.EmailExists);
-
-            var now = DateTime.UtcNow;
-            return new User
-            {
-                FirstName = insert.FirstName ?? string.Empty,
-                LastName = insert.LastName ?? string.Empty,
-                Username = insert.Username ?? string.Empty,
-                Email = insert.Email ?? string.Empty,
-                PhoneNumber = insert.PhoneNumber ?? string.Empty,
-                PasswordHash = !string.IsNullOrEmpty(insert.Password) ? BCrypt.Net.BCrypt.HashPassword(insert.Password) : null,
-                RoleId = insert.RoleId > 0 ? insert.RoleId : 2, // Default to User role (ID 2)
-                Picture = insert.Picture,
-                PasswordUpdateDate = !string.IsNullOrEmpty(insert.Password) ? now : null,
-                DeactivationDate = null
-            };
+            return await GetByIdAsync(id) ?? throw new NotFoundException(ErrorMessages.EntityNotFound);
         }
 
-        protected override void MapToEntity(UserUpdateRequest update, User entity)
+        public async Task<UserResponse> GetMe(int userId)
         {
-            if (update.Username != null && CheckUsernameExists(update.Username).Result && entity.Username != update.Username)
-                throw new ConflictException(ErrorMessages.UsernameExists);
-
-            if (update.Email != null && CheckEmailExists(update.Email).Result && entity.Email != update.Email)
-                throw new ConflictException(ErrorMessages.EmailExists);
-
-            if (update.FirstName != null) entity.FirstName = update.FirstName;
-            if (update.LastName != null) entity.LastName = update.LastName;
-            if (update.Username != null) entity.Username = update.Username;
-            if (update.Email != null) entity.Email = update.Email;
-            if (update.PhoneNumber != null) entity.PhoneNumber = update.PhoneNumber;
-            // Don't change RoleId if not specified (0 is not a valid role ID)
-            if (update.RoleId > 0) entity.RoleId = update.RoleId;
-
-            if (update.Picture != null)
-            {
-                entity.Picture = update.Picture;
-            }
-
-            if (!string.IsNullOrEmpty(update.Password))
-            {
-                entity.PasswordHash = BCrypt.Net.BCrypt.HashPassword(update.Password);
-                entity.PasswordUpdateDate = DateTime.UtcNow;
-            }
-            entity.UpdateDate = DateTime.UtcNow;
+            return await GetByIdAsync(userId) ?? throw new NotFoundException(ErrorMessages.EntityNotFound);
         }
 
-        public override async Task<User> Patch(int id, UserPatchRequest patch)
+        public async Task<UserResponse> UploadPicture(int userId, byte[] picture)
         {
-            var entity = await GetById(id);
-            
-            // Validate username uniqueness if it's being changed
-            if (patch.Username != null && entity.Username != patch.Username)
-            {
-                var usernameExists = await CheckUsernameExists(patch.Username);
-                if (usernameExists)
-                    throw new ConflictException(ErrorMessages.UsernameExists);
-            }
-            
-            // Validate email uniqueness if it's being changed
-            if (patch.Email != null && entity.Email != patch.Email)
-            {
-                var emailExists = await CheckEmailExists(patch.Email);
-                if (emailExists)
-                    throw new ConflictException(ErrorMessages.EmailExists);
-            }
-            
-            MapToEntity(patch, entity);
-            await _context.SaveChangesAsync();
-            return entity;
-        }
+            var user = await _context.Set<User>().Include(u => u.Role).FirstOrDefaultAsync(u => u.Id == userId);
+            if (user == null)
+                throw new NotFoundException(ErrorMessages.EntityNotFound);
 
-
-
-        protected override void MapToEntity(UserPatchRequest patch, User entity)
-        {
-            // Convert empty strings to null
-            if (string.IsNullOrWhiteSpace(patch.Email)) patch.Email = null;
-            if (string.IsNullOrWhiteSpace(patch.FirstName)) patch.FirstName = null;
-            if (string.IsNullOrWhiteSpace(patch.LastName)) patch.LastName = null;
-            if (string.IsNullOrWhiteSpace(patch.PhoneNumber)) patch.PhoneNumber = null;
-            if (string.IsNullOrWhiteSpace(patch.Username)) patch.Username = null;
-
-            // Only update fields that are provided (not null)
-            if (patch.FirstName != null)
-            {
-                entity.FirstName = patch.FirstName;
-            }
-
-            if (patch.LastName != null)
-            {
-                entity.LastName = patch.LastName;
-            }
-
-            if (patch.Username != null)
-            {
-                // Note: This will be handled properly in the async version
-                entity.Username = patch.Username;
-            }
-
-            if (patch.Email != null)
-            {
-                // Validate email format
-                try
-                {
-                    var addr = new System.Net.Mail.MailAddress(patch.Email);
-                    if (addr.Address != patch.Email)
-                        throw new ValidationException(ErrorMessages.InvalidEmail);
-                }
-                catch
-                {
-                    throw new ValidationException(ErrorMessages.InvalidEmail);
-                }
-
-                entity.Email = patch.Email;
-            }
-
-            if (patch.PhoneNumber != null)
-            {
-                entity.PhoneNumber = patch.PhoneNumber;
-            }
-
-            if (patch.Picture != null)
-            {
-                entity.Picture = patch.Picture;
-            }
-
-            entity.UpdateDate = DateTime.UtcNow;
-        }
-
-        public async Task<UserResponse> GetUserDetailsAsResponse(int id)
-        {
-            var user = await GetById(id);
-            return MapToResponse(user);
-        }
-
-        public async Task<UserResponse> GetMeAsResponse(int userId)
-        {
-            var user = await GetById(userId);
-            return MapToResponse(user);
-        }
-
-        public async Task<UserResponse> UpdateProfileAsResponse(int userId, UserProfileUpdateRequest request)
-        {
-            var user = await UpdateProfile(userId, request);
-            return MapToResponse(user);
-        }
-
-        public async Task<UserResponse> UploadPictureAsResponse(int userId, byte[] picture)
-        {
-            var user = await GetById(userId);
             user.Picture = picture;
-            
-            await Update(user.Id, new UserUpdateRequest
-            {
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                Email = user.Email,
-                PhoneNumber = user.PhoneNumber,
-                Username = user.Username,
-                RoleId = user.RoleId,
-                Picture = picture
-            });
+            user.UpdateDate = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
 
-            // Reload with includes
-            var updatedUser = await GetById(userId);
-            return MapToResponse(updatedUser);
+            return MapToResponse(user);
         }
 
-        public async Task<bool> DeletePictureAsResponse(int userId)
+        public async Task<bool> DeletePicture(int userId)
         {
-            var user = await GetById(userId);
+            var user = await _context.Set<User>().FindAsync(userId);
+            if (user == null)
+                throw new NotFoundException(ErrorMessages.EntityNotFound);
+
             user.Picture = null;
-            
-            await Update(user.Id, new UserUpdateRequest
-            {
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                Email = user.Email,
-                PhoneNumber = user.PhoneNumber,
-                Username = user.Username,
-                RoleId = user.RoleId,
-                Picture = null
-            });
+            user.UpdateDate = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
 
             return true;
         }
 
-        public async Task<UserResponse> RegisterAsResponse(UserRegisterRequest request)
+        public async Task<UserResponse> Register(UserRegisterRequest request)
         {
             // Convert RegisterRequest to InsertRequest with default User role
             var insertRequest = new UserInsertRequest
@@ -376,27 +277,15 @@ namespace MosPosudit.Services.Services
                 RoleId = 2 // Default to User role (ID 2)
             };
 
-            var user = await Insert(insertRequest);
-            return MapToResponse(user);
+            return await CreateAsync(insertRequest);
         }
 
-        private UserResponse MapToResponse(User entity)
+        protected override UserResponse MapToResponse(User entity)
         {
-            return new UserResponse
-            {
-                Id = entity.Id,
-                FirstName = entity.FirstName,
-                LastName = entity.LastName,
-                Email = entity.Email,
-                PhoneNumber = entity.PhoneNumber,
-                Username = entity.Username,
-                Picture = entity.Picture != null ? Convert.ToBase64String(entity.Picture) : null,
-                RoleId = entity.RoleId,
-                RoleName = entity.Role?.Name,
-                IsActive = entity.IsActive,
-                CreatedAt = entity.CreatedAt,
-                LastLogin = entity.LastLogin
-            };
+            var response = _mapper.Map<UserResponse>(entity);
+            response.Picture = entity.Picture != null ? Convert.ToBase64String(entity.Picture) : null;
+            response.RoleName = entity.Role?.Name;
+            return response;
         }
     }
 }

@@ -53,7 +53,7 @@ docker-compose up -d
 This will start:
 - SQL Server (port 1433)
 - RabbitMQ (ports 5672, 15672)
-- API Service (ports 5001, 5002)
+- API Service (port 5001)
 - Worker Service (background processing)
 
 **Note**: First run may take 5-10 minutes to download images and build containers.

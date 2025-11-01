@@ -5,15 +5,8 @@ using MosPosudit.Services.DataBase.Data;
 
 namespace MosPosudit.Services.Interfaces
 {
-    public interface ICategoryService : ICrudService<Category, CategorySearchObject, CategoryInsertRequest, CategoryUpdateRequest, CategoryPatchRequest>
+    public interface ICategoryService : ICrudService<CategoryResponse, CategorySearchObject, CategoryInsertRequest, CategoryUpdateRequest>
     {
-        Task<IEnumerable<CategoryResponse>> GetAsResponse(CategorySearchObject? search = null);
-        Task<CategoryResponse> GetByIdAsResponse(int id);
-        Task<CategoryResponse> InsertAsResponse(CategoryInsertRequest insert);
-        Task<CategoryResponse> UpdateAsResponse(int id, CategoryUpdateRequest update);
-        Task<CategoryResponse> PatchAsResponse(int id, CategoryPatchRequest patch);
-        Task<CategoryResponse> DeleteAsResponse(int id);
-        CategoryResponse MapToResponse(Category entity);
     }
 }
 

@@ -1,7 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using MosPosudit.Model.Exceptions;
-using MosPosudit.Model.Messages;
+﻿using Microsoft.AspNetCore.Mvc;
 using MosPosudit.Model.SearchObjects;
 using MosPosudit.Services.Interfaces;
 
@@ -9,152 +6,36 @@ namespace MosPosudit.WebAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
-    public abstract class BaseCrudController<T, TSearch, TInsert, TUpdate, TPatch> : ControllerBase
-        where T : class
-        where TSearch : BaseSearchObject
+    public class BaseCrudController<T, TSearch, TInsert, TUpdate> 
+        : BaseController<T, TSearch> 
+        where T : class 
+        where TSearch : BaseSearchObject, new() 
+        where TInsert : class 
+        where TUpdate : class
     {
-        protected readonly ICrudService<T, TSearch, TInsert, TUpdate, TPatch> _service;
+        protected readonly ICrudService<T, TSearch, TInsert, TUpdate> _crudService;
 
-        protected BaseCrudController(ICrudService<T, TSearch, TInsert, TUpdate, TPatch> service)
+        public BaseCrudController(ICrudService<T, TSearch, TInsert, TUpdate> service) : base(service)
         {
-            _service = service ?? throw new ArgumentNullException(nameof(service));
-        }
-
-        [HttpGet]
-        public virtual async Task<ActionResult<IEnumerable<T>>> Get([FromQuery] TSearch? search = null)
-        {
-            try
-            {
-                var result = await _service.Get(search);
-                return Ok(result);
-            }
-            catch (ValidationException ex)
-            {
-                return BadRequest(ex.Message);
-            }
-            catch (Exception)
-            {
-                return StatusCode(500, ErrorMessages.ServerError);
-            }
-        }
-
-        [HttpGet("{id}")]
-        public virtual async Task<ActionResult<T>> GetById(int id)
-        {
-            try
-            {
-                var result = await _service.GetById(id);
-                return Ok(result);
-            }
-            catch (NotFoundException ex)
-            {
-                return NotFound(ex.Message);
-            }
-            catch (ValidationException ex)
-            {
-                return BadRequest(ex.Message);
-            }
-            catch (Exception)
-            {
-                return StatusCode(500, ErrorMessages.ServerError);
-            }
+            _crudService = service;
         }
 
         [HttpPost]
-        public virtual async Task<ActionResult<T>> Insert([FromBody] TInsert insert)
+        public virtual async Task<T> Create([FromBody] TInsert request)
         {
-            try
-            {
-                if (insert == null)
-                    return BadRequest(ErrorMessages.InvalidRequest);
-
-                var result = await _service.Insert(insert);
-                return CreatedAtAction(nameof(GetById), new { id = GetId(result) }, result);
-            }
-            catch (ValidationException ex)
-            {
-                return BadRequest(ex.Message);
-            }
-            catch (Exception)
-            {
-                return StatusCode(500, ErrorMessages.ServerError);
-            }
+            return await _crudService.CreateAsync(request);
         }
 
         [HttpPut("{id}")]
-        public virtual async Task<ActionResult<T>> Update(int id, [FromBody] TUpdate update)
+        public virtual async Task<T?> Update(int id, [FromBody] TUpdate request)
         {
-            try
-            {
-                if (update == null)
-                    return BadRequest(ErrorMessages.InvalidRequest);
-
-                var result = await _service.Update(id, update);
-                return Ok(result);
-            }
-            catch (NotFoundException ex)
-            {
-                return NotFound(ex.Message);
-            }
-            catch (ValidationException ex)
-            {
-                return BadRequest(ex.Message);
-            }
-            catch (Exception)
-            {
-                return StatusCode(500, ErrorMessages.ServerError);
-            }
-        }
-
-        [HttpPatch("{id}")]
-        public virtual async Task<ActionResult<T>> Patch(int id, [FromBody] TPatch patch)
-        {
-            try
-            {
-                if (patch == null)
-                    return BadRequest(ErrorMessages.InvalidRequest);
-
-                var result = await _service.Patch(id, patch);
-                return Ok(result);
-            }
-            catch (NotFoundException ex)
-            {
-                return NotFound(ex.Message);
-            }
-            catch (ValidationException ex)
-            {
-                return BadRequest(ex.Message);
-            }
-            catch (Exception)
-            {
-                return StatusCode(500, ErrorMessages.ServerError);
-            }
+            return await _crudService.UpdateAsync(id, request);
         }
 
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin")]
-        public virtual async Task<ActionResult<T>> Delete(int id)
+        public virtual async Task<bool> Delete(int id)
         {
-            try
-            {
-                var result = await _service.Delete(id);
-                return Ok(result);
-            }
-            catch (NotFoundException ex)
-            {
-                return NotFound(ex.Message);
-            }
-            catch (ValidationException ex)
-            {
-                return BadRequest(ex.Message);
-            }
-            catch (Exception)
-            {
-                return StatusCode(500, ErrorMessages.ServerError);
-            }
+            return await _crudService.DeleteAsync(id);
         }
-
-        protected abstract int GetId(T entity);
     }
 } 

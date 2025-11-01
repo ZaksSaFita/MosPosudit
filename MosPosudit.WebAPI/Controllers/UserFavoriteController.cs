@@ -1,8 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using MosPosudit.Model.Exceptions;
-using MosPosudit.Model.Messages;
 using MosPosudit.Model.Requests.UserFavorite;
+using MosPosudit.Model.Responses;
 using MosPosudit.Model.Responses.UserFavorite;
 using MosPosudit.Model.SearchObjects;
 using MosPosudit.Services.Interfaces;
@@ -13,150 +12,73 @@ namespace MosPosudit.WebAPI.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
-    public class UserFavoriteController : ControllerBase
+    public class UserFavoriteController : BaseCrudController<UserFavoriteResponse, UserFavoriteSearchObject, UserFavoriteInsertRequest, UserFavoriteUpdateRequest>
     {
         private readonly IUserFavoriteService _favoriteService;
 
-        public UserFavoriteController(IUserFavoriteService favoriteService)
+        public UserFavoriteController(IUserFavoriteService service) : base(service)
         {
-            _favoriteService = favoriteService ?? throw new ArgumentNullException(nameof(favoriteService));
+            _favoriteService = service;
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<UserFavoriteResponse>>> Get([FromQuery] UserFavoriteSearchObject? search = null)
+        public override async Task<Model.Responses.PagedResult<UserFavoriteResponse>> Get([FromQuery] UserFavoriteSearchObject? search = null)
         {
-            try
+            // Get user ID from authenticated user context
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim != null && int.TryParse(userIdClaim.Value, out int userId))
             {
-                // Get user ID from authenticated user context
-                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-                if (userIdClaim != null && int.TryParse(userIdClaim.Value, out int userId))
-                {
-                    // Override search with authenticated user ID
-                    search ??= new UserFavoriteSearchObject();
-                    search.UserId = userId;
-                }
-                else if (search?.UserId == null)
-                {
-                    return Unauthorized("User ID is required");
-                }
-
-                var result = await _favoriteService.GetAsResponse(search);
-                return Ok(result);
+                search ??= new UserFavoriteSearchObject();
+                search.UserId = userId;
             }
-            catch (ValidationException ex)
-            {
-                return BadRequest(ex.Message);
-            }
-            catch (Exception)
-            {
-                return StatusCode(500, ErrorMessages.ServerError);
-            }
-        }
-
-        [HttpGet("{id}")]
-        public async Task<ActionResult<UserFavoriteResponse>> GetById(int id)
-        {
-            try
-            {
-                var result = await _favoriteService.GetByIdAsResponse(id);
-                return Ok(result);
-            }
-            catch (NotFoundException ex)
-            {
-                return NotFound(ex.Message);
-            }
-            catch (ValidationException ex)
-            {
-                return BadRequest(ex.Message);
-            }
-            catch (Exception)
-            {
-                return StatusCode(500, ErrorMessages.ServerError);
-            }
+            return await base.Get(search);
         }
 
         [HttpPost]
-        public async Task<ActionResult<UserFavoriteResponse>> Insert([FromBody] UserFavoriteInsertRequest insert)
+        public override async Task<UserFavoriteResponse> Create([FromBody] UserFavoriteInsertRequest request)
         {
-            try
+            // Get user ID from authenticated user context
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
             {
-                if (insert == null)
-                    return BadRequest(ErrorMessages.InvalidRequest);
-
-                // Get user ID from authenticated user context
-                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-                if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
-                {
-                    // For testing without auth, allow userId in request body
-                    if (insert.UserId == 0)
-                        return Unauthorized("User ID is required");
-                    userId = insert.UserId;
-                }
-                else
-                {
-                    insert.UserId = userId;
-                }
-
-                var result = await _favoriteService.InsertAsResponse(insert);
-                return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
+                if (request.UserId == 0)
+                    throw new UnauthorizedAccessException("User ID is required");
+                userId = request.UserId;
             }
-            catch (ValidationException ex)
+            else
             {
-                return BadRequest(ex.Message);
+                request.UserId = userId;
             }
-            catch (NotFoundException ex)
-            {
-                return NotFound(ex.Message);
-            }
-            catch (Exception)
-            {
-                return StatusCode(500, ErrorMessages.ServerError);
-            }
+            return await _favoriteService.CreateAsync(request);
         }
 
         [HttpDelete("tool/{toolId}")]
-        public async Task<ActionResult> DeleteByTool(int toolId)
+        public async Task<IActionResult> DeleteByTool(int toolId)
         {
-            try
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
             {
-                // Get user ID from authenticated user context
-                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-                if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
-                {
-                    return Unauthorized("User ID is required");
-                }
-
-                var deleted = await _favoriteService.DeleteByUserAndTool(userId, toolId);
-                if (!deleted)
-                    return NotFound("Favorite not found");
-
-                return Ok(new { message = "Favorite removed successfully" });
+                throw new UnauthorizedAccessException("User ID is required");
             }
-            catch (Exception)
-            {
-                return StatusCode(500, ErrorMessages.ServerError);
-            }
+
+            var deleted = await _favoriteService.DeleteByUserAndTool(userId, toolId);
+            if (!deleted)
+                return NotFound("Favorite not found");
+
+            return Ok(new { message = "Favorite removed successfully" });
         }
 
         [HttpGet("check/{toolId}")]
-        public async Task<ActionResult<bool>> IsFavorite(int toolId)
+        public async Task<IActionResult> IsFavorite(int toolId)
         {
-            try
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
             {
-                // Get user ID from authenticated user context
-                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-                if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
-                {
-                    return Unauthorized("User ID is required");
-                }
+                throw new UnauthorizedAccessException("User ID is required");
+            }
 
-                var isFavorite = await _favoriteService.IsFavorite(userId, toolId);
-                return Ok(new { isFavorite });
-            }
-            catch (Exception)
-            {
-                return StatusCode(500, ErrorMessages.ServerError);
-            }
+            var isFavorite = await _favoriteService.IsFavorite(userId, toolId);
+            return Ok(new { isFavorite });
         }
     }
 }

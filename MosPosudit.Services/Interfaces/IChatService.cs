@@ -10,6 +10,7 @@ namespace MosPosudit.Services.Interfaces
         Task<MessageResponse> SendMessage(int userId, MessageSendRequest request);
         Task<MessageResponse> SendReply(int fromUserId, int toUserId, MessageSendRequest request);
         Task StartChat(int messageId, int adminId);
+        Task StartChatWithUser(int adminId, int userId);
         Task MarkAsRead(int messageId, int userId);
     }
 }

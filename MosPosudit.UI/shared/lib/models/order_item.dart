@@ -2,43 +2,39 @@ class OrderItemModel {
   final int id;
   final int orderId;
   final int toolId;
+  final String? toolName;
   final int quantity;
-  final DateTime startDate;
-  final DateTime endDate;
   final num dailyRate;
-  final String? notes;
+  final num totalPrice;
 
   OrderItemModel({
     required this.id,
     required this.orderId,
     required this.toolId,
+    this.toolName,
     required this.quantity,
-    required this.startDate,
-    required this.endDate,
     required this.dailyRate,
-    this.notes,
+    required this.totalPrice,
   });
 
   factory OrderItemModel.fromJson(Map<String, dynamic> json) => OrderItemModel(
-        id: json['id'],
-        orderId: json['orderId'],
-        toolId: json['toolId'],
-        quantity: json['quantity'],
-        startDate: DateTime.parse(json['startDate']),
-        endDate: DateTime.parse(json['endDate']),
-        dailyRate: json['dailyRate'],
-        notes: json['notes'],
+        id: json['id'] ?? json['Id'] ?? 0,
+        orderId: json['orderId'] ?? json['OrderId'] ?? 0,
+        toolId: json['toolId'] ?? json['ToolId'] ?? 0,
+        toolName: json['toolName'] ?? json['ToolName'],
+        quantity: json['quantity'] ?? json['Quantity'] ?? 0,
+        dailyRate: json['dailyRate'] ?? json['DailyRate'] ?? 0,
+        totalPrice: json['totalPrice'] ?? json['TotalPrice'] ?? 0,
       );
 
   Map<String, dynamic> toJson() => {
         'id': id,
         'orderId': orderId,
         'toolId': toolId,
+        'toolName': toolName,
         'quantity': quantity,
-        'startDate': startDate.toIso8601String(),
-        'endDate': endDate.toIso8601String(),
         'dailyRate': dailyRate,
-        'notes': notes,
+        'totalPrice': totalPrice,
       };
 }
 

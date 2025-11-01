@@ -22,27 +22,20 @@ namespace MosPosudit.WebAPI.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
-            try
+            var response = await _authService.Login(request);
+            
+            // Send welcome notification
+            if (response.UserId.HasValue)
             {
-                var response = await _authService.Login(request);
-                
-                // Send welcome notification
-                if (response.UserId.HasValue)
-                {
-                    _messageService.PublishNotification(
-                        response.UserId.Value,
-                        "Welcome Back!",
-                        "You have successfully logged in to MosPosudit.",
-                        "Info"
-                    );
-                }
-                
-                return Ok(new { token = response.Token });
+                _messageService.PublishNotification(
+                    response.UserId.Value,
+                    "Welcome Back!",
+                    "You have successfully logged in to MosPosudit.",
+                    "Info"
+                );
             }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
+            
+            return Ok(new { token = response.Token });
         }
 
 

@@ -29,8 +29,8 @@ namespace MosPosudit.Services.DataBase.Data
         // Navigation properties
         [ForeignKey("CategoryId")]
         public Category Category { get; set; } = null!;
-        public ICollection<RentalItem> RentalItems { get; set; } = new List<RentalItem>();
         public ICollection<Review> Reviews { get; set; } = new List<Review>();
         public ICollection<UserFavorite> Favorites { get; set; } = new List<UserFavorite>();
+        public ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
     }
 }

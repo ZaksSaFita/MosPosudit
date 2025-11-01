@@ -5,14 +5,15 @@ using Microsoft.Extensions.Logging;
 using MosPosudit.Services.DataBase;
 using MosPosudit.Services.Interfaces;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace MosPosudit.Services.DataBase.Extensions
 {
     public static class DatabaseInitializer
     {
-        /// <summary>
-        /// Waits for SQL Server to be ready, applies migrations, and seeds the database
-        /// </summary>
+        private const int MaxRetries = 30;
+        private const int RetryDelayMs = 2000;
+
         public static async Task InitializeDatabaseAsync(
             IServiceProvider serviceProvider,
             IConfiguration configuration,
@@ -23,26 +24,14 @@ namespace MosPosudit.Services.DataBase.Extensions
             {
                 using var scope = serviceProvider.CreateScope();
                 var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                var connectionString = configuration.GetConnectionString("DefaultConnection");
-                // Replace any database name with master for connection test
-                var masterConnectionString = connectionString;
-                if (!string.IsNullOrEmpty(connectionString))
-                {
-                    // Extract database name and replace with master
-                    var dbNameMatch = System.Text.RegularExpressions.Regex.Match(connectionString, @"Database=([^;]+);");
-                    if (dbNameMatch.Success)
-                    {
-                        masterConnectionString = connectionString.Replace($"Database={dbNameMatch.Groups[1].Value};", "Database=master;");
-                    }
-                }
+                var connectionString = configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string not found");
 
-                // Wait for SQL Server to be ready
+                var (dbName, masterConnectionString) = ExtractDatabaseInfo(connectionString);
+
                 await WaitForSqlServerAsync(masterConnectionString, logger);
-
-                // Apply migrations
+                await EnsureDatabaseExistsAsync(dbName, masterConnectionString, logger);
                 await ApplyMigrationsAsync(db, logger);
 
-                // Seed database
                 var seeder = scope.ServiceProvider.GetRequiredService<ISeedService>();
                 seeder.SeedIfEmpty(db, contentRootPath);
 
@@ -55,20 +44,25 @@ namespace MosPosudit.Services.DataBase.Extensions
             }
         }
 
-        private static async Task WaitForSqlServerAsync(string? masterConnectionString, ILogger logger)
+        private static (string dbName, string masterConnectionString) ExtractDatabaseInfo(string connectionString)
         {
-            var maxRetries = 30;
-            var retryCount = 0;
+            var match = Regex.Match(connectionString, @"Database=([^;]+);?");
+            if (!match.Success)
+                throw new InvalidOperationException("Could not extract database name from connection string");
 
-            while (retryCount < maxRetries)
+            var dbName = match.Groups[1].Value;
+            var masterConnectionString = connectionString.Replace($"Database={dbName};", "Database=master;");
+            return (dbName, masterConnectionString);
+        }
+
+        private static async Task WaitForSqlServerAsync(string masterConnectionString, ILogger logger)
+        {
+            for (int attempt = 1; attempt <= MaxRetries; attempt++)
             {
                 try
                 {
-                    var optionsBuilder = new DbContextOptionsBuilder<ApplicationDbContext>();
-                    optionsBuilder.UseSqlServer(masterConnectionString);
-                    using var testContext = new ApplicationDbContext(optionsBuilder.Options);
-
-                    if (testContext.Database.CanConnect())
+                    using var context = CreateContext(masterConnectionString);
+                    if (context.Database.CanConnect())
                     {
                         logger.LogInformation("SQL Server is ready");
                         return;
@@ -76,16 +70,44 @@ namespace MosPosudit.Services.DataBase.Extensions
                 }
                 catch (Exception ex)
                 {
-                    retryCount++;
-                    if (retryCount >= maxRetries)
+                    if (attempt >= MaxRetries)
                     {
-                        logger.LogError(ex, "Failed to connect to SQL Server after {MaxRetries} attempts", maxRetries);
+                        logger.LogError(ex, "Failed to connect to SQL Server after {MaxRetries} attempts", MaxRetries);
                         throw;
                     }
-
-                    logger.LogWarning("SQL Server not ready yet, waiting 2 seconds before retry... (attempt {Attempt}/{MaxRetries})", retryCount, maxRetries);
-                    await Task.Delay(2000);
+                    logger.LogWarning("SQL Server not ready, waiting... (attempt {Attempt}/{MaxRetries})", attempt, MaxRetries);
+                    await Task.Delay(RetryDelayMs);
                 }
+            }
+        }
+
+        private static async Task EnsureDatabaseExistsAsync(string dbName, string masterConnectionString, ILogger logger)
+        {
+            try
+            {
+                using var masterContext = CreateContext(masterConnectionString);
+                await using var connection = masterContext.Database.GetDbConnection();
+                await connection.OpenAsync();
+
+                var checkCmd = connection.CreateCommand();
+                checkCmd.CommandText = $"SELECT COUNT(*) FROM sys.databases WHERE name = '{dbName}'";
+                var exists = Convert.ToInt32(await checkCmd.ExecuteScalarAsync()) > 0;
+
+                if (exists)
+                {
+                    logger.LogInformation("Database '{DatabaseName}' already exists", dbName);
+                    return;
+                }
+
+                logger.LogInformation("Creating database '{DatabaseName}'...", dbName);
+                var createCmd = connection.CreateCommand();
+                createCmd.CommandText = $"CREATE DATABASE [{dbName}]";
+                await createCmd.ExecuteNonQueryAsync();
+                logger.LogInformation("Database '{DatabaseName}' created successfully", dbName);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error ensuring database exists. Continuing with migration attempt...");
             }
         }
 
@@ -95,22 +117,19 @@ namespace MosPosudit.Services.DataBase.Extensions
             {
                 var pendingMigrations = db.Database.GetPendingMigrations().ToList();
                 
-                if (pendingMigrations.Any())
-                {
-                    logger.LogInformation("Applying {Count} pending migration(s)...", pendingMigrations.Count);
-                    await Task.Run(() => db.Database.Migrate());
-                    logger.LogInformation("Migrations applied successfully");
-                }
-                else
+                if (!pendingMigrations.Any())
                 {
                     logger.LogInformation("Database is up to date, no pending migrations");
+                    return;
                 }
-            }
-            catch (Microsoft.Data.SqlClient.SqlException ex) when (ex.Number == 2714) // Object already exists
-            {
-                logger.LogWarning("Some database objects already exist. This might indicate a previous incomplete migration.");
-                logger.LogWarning("Attempting to synchronize migration history...");
 
+                logger.LogInformation("Applying {Count} pending migration(s)...", pendingMigrations.Count);
+                await Task.Run(() => db.Database.Migrate());
+                logger.LogInformation("Migrations applied successfully");
+            }
+            catch (Microsoft.Data.SqlClient.SqlException ex) when (ex.Number == 2714)
+            {
+                logger.LogWarning("Migration conflict detected. Attempting to synchronize migration history...");
                 await SynchronizeMigrationHistoryAsync(db, logger);
             }
         }
@@ -119,34 +138,35 @@ namespace MosPosudit.Services.DataBase.Extensions
         {
             try
             {
-                var appliedMigrations = db.Database.GetAppliedMigrations().ToList();
-                var allMigrations = db.Database.GetMigrations().ToList();
-                var pendingMigrations = allMigrations.Except(appliedMigrations).ToList();
-
-                if (pendingMigrations.Any())
+                var pending = db.Database.GetMigrations().Except(db.Database.GetAppliedMigrations()).ToList();
+                
+                foreach (var migration in pending)
                 {
-                    // Try to mark pending migrations as applied if tables already exist
-                    foreach (var migration in pendingMigrations)
+                    try
                     {
-                        try
-                        {
-                            await db.Database.ExecuteSqlRawAsync(
-                                $"IF NOT EXISTS (SELECT * FROM [__EFMigrationsHistory] WHERE [MigrationId] = '{migration}') " +
-                                $"INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion]) VALUES ('{migration}', '8.0.0')");
-                            logger.LogInformation("Marked migration {Migration} as applied", migration);
-                        }
-                        catch (Exception e)
-                        {
-                            logger.LogWarning(e, "Could not mark migration {Migration} as applied", migration);
-                        }
+                        await db.Database.ExecuteSqlRawAsync(
+                            $"IF NOT EXISTS (SELECT * FROM [__EFMigrationsHistory] WHERE [MigrationId] = '{migration}') " +
+                            $"INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion]) VALUES ('{migration}', '8.0.0')");
+                        logger.LogInformation("Marked migration {Migration} as applied", migration);
+                    }
+                    catch (Exception e)
+                    {
+                        logger.LogWarning(e, "Could not mark migration {Migration} as applied", migration);
                     }
                 }
             }
             catch (Exception e)
             {
                 logger.LogError(e, "Error synchronizing migration history");
-                // Continue anyway - might work if tables are already there
             }
+        }
+
+        private static ApplicationDbContext CreateContext(string connectionString)
+        {
+            var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+                .UseSqlServer(connectionString)
+                .Options;
+            return new ApplicationDbContext(options);
         }
     }
 }

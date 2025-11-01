@@ -4,155 +4,79 @@ using MosPosudit.Model.Messages;
 using MosPosudit.Model.SearchObjects;
 using MosPosudit.Services.DataBase;
 using MosPosudit.Services.Interfaces;
+using MapsterMapper;
 
 namespace MosPosudit.Services.Services
 {
-    public class BaseCrudService<T, TSearch, TInsert, TUpdate, TPatch> : ICrudService<T, TSearch, TInsert, TUpdate, TPatch>
-        where T : class
-        where TSearch : BaseSearchObject
+    public abstract class BaseCrudService<T, TSearch, TEntity, TInsert, TUpdate> 
+        : BaseService<T, TSearch, TEntity>, ICrudService<T, TSearch, TInsert, TUpdate> 
+        where T : class 
+        where TSearch : BaseSearchObject 
+        where TEntity : class, new() 
+        where TInsert : class 
+        where TUpdate : class
     {
-        protected readonly ApplicationDbContext _context;
-        protected readonly DbSet<T> _dbSet;
-
-        public BaseCrudService(ApplicationDbContext context)
+        public BaseCrudService(ApplicationDbContext context, IMapper mapper) : base(context, mapper)
         {
-            _context = context ?? throw new ArgumentNullException(nameof(context));
-            _dbSet = context.Set<T>();
         }
 
-        public virtual async Task<IEnumerable<T>> Get(TSearch? search = null)
+        public virtual async Task<T> CreateAsync(TInsert request)
         {
-            try
-            {
-                var query = _dbSet.AsQueryable();
-
-                if (search?.Page.HasValue == true && search?.PageSize.HasValue == true)
-                {
-                    if (search.Page.Value < 1)
-                        throw new ValidationException(ErrorMessages.InvalidRequest);
-                    if (search.PageSize.Value < 1)
-                        throw new ValidationException(ErrorMessages.InvalidRequest);
-
-                    query = query.Skip((search.Page.Value - 1) * search.PageSize.Value)
-                                .Take(search.PageSize.Value);
-                }
-
-                return await query.ToListAsync();
-            }
-            catch (Exception ex) when (ex is not ValidationException && ex is not NotFoundException)
-            {
-                throw new Exception(ErrorMessages.ServerError, ex);
-            }
+            var entity = new TEntity();
+            MapInsertToEntity(entity, request);
+            _context.Set<TEntity>().Add(entity);
+            await BeforeInsert(entity, request);
+            await _context.SaveChangesAsync();
+            return MapToResponse(entity);
         }
 
-        public virtual async Task<T> GetById(int id)
+        protected virtual async Task BeforeInsert(TEntity entity, TInsert request)
         {
-            try
-            {
-                if (id <= 0)
-                    throw new ValidationException(ErrorMessages.InvalidRequest);
-
-                var entity = await _dbSet.FindAsync(id);
-                if (entity == null)
-                    throw new NotFoundException(ErrorMessages.EntityNotFound);
-
-                return entity;
-            }
-            catch (Exception ex) when (ex is not ValidationException && ex is not NotFoundException)
-            {
-                throw new Exception(ErrorMessages.ServerError, ex);
-            }
+            // Override in derived classes if needed
         }
 
-        public virtual async Task<T> Insert(TInsert insert)
+        protected virtual TEntity MapInsertToEntity(TEntity entity, TInsert request)
         {
-            try
-            {
-                if (insert == null)
-                    throw new ValidationException(ErrorMessages.InvalidRequest);
-
-                var entity = MapToEntity(insert);
-                await _dbSet.AddAsync(entity);
-                await _context.SaveChangesAsync();
-                return entity;
-            }
-            catch (Exception ex) when (ex is not ValidationException)
-            {
-                throw new Exception(ErrorMessages.ServerError, ex);
-            }
+            return _mapper.Map(request, entity);
         }
 
-        public virtual async Task<T> Update(int id, TUpdate update)
+        public virtual async Task<T?> UpdateAsync(int id, TUpdate request)
         {
-            try
-            {
-                if (id <= 0)
-                    throw new ValidationException(ErrorMessages.InvalidRequest);
-                if (update == null)
-                    throw new ValidationException(ErrorMessages.InvalidRequest);
+            var entity = await _context.Set<TEntity>().FindAsync(id);
+            if (entity == null)
+                return null;
 
-                var entity = await GetById(id);
-                MapToEntity(update, entity);
-                await _context.SaveChangesAsync();
-                return entity;
-            }
-            catch (Exception ex) when (ex is not ValidationException && ex is not NotFoundException)
-            {
-                throw new Exception(ErrorMessages.ServerError, ex);
-            }
+            await BeforeUpdate(entity, request);
+            MapUpdateToEntity(entity, request);
+            await _context.SaveChangesAsync();
+            return MapToResponse(entity);
         }
 
-        public virtual async Task<T> Delete(int id)
+        protected virtual async Task BeforeUpdate(TEntity entity, TUpdate request)
         {
-            try
-            {
-                if (id <= 0)
-                    throw new ValidationException(ErrorMessages.InvalidRequest);
-
-                var entity = await GetById(id);
-                _dbSet.Remove(entity);
-                await _context.SaveChangesAsync();
-                return entity;
-            }
-            catch (Exception ex) when (ex is not ValidationException && ex is not NotFoundException)
-            {
-                throw new Exception(ErrorMessages.ServerError, ex);
-            }
+            // Override in derived classes if needed
         }
 
-        public virtual async Task<T> Patch(int id, TPatch patch)
+        protected virtual void MapUpdateToEntity(TEntity entity, TUpdate request)
         {
-            try
-            {
-                if (id <= 0)
-                    throw new ValidationException(ErrorMessages.InvalidRequest);
-                if (patch == null)
-                    throw new ValidationException(ErrorMessages.InvalidRequest);
-
-                var entity = await GetById(id);
-                MapToEntity(patch, entity);
-                await _context.SaveChangesAsync();
-                return entity;
-            }
-            catch (Exception ex) when (ex is not ValidationException && ex is not NotFoundException)
-            {
-                throw new Exception(ErrorMessages.ServerError, ex);
-            }
+            _mapper.Map(request, entity);
         }
 
-        protected virtual T MapToEntity(TInsert insert)
+        public virtual async Task<bool> DeleteAsync(int id)
         {
-            throw new NotImplementedException(ErrorMessages.ServerError);
+            var entity = await _context.Set<TEntity>().FindAsync(id);
+            if (entity == null)
+                return false;
+
+            await BeforeDelete(entity);
+            _context.Set<TEntity>().Remove(entity);
+            await _context.SaveChangesAsync();
+            return true;
         }
 
-        protected virtual void MapToEntity(TUpdate update, T entity)
+        protected virtual async Task BeforeDelete(TEntity entity)
         {
-            throw new NotImplementedException(ErrorMessages.ServerError);
-        }
-
-        protected virtual void MapToEntity(TPatch patch, T entity)
-        {
-            throw new NotImplementedException(ErrorMessages.ServerError);
+            // Override in derived classes if needed
         }
     }
 }

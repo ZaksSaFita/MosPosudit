@@ -13,6 +13,7 @@ import 'package:mosposudit_shared/services/tool_service.dart';
 import 'package:mosposudit_shared/services/utility_service.dart';
 import 'package:mosposudit_shared/services/message_service.dart';
 import 'package:mosposudit_shared/services/cart_service.dart';
+import 'package:mosposudit_shared/services/notification_service.dart';
 import 'package:mosposudit_shared/models/tool.dart';
 import 'package:mosposudit_shared/models/category.dart';
 import 'package:mosposudit_shared/core/config.dart';
@@ -22,6 +23,7 @@ import 'screens/home_screen.dart';
 import 'screens/chat_screen.dart';
 import 'screens/registration_screen.dart';
 import 'screens/cart_screen.dart';
+import 'screens/orders_screen.dart';
 
 void main() {
   // Add error handling
@@ -205,8 +207,8 @@ class _LoginScreenState extends State<LoginScreen> {
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
-          'Username': _usernameController.text,
-          'Password': _passwordController.text,
+          'username': _usernameController.text,
+          'password': _passwordController.text,
         }),
       );
 
@@ -572,9 +574,9 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
       onProfileTap: _navigateToProfile,
     ),
     ToolsPage(key: ValueKey(_selectedCategoryId), initialCategoryId: _selectedCategoryId),
-    const MyRentalsPage(),
     ChatScreen(),
     const CartScreen(),
+    const OrdersScreen(),
   ];
 
   @override
@@ -602,12 +604,16 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
               _selectedIndex = index;
             });
             // Reload message count when navigating to chat
-            if (index == 3) {
+            if (index == 2) {
               _loadUnreadMessageCount();
             }
             // Reload cart count when navigating to cart
-            if (index == 4) {
+            if (index == 3) {
               _loadCartCount();
+            }
+            // Reload orders when navigating to orders
+            if (index == 4) {
+              // Orders screen will reload itself
             }
           },
           backgroundColor: Colors.transparent,
@@ -640,17 +646,10 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
               label: 'Tools',
             ),
             BottomNavigationBarItem(
-              icon: Icon(
-                _selectedIndex == 2 ? Icons.assignment : Icons.assignment_outlined,
-                size: 24,
-              ),
-              label: 'My Rentals',
-            ),
-            BottomNavigationBarItem(
               icon: Stack(
                 children: [
                   Icon(
-                    _selectedIndex == 3 ? Icons.chat : Icons.chat_outlined,
+                    _selectedIndex == 2 ? Icons.chat : Icons.chat_outlined,
                     size: 24,
                   ),
                   if (_unreadMessageCount > 0)
@@ -686,7 +685,7 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
               icon: Stack(
                 children: [
                   Icon(
-                    _selectedIndex == 4 ? Icons.shopping_cart : Icons.shopping_cart_outlined,
+                    _selectedIndex == 3 ? Icons.shopping_cart : Icons.shopping_cart_outlined,
                     size: 24,
                   ),
                   if (_cartItemCount > 0)
@@ -717,6 +716,13 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
                 ],
               ),
               label: 'Cart',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(
+                _selectedIndex == 4 ? Icons.receipt_long : Icons.receipt_long_outlined,
+                size: 24,
+              ),
+              label: 'Orders',
             ),
           ],
         ),
@@ -778,8 +784,16 @@ class _ToolsPageState extends State<ToolsPage> {
       final cartItems = results[2] as List;
       final toolsInCart = cartItems.map<int>((item) => item.toolId as int).toSet();
 
+      final loadedTools = results[0] as List<ToolModel>;
+      // Debug: print quantities to verify backend data
+      print('=== Tools Quantity Debug ===');
+      for (var tool in loadedTools.take(5)) {
+        print('Tool: ${tool.name}, Quantity: ${tool.quantity}, IsAvailable: ${tool.isAvailable}');
+      }
+      print('==========================');
+
       setState(() {
-        _tools = results[0] as List<ToolModel>;
+        _tools = loadedTools;
         _categories = results[1] as List<CategoryModel>;
         _toolsInCart = toolsInCart;
         _isLoading = false;
@@ -889,21 +903,64 @@ class _ToolsPageState extends State<ToolsPage> {
     try {
       final toolId = tool.id ?? 0;
       
+      // Check tool availability before adding to cart
+      if (tool.isAvailable == false) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                  content: Text('${tool.name ?? "This tool"} is currently not available.'),
+              backgroundColor: Colors.orange,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+        return;
+      }
+      
+      // Check if tool has available quantity
+      if (tool.quantity != null && tool.quantity! <= 0) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${tool.name ?? "This tool"} is out of stock.'),
+              backgroundColor: Colors.orange,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+        return;
+      }
+      
       // Check if item already exists in cart
       final existingItem = await _cartService.findItemByToolId(toolId);
       
       if (existingItem != null) {
+        // Check if increasing quantity would exceed available stock
+        final newQuantity = existingItem.quantity + 1;
+        if (tool.quantity != null && newQuantity > tool.quantity!) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Cannot increase quantity. Only ${tool.quantity} available in stock.'),
+                backgroundColor: Colors.orange,
+                duration: const Duration(seconds: 3),
+              ),
+            );
+          }
+          return;
+        }
+        
         // Item already exists, automatically increase quantity
         final success = await _cartService.updateCartItemQuantity(
           existingItem.id,
-          existingItem.quantity + 1,
+          newQuantity,
         );
 
         if (success && mounted) {
           await _refreshCartStatus();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Quantity increased to ${existingItem.quantity + 1}'),
+              content: Text('Quantity increased to $newQuantity'),
               backgroundColor: Colors.green,
             ),
           );
@@ -1046,11 +1103,14 @@ class _ToolsPageState extends State<ToolsPage> {
                   (context, index) {
                     final tool = _filteredTools[index];
                     final categoryName = _getCategoryName(tool.categoryId);
+                    final isOutOfStock = tool.isAvailable == false || (tool.quantity != null && tool.quantity! <= 0);
                     
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      elevation: 2,
-                      child: Padding(
+                    return Opacity(
+                      opacity: isOutOfStock ? 0.5 : 1.0,
+                      child: Card(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        elevation: 2,
+                        child: Padding(
                         padding: const EdgeInsets.all(12.0),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1082,6 +1142,46 @@ class _ToolsPageState extends State<ToolsPage> {
                                       ),
                                     ),
                                   const SizedBox(height: 6),
+                                  // Quantity indicator
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: (tool.quantity != null && tool.quantity! > 0)
+                                              ? Colors.green.shade100 
+                                              : Colors.red.shade100,
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              (tool.quantity != null && tool.quantity! > 0)
+                                                  ? Icons.inventory_2
+                                                  : Icons.block,
+                                              size: 14,
+                                              color: (tool.quantity != null && tool.quantity! > 0)
+                                                  ? Colors.green.shade700 
+                                                  : Colors.red.shade700,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              'Quantity: ${tool.quantity ?? 0}',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: (tool.quantity != null && tool.quantity! > 0)
+                                                    ? Colors.green.shade700 
+                                                    : Colors.red.shade700,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 6),
                                   // Description
                                   if (tool.description != null && tool.description!.isNotEmpty)
                                     Text(
@@ -1096,7 +1196,7 @@ class _ToolsPageState extends State<ToolsPage> {
                                   const SizedBox(height: 8),
                                   // Price
                                   Text(
-                                    '€${tool.dailyRate?.toStringAsFixed(2) ?? '0.00'} / day',
+                                    '\$${tool.dailyRate?.toStringAsFixed(2) ?? '0.00'} / day',
                                     style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
@@ -1104,11 +1204,13 @@ class _ToolsPageState extends State<ToolsPage> {
                                     ),
                                   ),
                                     const SizedBox(height: 8),
-                                    // Add to cart button - disabled if already in cart
+                                    // Add to cart button - disabled if already in cart or unavailable
                                     SizedBox(
                                       width: double.infinity,
                                       child: ElevatedButton.icon(
-                                        onPressed: _toolsInCart.contains(tool.id)
+                                        onPressed: (_toolsInCart.contains(tool.id) || 
+                                                   tool.isAvailable == false || 
+                                                   (tool.quantity != null && tool.quantity! <= 0))
                                             ? null
                                             : () => _addToCart(tool),
                                         icon: Icon(
@@ -1120,7 +1222,9 @@ class _ToolsPageState extends State<ToolsPage> {
                                         label: Text(
                                           _toolsInCart.contains(tool.id)
                                               ? 'In cart'
-                                              : 'Add to cart',
+                                              : (tool.isAvailable == false || (tool.quantity != null && tool.quantity! <= 0))
+                                                  ? 'Unavailable'
+                                                  : 'Add to cart',
                                         ),
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: _toolsInCart.contains(tool.id)
@@ -1142,53 +1246,13 @@ class _ToolsPageState extends State<ToolsPage> {
                           ],
                         ),
                       ),
+                    ),
                     );
                   },
                   childCount: _filteredTools.length,
                 ),
               ),
             ),
-        ],
-      ),
-    );
-  }
-}
-
-class MyRentalsPage extends StatelessWidget {
-  const MyRentalsPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'My Rentals',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
-          SizedBox(height: 16),
-          Expanded(
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.assignment, size: 64, color: Colors.grey),
-                  SizedBox(height: 16),
-                  Text(
-                    'No active rentals',
-                    style: TextStyle(fontSize: 18, color: Colors.grey),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    'Rent a tool to see it here',
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                ],
-              ),
-            ),
-          ),
         ],
       ),
     );
@@ -1447,20 +1511,6 @@ class _ProfilePageState extends State<ProfilePage> {
                   trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                   onTap: () {
                     // TODO: Implement password change
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Feature in development'),
-                      ),
-                    );
-                  },
-                ),
-                const Divider(),
-                ListTile(
-                  leading: const Icon(Icons.history, color: Colors.blue),
-                  title: const Text('Rental History'),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () {
-                    // TODO: Implement rental history
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text('Feature in development'),

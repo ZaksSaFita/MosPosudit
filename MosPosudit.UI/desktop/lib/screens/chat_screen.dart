@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:mosposudit_shared/services/message_service.dart';
 import 'package:mosposudit_shared/services/auth_service.dart';
+import 'package:mosposudit_shared/services/user_service.dart';
+import 'package:mosposudit_shared/models/user.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -17,6 +19,7 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final MessageService _messageService = MessageService();
+  final UserService _userService = UserService();
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _messageController = TextEditingController();
   
@@ -263,6 +266,128 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  Future<void> _showNewChatDialog() async {
+    try {
+      // Load non-admin users
+      final users = await _userService.fetchNonAdminUsers();
+      
+      if (!mounted) return;
+      
+      // Filter out users that already have active chats
+      final usersWithoutActiveChats = users.where((user) => 
+        !_activeUserIds.contains(user.id)
+      ).toList();
+      
+      if (usersWithoutActiveChats.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('All users already have active chats'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+      
+      // Show dialog
+      final selectedUser = await showDialog<UserModel>(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Start New Chat'),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: usersWithoutActiveChats.length,
+                itemBuilder: (context, index) {
+                  final user = usersWithoutActiveChats[index];
+                  final fullName = '${user.firstName ?? ''} ${user.lastName ?? ''}'.trim();
+                  final displayName = fullName.isNotEmpty ? fullName : user.username ?? 'User ${user.id}';
+                  
+                  return ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: Colors.blue,
+                      child: Text(
+                        displayName.isNotEmpty ? displayName[0].toUpperCase() : '?',
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ),
+                    title: Text(displayName),
+                    subtitle: user.email != null ? Text(user.email!) : null,
+                    onTap: () {
+                      Navigator.of(context).pop(user);
+                    },
+                  );
+                },
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
+              ),
+            ],
+          );
+        },
+      );
+      
+      if (selectedUser != null) {
+        await _startChatWithUser(selectedUser.id);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading users: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _startChatWithUser(int userId) async {
+    try {
+      print('Starting chat with user ID: $userId');
+      final success = await _messageService.startChatWithUser(userId);
+      print('Chat started result: $success');
+      
+      if (success) {
+        // Reload chats and messages
+        await _loadPendingMessages();
+        await _loadActiveChats();
+        
+        // Select the user and load their messages
+        setState(() {
+          _selectedUserId = userId;
+        });
+        await _loadChatMessages(userId);
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Chat started successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
+    } catch (e, stackTrace) {
+      print('Error in _startChatWithUser: $e');
+      print('Stack trace: $stackTrace');
+      if (mounted) {
+        final errorMessage = e.toString().replaceAll('Exception: ', '');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $errorMessage'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _sendMessage() async {
     if (_messageController.text.trim().isEmpty || _isSending || _selectedUserId == null) return;
 
@@ -355,12 +480,28 @@ class _ChatScreenState extends State<ChatScreen> {
                 decoration: BoxDecoration(
                   border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
                 ),
-                child: const Text(
-                  'Chat Messages',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Chat Messages',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: _showNewChatDialog,
+                      icon: const Icon(Icons.add, size: 18),
+                      label: const Text('New Chat'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               Expanded(

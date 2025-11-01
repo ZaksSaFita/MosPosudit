@@ -23,13 +23,5 @@ class DashboardService {
     throw Exception('Failed to fetch users count');
   }
 
-  Future<int> fetchActiveRentalsCount() async {
-    final response = await _api.get('/Rental', query: {'isActive': true});
-    if (response.statusCode == 200) {
-      final List<dynamic> data = jsonDecode(response.body);
-      return data.length;
-    }
-    throw Exception('Failed to fetch rentals count');
-  }
 }
 

@@ -20,9 +20,15 @@ class UserFavoriteService {
       
       if (res.statusCode == 200) {
         final decoded = jsonDecode(res.body);
-        final List<dynamic> data = decoded is List 
-            ? decoded 
-            : (decoded['value'] ?? []);
+        // Backend vraća PagedResult<T> sa items i totalCount
+        final List<dynamic> data;
+        if (decoded is Map && decoded.containsKey('items')) {
+          data = decoded['items'] as List<dynamic>;
+        } else if (decoded is List) {
+          data = decoded;
+        } else {
+          throw Exception('Unexpected response format: $decoded');
+        }
         return data.map((e) => UserFavoriteModel.fromJson(e)).toList();
       }
       

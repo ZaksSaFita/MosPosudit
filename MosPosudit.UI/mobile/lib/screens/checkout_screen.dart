@@ -1,291 +1,243 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:mosposudit_shared/models/cart.dart';
-import 'package:mosposudit_shared/services/rental_service.dart';
 import 'package:mosposudit_shared/services/cart_service.dart';
+import 'package:mosposudit_shared/services/order_service.dart';
+import 'package:mosposudit_shared/services/payment_service.dart';
+import 'package:mosposudit_shared/services/auth_service.dart';
+import 'package:mosposudit_shared/services/tool_service.dart';
+import 'package:mosposudit_shared/models/cart.dart';
+import 'package:mosposudit_shared/models/tool.dart';
+import 'package:mosposudit_shared/dtos/order/order_insert_request.dart';
+import 'paypal_payment_screen.dart';
 
 class CheckoutScreen extends StatefulWidget {
-  final List<CartItemModel> cartItems;
-
-  const CheckoutScreen({super.key, required this.cartItems});
+  const CheckoutScreen({super.key});
 
   @override
   State<CheckoutScreen> createState() => _CheckoutScreenState();
 }
 
 class _CheckoutScreenState extends State<CheckoutScreen> {
-  final RentalService _rentalService = RentalService();
-  final CartService _cartService = CartService();
+  final _cartService = CartService();
+  final _orderService = OrderService();
+  final _toolService = ToolService();
+  final _formKey = GlobalKey<FormState>();
+  
+  List<CartItemModel> _cartItems = [];
+  Map<int, ToolModel> _tools = {};
+  bool _isLoading = true;
+  bool _isProcessing = false;
+  bool _termsAccepted = false;
+  
   DateTime _focusedDay = DateTime.now();
   DateTime _selectedStartDate = DateTime.now();
-  DateTime? _selectedEndDate;
-  Set<DateTime> _bookedDates = {};
-  bool _isLoadingBookedDates = true;
-  bool _isCreatingRental = false;
-
+  DateTime _selectedEndDate = DateTime.now().add(const Duration(days: 1));
+  CalendarFormat _calendarFormat = CalendarFormat.month;
+  
   @override
   void initState() {
     super.initState();
-    _loadBookedDates();
+    _loadCart();
   }
 
-  Future<void> _loadBookedDates() async {
+  Future<void> _loadCart() async {
     setState(() {
-      _isLoadingBookedDates = true;
+      _isLoading = true;
     });
 
     try {
-      // Get all tool IDs from cart
-      final toolIds = widget.cartItems.map((item) => item.toolId).toSet().toList();
+      final items = await _cartService.getCartItems();
+      final toolIds = items.map((item) => item.toolId).toSet();
+      final tools = await _toolService.fetchTools();
       
-      // Get booked dates for all tools from API
-      final startDate = DateTime.now();
-      final endDate = DateTime.now().add(const Duration(days: 365));
-      
-      final bookedDatesList = await _rentalService.getAllBookedDatesForTools(
-        toolIds: toolIds,
-        startDate: startDate,
-        endDate: endDate,
-      );
-      
-      if (mounted) {
-        setState(() {
-          _bookedDates = bookedDatesList.toSet();
-          _isLoadingBookedDates = false;
-        });
-      }
-    } catch (e) {
-      print('Error loading booked dates: $e');
-      if (mounted) {
-        setState(() {
-          _isLoadingBookedDates = false;
-        });
-      }
-    }
-  }
-
-  bool _isDateBooked(DateTime date) {
-    final normalizedDate = DateTime(date.year, date.month, date.day);
-    return _bookedDates.contains(normalizedDate);
-  }
-
-  bool _isDateSelectable(DateTime date) {
-    // Don't allow dates in the past
-    final today = DateTime.now();
-    final normalizedDate = DateTime(date.year, date.month, date.day);
-    final normalizedToday = DateTime(today.year, today.month, today.day);
-    
-    if (normalizedDate.isBefore(normalizedToday)) {
-      return false;
-    }
-    
-    // Don't allow booked dates
-    if (_isDateBooked(date)) {
-      return false;
-    }
-    
-    return true;
-  }
-
-  void _onDaySelected(DateTime selectedDay, DateTime focusedDay) {
-    if (!_isDateSelectable(selectedDay)) {
-      return;
-    }
-
-    setState(() {
-      _focusedDay = focusedDay;
-      
-      if (_selectedStartDate == _selectedEndDate || _selectedEndDate == null) {
-        // Starting new selection
-        _selectedStartDate = selectedDay;
-        _selectedEndDate = null;
-      } else if (selectedDay.isBefore(_selectedStartDate)) {
-        // Selected date is before start date, make it new start
-        _selectedStartDate = selectedDay;
-        _selectedEndDate = null;
-      } else {
-        // Selected date is after start date, make it end date
-        _selectedEndDate = selectedDay;
-      }
-    });
-  }
-
-  void _onRangeSelected(DateTime? start, DateTime? end, DateTime focusedDay) {
-    if (start == null) {
-      setState(() {
-        _selectedStartDate = DateTime.now();
-        _selectedEndDate = null;
-        _focusedDay = focusedDay;
-      });
-      return;
-    }
-
-    // Validate that all dates in range are selectable
-    if (end != null) {
-      DateTime current = start;
-      bool allSelectable = true;
-      
-      // Check all dates from start to end (inclusive)
-      while (current.isBefore(end) || isSameDay(current, end)) {
-        if (!_isDateSelectable(current)) {
-          allSelectable = false;
-          break;
+      final toolsMap = <int, ToolModel>{};
+      for (var tool in tools) {
+        if (toolIds.contains(tool.id)) {
+          toolsMap[tool.id] = tool;
         }
-        if (isSameDay(current, end)) break;
-        current = current.add(const Duration(days: 1));
       }
 
-      if (allSelectable) {
-        setState(() {
-          _selectedStartDate = start;
-          _selectedEndDate = end;
-          _focusedDay = focusedDay;
-        });
-      }
-    } else {
-      // Only start date selected, validate it
-      if (_isDateSelectable(start)) {
-        setState(() {
-          _selectedStartDate = start;
-          _selectedEndDate = null;
-          _focusedDay = focusedDay;
-        });
-      }
+      setState(() {
+        _cartItems = items;
+        _tools = toolsMap;
+        if (items.isNotEmpty) {
+          // Set default dates from first item or use current date
+          _selectedStartDate = items.first.startDate;
+          _selectedEndDate = items.first.endDate;
+        }
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading cart: $e');
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
-  int _calculateDays() {
-    if (_selectedEndDate == null) return 0;
-    return _selectedEndDate!.difference(_selectedStartDate).inDays + 1;
-  }
-
-  num _calculateTotal() {
-    if (_selectedEndDate == null) return 0;
-    final days = _calculateDays();
+  num get _totalAmount {
     num total = 0;
-    for (var item in widget.cartItems) {
+    final days = _selectedEndDate.difference(_selectedStartDate).inDays + 1;
+    for (var item in _cartItems) {
       total += item.dailyRate * item.quantity * days;
     }
     return total;
   }
 
-  Future<void> _createRental() async {
-    if (_selectedEndDate == null) return;
+  void _showTermsDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Terms and Conditions of Use'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'By renting tools from MosPosudit, you agree to the following terms:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  '1. Damage Responsibility:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'You are responsible for any damage, loss, or theft of the rented tools. Damages will be charged based on repair costs or replacement value.',
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  '2. Late Returns:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Late returns will incur additional charges. A fee equivalent to 1.5x the daily rental rate will be applied for each day beyond the agreed return date.',
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  '3. Tool Condition:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Tools must be returned in the same condition as received. Normal wear and tear is expected, but excessive damage will result in additional charges.',
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  '4. Insurance:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'You are responsible for ensuring the tools are used safely and appropriately. We recommend obtaining appropriate insurance coverage for valuable items.',
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  '5. Payment:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Payment must be completed before tools are collected. All charges, including damage fees and late return fees, must be settled promptly.',
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _handleCheckout() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    if (!_termsAccepted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please accept the terms and conditions'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    if (_cartItems.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Cart is empty'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
     setState(() {
-      _isCreatingRental = true;
+      _isProcessing = true;
     });
 
     try {
-      // Prepare items for rental creation
-      final items = widget.cartItems.map((cartItem) => {
-        'toolId': cartItem.toolId,
-        'quantity': cartItem.quantity,
-        'dailyRate': cartItem.dailyRate,
-      }).toList();
+      final userId = await AuthService.getUserId();
+      if (userId == null) {
+        throw Exception('User not logged in');
+      }
 
-      // Create rental via API
-      final rental = await _rentalService.createRental(
+      // Create order items from cart
+      final orderItems = _cartItems.map((item) => 
+        OrderItemInsertRequest(
+          toolId: item.toolId,
+          quantity: item.quantity,
+        )
+      ).toList();
+
+      // Prepare order data (but don't create in database yet)
+      final orderRequest = OrderInsertRequest(
+        userId: userId,
         startDate: _selectedStartDate,
-        endDate: _selectedEndDate!,
-        items: items,
-        termsAccepted: true, // TODO: Add UI checkbox for terms acceptance
+        endDate: _selectedEndDate,
+        termsAccepted: _termsAccepted,
+        orderItems: orderItems,
       );
 
-      // Clear cart after successful rental creation
-      await _cartService.clearCart();
-
+      // Reset processing state before navigation to prevent loading loop
       if (mounted) {
-        // Check rental status
-        // StatusId: 0 = Pending, 1 = Active
-        final isActive = rental.statusId == 1; // Active status
+        setState(() {
+          _isProcessing = false;
+        });
         
-        if (isActive) {
-          // Generate payment link and redirect to PayPal
-          final paymentData = await _rentalService.generatePaymentLink(rental.id);
-          
-          if (paymentData != null && paymentData['paymentLink'] != null) {
-            final paymentLink = paymentData['paymentLink'] as String;
-            
-            // Show dialog asking to proceed to payment
-            final shouldProceed = await showDialog<bool>(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: const Text('Reservation Created'),
-                content: Text(
-                  'Your reservation has been confirmed!\n\n'
-                  'Total: €${rental.totalAmount.toStringAsFixed(2)}\n\n'
-                  'Proceed to PayPal payment?',
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(false),
-                    child: const Text('Pay Later'),
-                  ),
-                  ElevatedButton(
-                    onPressed: () => Navigator.of(context).pop(true),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                    ),
-                    child: const Text('Pay Now'),
-                  ),
-                ],
-              ),
-            );
-            
-            if (shouldProceed == true) {
-              // Open PayPal payment link
-              final uri = Uri.parse(paymentLink);
-              if (await canLaunchUrl(uri)) {
-                await launchUrl(uri, mode: LaunchMode.externalApplication);
-              } else {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Could not open payment link'),
-                      backgroundColor: Colors.orange,
-                    ),
-                  );
-                }
-              }
-            }
-          } else {
-            // Active but payment link generation failed
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Reservation created successfully! Please contact support for payment.'),
-                backgroundColor: Colors.green,
-              ),
-            );
-          }
-        } else {
-          // Pending status - requires admin approval
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Reservation request submitted! Waiting for admin approval.'),
-              backgroundColor: Colors.orange,
-              duration: Duration(seconds: 5),
-            ),
-          );
-        }
-
-        // Navigate back to home/cart screen
-        Navigator.of(context).popUntil((route) => route.isFirst);
-      }
-    } catch (e) {
-      print('Error creating rental: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to create rental: ${e.toString()}'),
-            backgroundColor: Colors.red,
+        // Navigate to PayPal payment - Order will be created AFTER successful payment
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => PayPalPaymentScreen(orderData: orderRequest),
           ),
         );
+      }
+    } catch (e) {
+      print('Error during checkout: $e');
+      if (mounted) {
         setState(() {
-          _isCreatingRental = false;
+          _isProcessing = false;
         });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
       }
     }
   }
@@ -294,272 +246,296 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Select Rental Dates'),
+        title: const Text('Checkout'),
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
       ),
-      body: Column(
-        children: [
-          // Calendar
-          Expanded(
-            child: SingleChildScrollView(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Form(
+              key: _formKey,
               child: Column(
                 children: [
-                  if (_isLoadingBookedDates)
-                    const Padding(
-                      padding: EdgeInsets.all(16.0),
-                      child: Center(child: CircularProgressIndicator()),
-                    )
-                  else
-                    Card(
-                      margin: const EdgeInsets.all(16),
-                      child: TableCalendar(
-                        firstDay: DateTime.now(),
-                        lastDay: DateTime.now().add(const Duration(days: 365)),
-                        focusedDay: _focusedDay,
-                        selectedDayPredicate: (day) {
-                          return isSameDay(_selectedStartDate, day) ||
-                              (_selectedEndDate != null && 
-                               isSameDay(_selectedEndDate, day));
-                        },
-                        rangeStartDay: _selectedStartDate,
-                        rangeEndDay: _selectedEndDate,
-                        rangeSelectionMode: RangeSelectionMode.enforced,
-                        calendarFormat: CalendarFormat.month,
-                        startingDayOfWeek: StartingDayOfWeek.monday,
-                        availableGestures: AvailableGestures.all,
-                        onDaySelected: _onDaySelected,
-                        onRangeSelected: _onRangeSelected,
-                        onPageChanged: (focusedDay) {
-                          _focusedDay = focusedDay;
-                        },
-                        enabledDayPredicate: _isDateSelectable,
-                        calendarStyle: CalendarStyle(
-                          // Style for selected range
-                          rangeStartDecoration: BoxDecoration(
-                            color: Colors.blue,
-                            shape: BoxShape.circle,
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Date selection
+                          const Text(
+                            'Select Rental Period',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                          rangeEndDecoration: BoxDecoration(
-                            color: Colors.blue,
-                            shape: BoxShape.circle,
+                          const SizedBox(height: 16),
+                          
+                          // Calendar
+                          TableCalendar(
+                            firstDay: DateTime.now(),
+                            lastDay: DateTime.now().add(const Duration(days: 365)),
+                            focusedDay: _focusedDay,
+                            calendarFormat: _calendarFormat,
+                            selectedDayPredicate: (day) {
+                              return isSameDay(_selectedStartDate, day) ||
+                                     isSameDay(_selectedEndDate, day) ||
+                                     (day.isAfter(_selectedStartDate) && day.isBefore(_selectedEndDate));
+                            },
+                            rangeStartDay: _selectedStartDate,
+                            rangeEndDay: _selectedEndDate,
+                            rangeSelectionMode: RangeSelectionMode.enforced,
+                            onDaySelected: (selectedDay, focusedDay) {
+                              if (_selectedStartDate.isAfter(selectedDay)) {
+                                setState(() {
+                                  _selectedStartDate = selectedDay;
+                                  _selectedEndDate = selectedDay.add(const Duration(days: 1));
+                                  _focusedDay = focusedDay;
+                                });
+                              } else {
+                                setState(() {
+                                  _selectedEndDate = selectedDay;
+                                  _focusedDay = focusedDay;
+                                });
+                              }
+                            },
+                            onPageChanged: (focusedDay) {
+                              setState(() {
+                                _focusedDay = focusedDay;
+                              });
+                            },
+                            onFormatChanged: (format) {
+                              setState(() {
+                                _calendarFormat = format;
+                              });
+                            },
+                            calendarStyle: CalendarStyle(
+                              selectedDecoration: BoxDecoration(
+                                color: Colors.blue,
+                                shape: BoxShape.circle,
+                              ),
+                              todayDecoration: BoxDecoration(
+                                color: Colors.blue.shade200,
+                                shape: BoxShape.circle,
+                              ),
+                              rangeStartDecoration: BoxDecoration(
+                                color: Colors.blue.shade100,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              rangeEndDecoration: BoxDecoration(
+                                color: Colors.blue.shade100,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              withinRangeDecoration: BoxDecoration(
+                                color: Colors.blue.shade50,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
                           ),
-                          withinRangeDecoration: BoxDecoration(
-                            color: Colors.blue.shade100,
-                            shape: BoxShape.circle,
+                          const SizedBox(height: 24),
+                          
+                          // Selected dates
+                          Card(
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      const Text('Start Date:'),
+                                      Text(
+                                        '${_selectedStartDate.day}/${_selectedStartDate.month}/${_selectedStartDate.year}',
+                                        style: const TextStyle(fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      const Text('End Date:'),
+                                      Text(
+                                        '${_selectedEndDate.day}/${_selectedEndDate.month}/${_selectedEndDate.year}',
+                                        style: const TextStyle(fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      const Text('Days:'),
+                                      Text(
+                                        '${_selectedEndDate.difference(_selectedStartDate).inDays + 1}',
+                                        style: const TextStyle(fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
-                          // Style for booked dates (red) - these are disabled
-                          disabledDecoration: BoxDecoration(
-                            color: Colors.red.shade300,
-                            shape: BoxShape.circle,
+                          const SizedBox(height: 24),
+                          
+                          // Order items summary
+                          const Text(
+                            'Order Summary',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                          disabledTextStyle: TextStyle(
-                            color: Colors.red.shade900,
-                            decoration: TextDecoration.lineThrough,
-                          ),
-                          // Style for available dates - green background
-                          defaultDecoration: BoxDecoration(
-                            color: Colors.green.shade50,
-                            shape: BoxShape.circle,
-                          ),
-                          todayDecoration: BoxDecoration(
-                            color: Colors.green.shade100,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.green.shade400, width: 2),
-                          ),
-                          weekendDecoration: BoxDecoration(
-                            color: Colors.green.shade50,
-                            shape: BoxShape.circle,
-                          ),
-                          defaultTextStyle: TextStyle(
-                            color: Colors.black87,
-                          ),
-                          weekendTextStyle: TextStyle(
-                            color: Colors.black87,
-                          ),
-                          todayTextStyle: TextStyle(
-                            color: Colors.black87,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          outsideDaysVisible: false,
-                        ),
-                        calendarBuilders: CalendarBuilders(
-                          defaultBuilder: (context, date, events) {
-                            final normalizedDate = DateTime(date.year, date.month, date.day);
-                            final isBooked = _isDateBooked(normalizedDate);
-                            final isSelectable = _isDateSelectable(normalizedDate);
+                          const SizedBox(height: 12),
+                          ..._cartItems.map((item) {
+                            final tool = _tools[item.toolId];
+                            final days = _selectedEndDate.difference(_selectedStartDate).inDays + 1;
+                            final itemTotal = item.dailyRate * item.quantity * days;
                             
-                            if (!isSelectable && !isBooked) {
-                              // Past dates that are not booked
-                              return Container(
-                                margin: const EdgeInsets.all(4),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade200,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    '${date.day}',
-                                    style: TextStyle(
-                                      color: Colors.grey.shade600,
-                                      fontSize: 16,
-                                    ),
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              child: ListTile(
+                                title: Text(tool?.name ?? 'Unknown tool'),
+                                subtitle: Text('Quantity: ${item.quantity} x €${item.dailyRate.toStringAsFixed(2)}/day x $days days'),
+                                trailing: Text(
+                                  '€${itemTotal.toStringAsFixed(2)}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
                                   ),
                                 ),
-                              );
-                            }
-                            
-                            return null; // Use default styling
-                          },
-                        ),
-                        headerStyle: const HeaderStyle(
-                          formatButtonVisible: false,
-                          titleCentered: true,
-                        ),
-                        daysOfWeekStyle: const DaysOfWeekStyle(
-                          weekdayStyle: TextStyle(color: Colors.black87),
-                          weekendStyle: TextStyle(color: Colors.black87),
-                        ),
+                              ),
+                            );
+                          }),
+                          const SizedBox(height: 24),
+                          
+                          // Total amount
+                          Card(
+                            color: Colors.blue.shade50,
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text(
+                                    'Total Amount:',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  Text(
+                                    '€${_totalAmount.toStringAsFixed(2)}',
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.blue.shade700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          
+                          // Terms and conditions
+                          Card(
+                            child: Column(
+                              children: [
+                                CheckboxListTile(
+                                  title: Row(
+                                    children: [
+                                      const Text('I accept the '),
+                                      GestureDetector(
+                                        onTap: _showTermsDialog,
+                                        child: Text(
+                                          'terms and conditions',
+                                          style: TextStyle(
+                                            color: Colors.blue,
+                                            decoration: TextDecoration.underline,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  value: _termsAccepted,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _termsAccepted = value ?? false;
+                                    });
+                                  },
+                                  controlAffinity: ListTileControlAffinity.leading,
+                                ),
+                                if (!_termsAccepted)
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
+                                    child: Text(
+                                      'Please accept the terms and conditions to proceed',
+                                      style: TextStyle(
+                                        color: Colors.orange.shade700,
+                                        fontSize: 12,
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  // Legend
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _buildLegendItem(Colors.green.shade50, 'Available'),
-                        const SizedBox(width: 16),
-                        _buildLegendItem(Colors.red.shade300, 'Booked'),
-                        const SizedBox(width: 16),
-                        _buildLegendItem(Colors.blue, 'Selected'),
+                  ),
+                  
+                  // Checkout button
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withOpacity(0.3),
+                          spreadRadius: 1,
+                          blurRadius: 5,
+                          offset: const Offset(0, -3),
+                        ),
                       ],
+                    ),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: (_isProcessing || !_termsAccepted) ? null : _handleCheckout,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: (_termsAccepted && !_isProcessing) ? Colors.blue : Colors.grey,
+                          foregroundColor: Colors.white,
+                          disabledBackgroundColor: Colors.grey.shade300,
+                          disabledForegroundColor: Colors.grey.shade600,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: _isProcessing
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              )
+                            : const Text(
+                                'Proceed to Payment',
+                                style: TextStyle(fontSize: 16),
+                              ),
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
-          ),
-          // Summary and proceed button
-          Container(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-            margin: const EdgeInsets.only(bottom: 16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.3),
-                  spreadRadius: 1,
-                  blurRadius: 5,
-                  offset: const Offset(0, -3),
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                if (_selectedEndDate != null) ...[
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Rental Period:',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                      Text(
-                        '${_selectedStartDate.day}/${_selectedStartDate.month}/${_selectedStartDate.year} - '
-                        '${_selectedEndDate!.day}/${_selectedEndDate!.month}/${_selectedEndDate!.year}',
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Days:',
-                        style: TextStyle(fontSize: 16),
-                      ),
-                      Text(
-                        '${_calculateDays()}',
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Total:',
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                      ),
-                      Text(
-                        '€${_calculateTotal().toStringAsFixed(2)}',
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.blue,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                ],
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: (_selectedEndDate != null && !_isCreatingRental)
-                        ? () => _createRental()
-                        : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor: Colors.grey.shade300,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: _isCreatingRental
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                            ),
-                          )
-                        : Text(
-                            _selectedEndDate != null
-                                ? 'Confirm Reservation'
-                                : 'Select End Date',
-                            style: const TextStyle(fontSize: 16),
-                          ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLegendItem(Color color, String label) {
-    return Row(
-      children: [
-        Container(
-          width: 20,
-          height: 20,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Text(label, style: const TextStyle(fontSize: 12)),
-      ],
     );
   }
 }

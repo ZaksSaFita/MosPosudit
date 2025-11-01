@@ -1,8 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using MosPosudit.Model.Exceptions;
-using MosPosudit.Model.Messages;
 using MosPosudit.Model.Requests.Review;
+using MosPosudit.Model.Responses;
 using MosPosudit.Model.Responses.Review;
 using MosPosudit.Model.SearchObjects;
 using MosPosudit.Services.Interfaces;
@@ -12,190 +11,69 @@ namespace MosPosudit.WebAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
-    public class ReviewController : ControllerBase
+    public class ReviewController : BaseCrudController<ReviewResponse, ReviewSearchObject, ReviewInsertRequest, ReviewUpdateRequest>
     {
         private readonly IReviewService _reviewService;
 
-        public ReviewController(IReviewService reviewService)
+        public ReviewController(IReviewService service) : base(service)
         {
-            _reviewService = reviewService ?? throw new ArgumentNullException(nameof(reviewService));
+            _reviewService = service;
         }
 
         [HttpGet]
         [AllowAnonymous]
-        public async Task<ActionResult<IEnumerable<ReviewResponse>>> Get([FromQuery] ReviewSearchObject? search = null)
+        public override async Task<PagedResult<ReviewResponse>> Get([FromQuery] ReviewSearchObject? search = null)
         {
-            try
-            {
-                var result = await _reviewService.GetAsResponse(search);
-                return Ok(result);
-            }
-            catch (ValidationException ex)
-            {
-                return BadRequest(ex.Message);
-            }
-            catch (Exception)
-            {
-                return StatusCode(500, ErrorMessages.ServerError);
-            }
+            return await base.Get(search);
         }
 
         [HttpGet("{id}")]
         [AllowAnonymous]
-        public async Task<ActionResult<ReviewResponse>> GetById(int id)
+        public override async Task<ReviewResponse?> GetById(int id)
         {
-            try
-            {
-                var result = await _reviewService.GetByIdAsResponse(id);
-                return Ok(result);
-            }
-            catch (NotFoundException ex)
-            {
-                return NotFound(ex.Message);
-            }
-            catch (ValidationException ex)
-            {
-                return BadRequest(ex.Message);
-            }
-            catch (Exception)
-            {
-                return StatusCode(500, ErrorMessages.ServerError);
-            }
+            return await base.GetById(id);
         }
 
         [HttpPost]
-        public async Task<ActionResult<ReviewResponse>> Insert([FromBody] ReviewInsertRequest insert)
+        public override async Task<ReviewResponse> Create([FromBody] ReviewInsertRequest request)
         {
-            try
+            // Get user ID from authenticated user context
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
             {
-                if (insert == null)
-                    return BadRequest(ErrorMessages.InvalidRequest);
+                // For testing without auth, allow userId in request body
+                if (request.UserId == 0)
+                    throw new UnauthorizedAccessException("User ID is required");
+                userId = request.UserId;
+            }
+            else
+            {
+                request.UserId = userId;
+            }
 
-                // Get user ID from authenticated user context
-                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-                if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
-                {
-                    // For testing without auth, allow userId in request body
-                    if (insert.UserId == 0)
-                        return Unauthorized("User ID is required");
-                    userId = insert.UserId;
-                }
-                else
-                {
-                    insert.UserId = userId;
-                }
-
-                var result = await _reviewService.InsertAsResponse(insert);
-                return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
-            }
-            catch (ValidationException ex)
-            {
-                return BadRequest(ex.Message);
-            }
-            catch (NotFoundException ex)
-            {
-                return NotFound(ex.Message);
-            }
-            catch (Exception)
-            {
-                return StatusCode(500, ErrorMessages.ServerError);
-            }
+            return await base.Create(request);
         }
 
         [HttpPut("{id}")]
         [Authorize]
-        public async Task<ActionResult<ReviewResponse>> Update(int id, [FromBody] ReviewUpdateRequest update)
+        public override async Task<ReviewResponse?> Update(int id, [FromBody] ReviewUpdateRequest request)
         {
-            try
-            {
-                if (update == null)
-                    return BadRequest(ErrorMessages.InvalidRequest);
-
-                var result = await _reviewService.UpdateAsResponse(id, update);
-                return Ok(result);
-            }
-            catch (NotFoundException ex)
-            {
-                return NotFound(ex.Message);
-            }
-            catch (ValidationException ex)
-            {
-                return BadRequest(ex.Message);
-            }
-            catch (Exception)
-            {
-                return StatusCode(500, ErrorMessages.ServerError);
-            }
-        }
-
-        [HttpPatch("{id}")]
-        [Authorize]
-        public async Task<ActionResult<ReviewResponse>> Patch(int id, [FromBody] ReviewPatchRequest patch)
-        {
-            try
-            {
-                if (patch == null)
-                    return BadRequest(ErrorMessages.InvalidRequest);
-
-                var result = await _reviewService.PatchAsResponse(id, patch);
-                return Ok(result);
-            }
-            catch (NotFoundException ex)
-            {
-                return NotFound(ex.Message);
-            }
-            catch (ValidationException ex)
-            {
-                return BadRequest(ex.Message);
-            }
-            catch (Exception)
-            {
-                return StatusCode(500, ErrorMessages.ServerError);
-            }
+            return await base.Update(id, request);
         }
 
         [HttpDelete("{id}")]
         [Authorize]
-        public async Task<ActionResult<ReviewResponse>> Delete(int id)
+        public override async Task<bool> Delete(int id)
         {
-            try
-            {
-                var result = await _reviewService.DeleteAsResponse(id);
-                return Ok(result);
-            }
-            catch (NotFoundException ex)
-            {
-                return NotFound(ex.Message);
-            }
-            catch (ValidationException ex)
-            {
-                return BadRequest(ex.Message);
-            }
-            catch (Exception)
-            {
-                return StatusCode(500, ErrorMessages.ServerError);
-            }
+            return await base.Delete(id);
         }
 
         [HttpGet("tool/{toolId}")]
         [AllowAnonymous]
         public async Task<ActionResult<IEnumerable<ReviewResponse>>> GetByToolId(int toolId)
         {
-            try
-            {
-                var result = await _reviewService.GetByToolIdAsResponse(toolId);
-                return Ok(result);
-            }
-            catch (ValidationException ex)
-            {
-                return BadRequest(ex.Message);
-            }
-            catch (Exception)
-            {
-                return StatusCode(500, ErrorMessages.ServerError);
-            }
+            var result = await _reviewService.GetByToolIdAsResponse(toolId);
+            return Ok(result);
         }
     }
 }
-

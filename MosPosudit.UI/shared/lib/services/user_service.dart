@@ -27,7 +27,16 @@ class UserService {
   Future<List<UserModel>> fetchUsers() async {
     final res = await _api.get('/User');
     if (res.statusCode == 200) {
-      final List<dynamic> data = jsonDecode(res.body);
+      final decoded = jsonDecode(res.body);
+      // Backend vraća PagedResult<T> sa items i totalCount
+      final List<dynamic> data;
+      if (decoded is Map && decoded.containsKey('items')) {
+        data = decoded['items'] as List<dynamic>;
+      } else if (decoded is List) {
+        data = decoded;
+      } else {
+        throw Exception('Unexpected response format: $decoded');
+      }
       return data.map((e) => UserModel.fromJson(e)).toList();
     }
     throw Exception('Failed to fetch users');
@@ -36,7 +45,9 @@ class UserService {
   Future<List<UserModel>> fetchNonAdminUsers() async {
     final res = await _api.get('/User/non-admins');
     if (res.statusCode == 200) {
-      final List<dynamic> data = jsonDecode(res.body);
+      final decoded = jsonDecode(res.body);
+      // Backend vraća direktno listu za non-admins endpoint
+      final List<dynamic> data = decoded is List ? decoded : [];
       return data.map((e) => UserModel.fromJson(e)).toList();
     }
     throw Exception('Failed to fetch non-admin users');

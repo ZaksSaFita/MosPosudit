@@ -12,7 +12,8 @@ class MessageService {
       
       if (res.statusCode == 200) {
         final decoded = jsonDecode(res.body);
-        final List<dynamic> data = decoded is List ? decoded : (decoded['value'] ?? []);
+        // Backend vraća direktno listu za user endpoint
+        final List<dynamic> data = decoded is List ? decoded : [];
         return data.map((e) => MessageModel.fromJson(e)).toList();
       }
       
@@ -77,7 +78,8 @@ class MessageService {
       
       if (res.statusCode == 200) {
         final decoded = jsonDecode(res.body);
-        final List<dynamic> data = decoded is List ? decoded : (decoded['value'] ?? []);
+        // Backend vraća direktno listu za user endpoint
+        final List<dynamic> data = decoded is List ? decoded : [];
         return data.map((e) => MessageModel.fromJson(e)).toList();
       }
       
@@ -96,6 +98,52 @@ class MessageService {
     } catch (e) {
       print('Error in startChat: $e');
       return false;
+    }
+  }
+
+  Future<bool> startChatWithUser(int userId) async {
+    try {
+      final res = await _api.post('/Message/start-with-user/$userId');
+      print('startChatWithUser response status: ${res.statusCode}');
+      print('startChatWithUser response body: ${res.body}');
+      
+      if (res.statusCode == 200) {
+        // Check if body is empty or try to parse if it exists
+        if (res.body.trim().isEmpty) {
+          // Empty response is OK for success
+          return true;
+        }
+        // Try to parse JSON if body is not empty
+        try {
+          final decoded = jsonDecode(res.body);
+          // If we have a message, log it but still return true for 200
+          if (decoded['message'] != null) {
+            print('Success message: ${decoded['message']}');
+          }
+          return true;
+        } catch (e) {
+          // If parsing fails but status is 200, still consider it success
+          print('Warning: Could not parse response body but status is 200: $e');
+          return true;
+        }
+      } else {
+        String errorMessage = 'Failed to start chat (${res.statusCode})';
+        // Only try to parse if body is not empty
+        if (res.body.trim().isNotEmpty) {
+          try {
+            final decoded = jsonDecode(res.body);
+            errorMessage = decoded['message'] ?? decoded['title'] ?? errorMessage;
+          } catch (e) {
+            // If JSON parsing fails, use the raw body or default message
+            errorMessage = res.body;
+          }
+        }
+        throw Exception(errorMessage);
+      }
+    } catch (e, stackTrace) {
+      print('Error in startChatWithUser: $e');
+      print('Stack trace: $stackTrace');
+      rethrow;
     }
   }
 

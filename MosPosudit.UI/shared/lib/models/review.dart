@@ -4,7 +4,6 @@ class ReviewModel {
   final String? userName;
   final int toolId;
   final String? toolName;
-  final int rentalId;
   final int rating;
   final String? comment;
   final DateTime createdAt;
@@ -16,7 +15,6 @@ class ReviewModel {
     this.userName,
     required this.toolId,
     this.toolName,
-    required this.rentalId,
     required this.rating,
     this.comment,
     required this.createdAt,
@@ -42,7 +40,6 @@ class ReviewModel {
       userName: json['userName'],
       toolId: json['toolId'] as int,
       toolName: json['toolName'],
-      rentalId: json['rentalId'] as int,
       rating: json['rating'] as int,
       comment: json['comment'],
       createdAt: parseDateTime(json['createdAt']) ?? DateTime.now(),
@@ -56,7 +53,6 @@ class ReviewModel {
         'userName': userName,
         'toolId': toolId,
         'toolName': toolName,
-        'rentalId': rentalId,
         'rating': rating,
         'comment': comment,
         'createdAt': createdAt.toIso8601String(),

@@ -11,12 +11,12 @@ var builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Add RabbitMQ service
-builder.Services.AddSingleton<RabbitMQService>();
+// Add Email Service
+builder.Services.AddSingleton<EmailService>();
 
 // Add background services
 builder.Services.AddHostedService<NotificationWorker>();
-builder.Services.AddHostedService<EmailWorker>();
+builder.Services.AddHostedService<EmailConsumer>();
 
 var host = builder.Build();
 host.Run();

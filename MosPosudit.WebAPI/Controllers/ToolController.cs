@@ -1,8 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using MosPosudit.Model.Exceptions;
-using MosPosudit.Model.Messages;
 using MosPosudit.Model.Requests.Tool;
+using MosPosudit.Model.Responses;
 using MosPosudit.Model.Responses.Tool;
 using MosPosudit.Model.SearchObjects;
 using MosPosudit.Services.Interfaces;
@@ -11,154 +10,45 @@ namespace MosPosudit.WebAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
-    public class ToolController : ControllerBase
+    public class ToolController : BaseCrudController<ToolResponse, ToolSearchObject, ToolInsertRequest, ToolUpdateRequest>
     {
-        protected readonly IToolService _service;
-
-        public ToolController(IToolService toolService)
+        public ToolController(IToolService service) : base(service)
         {
-            _service = toolService ?? throw new ArgumentNullException(nameof(toolService));
         }
 
         [HttpGet]
         [AllowAnonymous]
-        public virtual async Task<ActionResult<IEnumerable<ToolResponse>>> Get([FromQuery] ToolSearchObject? search = null)
+        public override async Task<PagedResult<ToolResponse>> Get([FromQuery] ToolSearchObject? search = null)
         {
-            try
-            {
-                var result = await _service.GetAsResponse(search);
-                return Ok(result);
-            }
-            catch (ValidationException ex)
-            {
-                return BadRequest(ex.Message);
-            }
-            catch (Exception)
-            {
-                return StatusCode(500, ErrorMessages.ServerError);
-            }
+            return await base.Get(search);
         }
 
         [HttpGet("{id}")]
         [AllowAnonymous]
-        public virtual async Task<ActionResult<ToolResponse>> GetById(int id)
+        public override async Task<ToolResponse?> GetById(int id)
         {
-            try
-            {
-                var result = await _service.GetByIdAsResponse(id);
-                return Ok(result);
-            }
-            catch (NotFoundException ex)
-            {
-                return NotFound(ex.Message);
-            }
-            catch (ValidationException ex)
-            {
-                return BadRequest(ex.Message);
-            }
-            catch (Exception)
-            {
-                return StatusCode(500, ErrorMessages.ServerError);
-            }
+            return await base.GetById(id);
         }
 
         [HttpPost]
         [Authorize(Roles = "Admin")]
-        public virtual async Task<ActionResult<ToolResponse>> Insert([FromBody] ToolInsertRequest insert)
+        public override async Task<ToolResponse> Create([FromBody] ToolInsertRequest request)
         {
-            try
-            {
-                if (insert == null)
-                    return BadRequest(ErrorMessages.InvalidRequest);
-
-                var result = await _service.InsertAsResponse(insert);
-                return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
-            }
-            catch (ValidationException ex)
-            {
-                return BadRequest(ex.Message);
-            }
-            catch (Exception)
-            {
-                return StatusCode(500, ErrorMessages.ServerError);
-            }
+            return await base.Create(request);
         }
 
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin")]
-        public virtual async Task<ActionResult<ToolResponse>> Update(int id, [FromBody] ToolUpdateRequest update)
+        public override async Task<ToolResponse?> Update(int id, [FromBody] ToolUpdateRequest request)
         {
-            try
-            {
-                if (update == null)
-                    return BadRequest(ErrorMessages.InvalidRequest);
-
-                var result = await _service.UpdateAsResponse(id, update);
-                return Ok(result);
-            }
-            catch (NotFoundException ex)
-            {
-                return NotFound(ex.Message);
-            }
-            catch (ValidationException ex)
-            {
-                return BadRequest(ex.Message);
-            }
-            catch (Exception)
-            {
-                return StatusCode(500, ErrorMessages.ServerError);
-            }
-        }
-
-        [HttpPatch("{id}")]
-        [Authorize(Roles = "Admin")]
-        public virtual async Task<ActionResult<ToolResponse>> Patch(int id, [FromBody] ToolPatchRequest patch)
-        {
-            try
-            {
-                if (patch == null)
-                    return BadRequest(ErrorMessages.InvalidRequest);
-
-                var result = await _service.PatchAsResponse(id, patch);
-                return Ok(result);
-            }
-            catch (NotFoundException ex)
-            {
-                return NotFound(ex.Message);
-            }
-            catch (ValidationException ex)
-            {
-                return BadRequest(ex.Message);
-            }
-            catch (Exception)
-            {
-                return StatusCode(500, ErrorMessages.ServerError);
-            }
+            return await base.Update(id, request);
         }
 
         [HttpDelete("{id}")]
         [Authorize(Roles = "Admin")]
-        public virtual async Task<ActionResult<ToolResponse>> Delete(int id)
+        public override async Task<bool> Delete(int id)
         {
-            try
-            {
-                var result = await _service.DeleteAsResponse(id);
-                return Ok(result);
-            }
-            catch (NotFoundException ex)
-            {
-                return NotFound(ex.Message);
-            }
-            catch (ValidationException ex)
-            {
-                return BadRequest(ex.Message);
-            }
-            catch (Exception)
-            {
-                return StatusCode(500, ErrorMessages.ServerError);
-            }
+            return await base.Delete(id);
         }
     }
 }
-

@@ -247,40 +247,18 @@ class _SidebarState extends State<Sidebar> {
                     ),
                   ],
                 ),
-                _ExpandableSidebarItem(
-                  icon: Icons.calendar_today,
-                  label: 'Reservations',
-                  selected: widget.selectedIndex >= 6 && widget.selectedIndex <= 8,
-                  children: [
-                    _SidebarItem(
-                      icon: Icons.play_circle_outline,
-                      label: 'Active',
-                      selected: widget.selectedIndex == 6,
-                      onTap: () => widget.onItemSelected(6),
-                      isSubItem: true,
-                    ),
-                    _SidebarItem(
-                      icon: Icons.history,
-                      label: 'History',
-                      selected: widget.selectedIndex == 7,
-                      onTap: () => widget.onItemSelected(7),
-                      isSubItem: true,
-                    ),
-                    _SidebarItem(
-                      icon: Icons.description,
-                      label: 'Reports',
-                      selected: widget.selectedIndex == 8,
-                      onTap: () => widget.onItemSelected(8),
-                      isSubItem: true,
-                    ),
-                  ],
+                _SidebarItem(
+                  icon: Icons.description,
+                  label: 'Reports',
+                  selected: widget.selectedIndex == 6,
+                  onTap: () => widget.onItemSelected(6),
                 ),
                 _SidebarItem(
                   icon: Icons.chat,
                   label: 'Chat',
-                  selected: widget.selectedIndex == 9,
+                  selected: widget.selectedIndex == 7,
                   onTap: () {
-                    widget.onItemSelected(9);
+                    widget.onItemSelected(7);
                     _loadUnreadMessageCount(); // Refresh count when navigating to chat
                   },
                   badgeCount: _unreadMessageCount > 0 ? _unreadMessageCount : null,
@@ -288,8 +266,8 @@ class _SidebarState extends State<Sidebar> {
                 _SidebarItem(
                   icon: Icons.settings,
                   label: 'Settings',
-                  selected: widget.selectedIndex == 10,
-                  onTap: () => widget.onItemSelected(10),
+                  selected: widget.selectedIndex == 8,
+                  onTap: () => widget.onItemSelected(8),
                 ),
               ],
             ),

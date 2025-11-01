@@ -6,127 +6,101 @@ using MosPosudit.Model.SearchObjects;
 using MosPosudit.Services.DataBase;
 using MosPosudit.Services.DataBase.Data;
 using MosPosudit.Services.Interfaces;
+using MapsterMapper;
 
 namespace MosPosudit.Services.Services
 {
-    public class UserFavoriteService : IUserFavoriteService
+    public class UserFavoriteService : BaseCrudService<UserFavoriteResponse, UserFavoriteSearchObject, UserFavorite, UserFavoriteInsertRequest, UserFavoriteUpdateRequest>, IUserFavoriteService
     {
-        private readonly ApplicationDbContext _context;
-        private readonly DbSet<UserFavorite> _dbSet;
-
-        public UserFavoriteService(ApplicationDbContext context)
+        public UserFavoriteService(ApplicationDbContext context, IMapper mapper) : base(context, mapper)
         {
-            _context = context ?? throw new ArgumentNullException(nameof(context));
-            _dbSet = context.Set<UserFavorite>();
         }
 
-        public async Task<IEnumerable<UserFavoriteResponse>> GetAsResponse(UserFavoriteSearchObject? search = null)
+        protected override IQueryable<UserFavorite> ApplyFilter(IQueryable<UserFavorite> query, UserFavoriteSearchObject search)
         {
-            var query = _dbSet
-                .Include(uf => uf.Tool)
-                .AsQueryable();
+            query = query.Include(uf => uf.Tool);
 
-            if (search != null)
-            {
-                if (search.UserId.HasValue)
-                    query = query.Where(uf => uf.UserId == search.UserId.Value);
+            if (search.UserId.HasValue)
+                query = query.Where(uf => uf.UserId == search.UserId.Value);
 
-                if (search.ToolId.HasValue)
-                    query = query.Where(uf => uf.ToolId == search.ToolId.Value);
-            }
+            if (search.ToolId.HasValue)
+                query = query.Where(uf => uf.ToolId == search.ToolId.Value);
 
-            if (search?.Page.HasValue == true && search?.PageSize.HasValue == true)
-            {
-                query = query.Skip((search.Page.Value - 1) * search.PageSize.Value)
-                            .Take(search.PageSize.Value);
-            }
-
-            var entities = await query.OrderByDescending(uf => uf.CreatedAt).ToListAsync();
-            return entities.Select(MapToResponse);
+            return query.OrderByDescending(uf => uf.CreatedAt);
         }
 
-        public async Task<UserFavoriteResponse> GetByIdAsResponse(int id)
+        public override async Task<UserFavoriteResponse?> GetByIdAsync(int id)
         {
-            if (id <= 0)
-                throw new ValidationException("Invalid favorite ID");
-
-            var entity = await _dbSet
+            var entity = await _context.Set<UserFavorite>()
                 .Include(uf => uf.Tool)
                 .FirstOrDefaultAsync(uf => uf.Id == id);
 
             if (entity == null)
-                throw new NotFoundException("Favorite not found");
+                return null;
 
             return MapToResponse(entity);
         }
 
-        public async Task<UserFavoriteResponse> InsertAsResponse(UserFavoriteInsertRequest insert)
+        public override async Task<UserFavoriteResponse> CreateAsync(UserFavoriteInsertRequest request)
         {
-            if (insert == null)
+            if (request == null)
                 throw new ValidationException("Invalid request");
 
             // Verify tool exists
-            var tool = await _context.Tools.FindAsync(insert.ToolId);
+            var tool = await _context.Tools.FindAsync(request.ToolId);
             if (tool == null)
                 throw new NotFoundException("Tool not found");
 
             // Check if already in favorites
-            var existing = await _dbSet
-                .FirstOrDefaultAsync(uf => uf.UserId == insert.UserId && uf.ToolId == insert.ToolId);
+            var existing = await _context.Set<UserFavorite>()
+                .FirstOrDefaultAsync(uf => uf.UserId == request.UserId && uf.ToolId == request.ToolId);
 
             if (existing != null)
                 throw new ValidationException("Tool is already in favorites");
 
-            var entity = new UserFavorite
-            {
-                UserId = insert.UserId,
-                ToolId = insert.ToolId,
-                CreatedAt = DateTime.UtcNow
-            };
+            var entity = _mapper.Map<UserFavorite>(request);
+            entity.CreatedAt = DateTime.UtcNow;
 
-            await _dbSet.AddAsync(entity);
+            await _context.Set<UserFavorite>().AddAsync(entity);
             await _context.SaveChangesAsync();
 
-            // Reload with includes
-            var reloaded = await _dbSet
-                .Include(uf => uf.Tool)
-                .FirstOrDefaultAsync(uf => uf.Id == entity.Id);
+            return await GetByIdAsync(entity.Id) ?? throw new Exception("Failed to retrieve created favorite");
+        }
 
-            return MapToResponse(reloaded!);
+        public override async Task<UserFavoriteResponse?> UpdateAsync(int id, UserFavoriteUpdateRequest request)
+        {
+            // UserFavorite doesn't support update operations
+            throw new ValidationException("Update operation is not supported for UserFavorite");
         }
 
         public async Task<bool> DeleteByUserAndTool(int userId, int toolId)
         {
-            var entity = await _dbSet
+            var entity = await _context.Set<UserFavorite>()
                 .FirstOrDefaultAsync(uf => uf.UserId == userId && uf.ToolId == toolId);
 
             if (entity == null)
                 return false;
 
-            _dbSet.Remove(entity);
+            _context.Set<UserFavorite>().Remove(entity);
             await _context.SaveChangesAsync();
             return true;
         }
 
         public async Task<bool> IsFavorite(int userId, int toolId)
         {
-            return await _dbSet
+            return await _context.Set<UserFavorite>()
                 .AnyAsync(uf => uf.UserId == userId && uf.ToolId == toolId);
         }
 
-        private UserFavoriteResponse MapToResponse(UserFavorite entity)
+        protected override UserFavoriteResponse MapToResponse(UserFavorite entity)
         {
-            return new UserFavoriteResponse
-            {
-                Id = entity.Id,
-                UserId = entity.UserId,
-                ToolId = entity.ToolId,
-                ToolName = entity.Tool?.Name,
-                ToolDescription = entity.Tool?.Description,
-                ToolDailyRate = entity.Tool?.DailyRate,
-                ToolImageBase64 = entity.Tool?.ImageBase64,
-                CreatedAt = entity.CreatedAt
-            };
+            var response = _mapper.Map<UserFavoriteResponse>(entity);
+            // Map nested properties
+            response.ToolName = entity.Tool?.Name;
+            response.ToolDescription = entity.Tool?.Description;
+            response.ToolDailyRate = entity.Tool?.DailyRate ?? 0;
+            response.ToolImageBase64 = entity.Tool?.ImageBase64;
+            return response;
         }
     }
 }

@@ -1,8 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using MosPosudit.Model.Exceptions;
-using MosPosudit.Model.Messages;
 using MosPosudit.Model.Requests.Category;
+using MosPosudit.Model.Responses;
 using MosPosudit.Model.Responses.Category;
 using MosPosudit.Model.SearchObjects;
 using MosPosudit.Services.Interfaces;
@@ -11,154 +10,45 @@ namespace MosPosudit.WebAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
-    public class CategoryController : ControllerBase
+    public class CategoryController : BaseCrudController<CategoryResponse, CategorySearchObject, CategoryInsertRequest, CategoryUpdateRequest>
     {
-        protected readonly ICategoryService _service;
-
-        public CategoryController(ICategoryService categoryService)
+        public CategoryController(ICategoryService service) : base(service)
         {
-            _service = categoryService ?? throw new ArgumentNullException(nameof(categoryService));
         }
 
         [HttpGet]
         [AllowAnonymous]
-        public virtual async Task<ActionResult<IEnumerable<CategoryResponse>>> Get([FromQuery] CategorySearchObject? search = null)
+        public override async Task<PagedResult<CategoryResponse>> Get([FromQuery] CategorySearchObject? search = null)
         {
-            try
-            {
-                var result = await _service.GetAsResponse(search);
-                return Ok(result);
-            }
-            catch (ValidationException ex)
-            {
-                return BadRequest(ex.Message);
-            }
-            catch (Exception)
-            {
-                return StatusCode(500, ErrorMessages.ServerError);
-            }
+            return await base.Get(search);
         }
 
         [HttpGet("{id}")]
         [AllowAnonymous]
-        public virtual async Task<ActionResult<CategoryResponse>> GetById(int id)
+        public override async Task<CategoryResponse?> GetById(int id)
         {
-            try
-            {
-                var result = await _service.GetByIdAsResponse(id);
-                return Ok(result);
-            }
-            catch (NotFoundException ex)
-            {
-                return NotFound(ex.Message);
-            }
-            catch (ValidationException ex)
-            {
-                return BadRequest(ex.Message);
-            }
-            catch (Exception)
-            {
-                return StatusCode(500, ErrorMessages.ServerError);
-            }
+            return await base.GetById(id);
         }
 
         [HttpPost]
         [Authorize(Roles = "Admin")]
-        public virtual async Task<ActionResult<CategoryResponse>> Insert([FromBody] CategoryInsertRequest insert)
+        public override async Task<CategoryResponse> Create([FromBody] CategoryInsertRequest request)
         {
-            try
-            {
-                if (insert == null)
-                    return BadRequest(ErrorMessages.InvalidRequest);
-
-                var result = await _service.InsertAsResponse(insert);
-                return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
-            }
-            catch (ValidationException ex)
-            {
-                return BadRequest(ex.Message);
-            }
-            catch (Exception)
-            {
-                return StatusCode(500, ErrorMessages.ServerError);
-            }
+            return await base.Create(request);
         }
 
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin")]
-        public virtual async Task<ActionResult<CategoryResponse>> Update(int id, [FromBody] CategoryUpdateRequest update)
+        public override async Task<CategoryResponse?> Update(int id, [FromBody] CategoryUpdateRequest request)
         {
-            try
-            {
-                if (update == null)
-                    return BadRequest(ErrorMessages.InvalidRequest);
-
-                var result = await _service.UpdateAsResponse(id, update);
-                return Ok(result);
-            }
-            catch (NotFoundException ex)
-            {
-                return NotFound(ex.Message);
-            }
-            catch (ValidationException ex)
-            {
-                return BadRequest(ex.Message);
-            }
-            catch (Exception)
-            {
-                return StatusCode(500, ErrorMessages.ServerError);
-            }
-        }
-
-        [HttpPatch("{id}")]
-        [Authorize(Roles = "Admin")]
-        public virtual async Task<ActionResult<CategoryResponse>> Patch(int id, [FromBody] CategoryPatchRequest patch)
-        {
-            try
-            {
-                if (patch == null)
-                    return BadRequest(ErrorMessages.InvalidRequest);
-
-                var result = await _service.PatchAsResponse(id, patch);
-                return Ok(result);
-            }
-            catch (NotFoundException ex)
-            {
-                return NotFound(ex.Message);
-            }
-            catch (ValidationException ex)
-            {
-                return BadRequest(ex.Message);
-            }
-            catch (Exception)
-            {
-                return StatusCode(500, ErrorMessages.ServerError);
-            }
+            return await base.Update(id, request);
         }
 
         [HttpDelete("{id}")]
         [Authorize(Roles = "Admin")]
-        public virtual async Task<ActionResult<CategoryResponse>> Delete(int id)
+        public override async Task<bool> Delete(int id)
         {
-            try
-            {
-                var result = await _service.DeleteAsResponse(id);
-                return Ok(result);
-            }
-            catch (NotFoundException ex)
-            {
-                return NotFound(ex.Message);
-            }
-            catch (ValidationException ex)
-            {
-                return BadRequest(ex.Message);
-            }
-            catch (Exception)
-            {
-                return StatusCode(500, ErrorMessages.ServerError);
-            }
+            return await base.Delete(id);
         }
     }
 }
-

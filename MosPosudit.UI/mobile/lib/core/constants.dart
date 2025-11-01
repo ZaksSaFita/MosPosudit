@@ -1,6 +1,7 @@
 // API Configuration
-// Uses --dart-define=API_URL=http://10.0.2.2:5001/api for Android emulator
+// Uses --dart-define=API_URL=http://10.0.2.2:5001/api for Android emulator (Docker port)
 // Or use --dart-define=API_URL=http://YOUR_IP:5001/api for physical device
+// For local development (non-Docker): use port 5000
 const String _defaultApiUrl = 'http://10.0.2.2:5001/api';
 const String _apiUrlFromEnv = String.fromEnvironment('API_URL', defaultValue: _defaultApiUrl);
 

@@ -42,14 +42,13 @@ namespace MosPosudit.Services.DataBase.Data
 
         // Navigation properties
 
-        public virtual ICollection<Rental> Rentals { get; set; } = new List<Rental>();
-        public virtual ICollection<PaymentTransaction> PaymentTransactions { get; set; } = new List<PaymentTransaction>();
         public virtual ICollection<Review> Reviews { get; set; } = new List<Review>();
         public virtual ICollection<UserFavorite> Favorites { get; set; } = new List<UserFavorite>();
         public virtual ICollection<Notification> Notifications { get; set; } = new List<Notification>();
         public virtual ICollection<Message> SentMessages { get; set; } = new List<Message>();
         public virtual ICollection<Message> ReceivedMessages { get; set; } = new List<Message>();
         public virtual ICollection<Message> StartedChats { get; set; } = new List<Message>();
+        public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
 
         [NotMapped]
         public string FullName => $"{FirstName} {LastName}";

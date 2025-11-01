@@ -1,10 +1,13 @@
-using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using MosPosudit.Model.Enums;
 using MosPosudit.Services.DataBase;
 using MosPosudit.Services.DataBase.Data;
+using RabbitMQ.Client;
+using RabbitMQ.Client.Events;
+using System.Text;
+using Newtonsoft.Json;
 
 namespace MosPosudit.Worker.Services
 {
@@ -12,40 +15,142 @@ namespace MosPosudit.Worker.Services
     {
         private readonly IServiceProvider _serviceProvider;
         private readonly ILogger<NotificationWorker> _logger;
-        private readonly RabbitMQService _rabbitMQService;
+        private readonly IConfiguration _configuration;
+        private readonly IConnection? _connection;
+        private readonly IModel? _channel;
+        private readonly string _host;
+        private readonly string _username;
+        private readonly string _password;
 
         public NotificationWorker(
             IServiceProvider serviceProvider,
             ILogger<NotificationWorker> logger,
-            RabbitMQService rabbitMQService)
+            IConfiguration configuration)
         {
             _serviceProvider = serviceProvider;
             _logger = logger;
-            _rabbitMQService = rabbitMQService;
+            _configuration = configuration;
+
+            _host = Environment.GetEnvironmentVariable("RABBITMQ_HOST") ?? _configuration["RabbitMQ:Host"] ?? "localhost";
+            _username = Environment.GetEnvironmentVariable("RABBITMQ_USERNAME") ?? _configuration["RabbitMQ:Username"] ?? "admin";
+            _password = Environment.GetEnvironmentVariable("RABBITMQ_PASSWORD") ?? _configuration["RabbitMQ:Password"] ?? "admin123";
+
+            try
+            {
+                var factory = new ConnectionFactory
+                {
+                    HostName = _host,
+                    UserName = _username,
+                    Password = _password,
+                    AutomaticRecoveryEnabled = true,
+                    NetworkRecoveryInterval = TimeSpan.FromSeconds(10)
+                };
+
+                // Retry logic for connecting to RabbitMQ
+                var maxRetries = 3;
+                var retryDelay = TimeSpan.FromSeconds(1);
+                IConnection? connection = null;
+
+                for (int i = 0; i < maxRetries; i++)
+                {
+                    try
+                    {
+                        _logger.LogInformation("NotificationWorker: Attempting to connect to RabbitMQ (attempt {Attempt}/{MaxRetries})...", i + 1, maxRetries);
+                        connection = factory.CreateConnection();
+                        _logger.LogInformation("NotificationWorker: Successfully connected to RabbitMQ");
+                        break;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "NotificationWorker: Failed to connect to RabbitMQ on attempt {Attempt}/{MaxRetries}", i + 1, maxRetries);
+                        if (i < maxRetries - 1)
+                        {
+                            Thread.Sleep(retryDelay);
+                        }
+                    }
+                }
+
+                if (connection == null || !connection.IsOpen)
+                {
+                    _logger.LogWarning("NotificationWorker: RabbitMQ is not available. Notification Worker will not process messages.");
+                    _connection = null;
+                    _channel = null;
+                    return;
+                }
+
+                _connection = connection;
+                _channel = _connection.CreateModel();
+
+                // Declare queue
+                _channel.QueueDeclare(
+                    queue: "notifications",
+                    durable: true,
+                    exclusive: false,
+                    autoDelete: false,
+                    arguments: null);
+
+                _logger.LogInformation("NotificationWorker: Queue 'notifications' declared successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "NotificationWorker: Error initializing RabbitMQ connection");
+                _connection = null;
+                _channel = null;
+            }
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             _logger.LogInformation("Notification Worker started");
 
-            // Subscribe to notification queue
-            _rabbitMQService.SubscribeToQueue<NotificationMessage>("notifications", HandleNotification);
+            if (_connection == null || _channel == null)
+            {
+                _logger.LogWarning("NotificationWorker: RabbitMQ is not available. Notification Worker will not process messages.");
+                while (!stoppingToken.IsCancellationRequested)
+                {
+                    await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
+                }
+                return;
+            }
 
-            while (!stoppingToken.IsCancellationRequested)
+            var consumer = new EventingBasicConsumer(_channel);
+            consumer.Received += (model, ea) =>
             {
                 try
                 {
-                    // Check for overdue rentals and send reminders
-                    await CheckOverdueRentals();
+                    var body = ea.Body.ToArray();
+                    var message = Encoding.UTF8.GetString(body);
+                    _logger.LogInformation("NotificationWorker: Received message: {Message}", message);
 
-                    // Wait for 1 hour before next check
-                    await Task.Delay(TimeSpan.FromHours(1), stoppingToken);
+                    var notificationMessage = JsonConvert.DeserializeObject<NotificationMessage>(message);
+                    if (notificationMessage != null)
+                    {
+                        HandleNotification(notificationMessage);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("NotificationWorker: Invalid notification message received");
+                    }
+
+                    _channel.BasicAck(ea.DeliveryTag, false);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error in notification worker");
-                    await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
+                    _logger.LogError(ex, "NotificationWorker: Error processing notification message");
+                    _channel.BasicNack(ea.DeliveryTag, false, true);
                 }
+            };
+
+            _channel.BasicConsume(
+                queue: "notifications",
+                autoAck: false,
+                consumer: consumer);
+
+            _logger.LogInformation("NotificationWorker: Subscribed to 'notifications' queue");
+
+            while (!stoppingToken.IsCancellationRequested)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
             }
         }
 
@@ -67,49 +172,33 @@ namespace MosPosudit.Worker.Services
                 };
 
                 context.Notifications.Add(notification);
-                _ = context.SaveChangesAsync();
+                context.SaveChanges();
 
-                _logger.LogInformation($"Notification created for user {message.UserId}: {message.Title}");
+                _logger.LogInformation("NotificationWorker: Notification created for user {UserId}: {Title}", message.UserId, message.Title);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error handling notification");
+                _logger.LogError(ex, "NotificationWorker: Error handling notification");
             }
         }
 
-        private async Task CheckOverdueRentals()
+        public override void Dispose()
         {
             try
             {
-                using var scope = _serviceProvider.CreateScope();
-                var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-
-                var overdueRentals = await context.Rentals
-                    .Include(r => r.User)
-                    .Include(r => r.RentalItems)
-                    .ThenInclude(ri => ri.Tool)
-                    .Where(r => r.EndDate < DateTime.UtcNow && r.Status == RentalStatus.Active)
-                    .ToListAsync();
-
-                foreach (var rental in overdueRentals)
-                {
-                    var message = new NotificationMessage
-                    {
-                        UserId = rental.UserId,
-                        Title = "Overdue Rental",
-                        Message = $"Your rental for {string.Join(", ", rental.RentalItems.Select(ri => ri.Tool.Name))} is overdue. Please return the items.",
-                        Type = "Warning"
-                    };
-
-                    _rabbitMQService.PublishMessage("notifications", message);
-                }
-
-                _logger.LogInformation($"Checked {overdueRentals.Count} overdue rentals");
+                _channel?.Close();
+                _channel?.Dispose();
             }
-            catch (Exception ex)
+            catch { }
+
+            try
             {
-                _logger.LogError(ex, "Error checking overdue rentals");
+                _connection?.Close();
+                _connection?.Dispose();
             }
+            catch { }
+
+            base.Dispose();
         }
     }
 

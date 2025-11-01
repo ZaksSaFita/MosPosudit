@@ -13,12 +13,12 @@ class NotificationService {
       if (res.statusCode == 200) {
         final decoded = jsonDecode(res.body);
         
-        // Handle both array and object with "value" property
+        // Backend vraća PagedResult<T> sa items i totalCount
         final List<dynamic> data;
-        if (decoded is List) {
+        if (decoded is Map && decoded.containsKey('items')) {
+          data = decoded['items'] as List<dynamic>;
+        } else if (decoded is List) {
           data = decoded;
-        } else if (decoded is Map && decoded.containsKey('value')) {
-          data = decoded['value'] as List<dynamic>;
         } else {
           throw Exception('Unexpected response format: $decoded');
         }

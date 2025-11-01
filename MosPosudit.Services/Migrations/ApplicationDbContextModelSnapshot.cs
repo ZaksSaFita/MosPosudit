@@ -121,60 +121,7 @@ namespace MosPosudit.Services.Migrations
                     b.ToTable("Notifications");
                 });
 
-            modelBuilder.Entity("MosPosudit.Services.DataBase.Data.PaymentTransaction", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<decimal>("Amount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("PaymentMethod")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("ProcessedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("RentalId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("TermsAccepted")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime?>("TermsAcceptedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("TransactionDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("TransactionId")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("RentalId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("PaymentTransactions");
-                });
-
-            modelBuilder.Entity("MosPosudit.Services.DataBase.Data.Rental", b =>
+            modelBuilder.Entity("MosPosudit.Services.DataBase.Data.Order", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -185,9 +132,6 @@ namespace MosPosudit.Services.Migrations
                     b.Property<bool>("ConfirmationEmailSent")
                         .HasColumnType("bit");
 
-                    b.Property<DateTime?>("ConfirmationEmailSentAt")
-                        .HasColumnType("datetime2");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -197,29 +141,14 @@ namespace MosPosudit.Services.Migrations
                     b.Property<bool>("IsReturned")
                         .HasColumnType("bit");
 
-                    b.Property<string>("Notes")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<DateTime?>("ReturnDate")
                         .HasColumnType("datetime2");
-
-                    b.Property<string>("ReturnNotes")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
-
-                    b.Property<int>("StatusId")
-                        .HasColumnType("int");
-
                     b.Property<bool>("TermsAccepted")
                         .HasColumnType("bit");
-
-                    b.Property<DateTime?>("TermsAcceptedAt")
-                        .HasColumnType("datetime2");
 
                     b.Property<decimal>("TotalAmount")
                         .HasPrecision(18, 2)
@@ -235,10 +164,10 @@ namespace MosPosudit.Services.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Rentals");
+                    b.ToTable("Orders");
                 });
 
-            modelBuilder.Entity("MosPosudit.Services.DataBase.Data.RentalItem", b =>
+            modelBuilder.Entity("MosPosudit.Services.DataBase.Data.OrderItem", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -250,25 +179,60 @@ namespace MosPosudit.Services.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<string>("Notes")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("Quantity")
+                    b.Property<int>("OrderId")
                         .HasColumnType("int");
 
-                    b.Property<int>("RentalId")
+                    b.Property<int>("Quantity")
                         .HasColumnType("int");
 
                     b.Property<int>("ToolId")
                         .HasColumnType("int");
 
+                    b.Property<decimal>("TotalPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("RentalId");
+                    b.HasIndex("OrderId");
 
                     b.HasIndex("ToolId");
 
-                    b.ToTable("RentalItems");
+                    b.ToTable("OrderItems");
+                });
+
+            modelBuilder.Entity("MosPosudit.Services.DataBase.Data.Payment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsCompleted")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("OrderId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("PaymentDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TransactionId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId");
+
+                    b.ToTable("Payments");
                 });
 
             modelBuilder.Entity("MosPosudit.Services.DataBase.Data.Review", b =>
@@ -288,9 +252,6 @@ namespace MosPosudit.Services.Migrations
                     b.Property<int>("Rating")
                         .HasColumnType("int");
 
-                    b.Property<int>("RentalId")
-                        .HasColumnType("int");
-
                     b.Property<int>("ToolId")
                         .HasColumnType("int");
 
@@ -301,8 +262,6 @@ namespace MosPosudit.Services.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("RentalId");
 
                     b.HasIndex("ToolId");
 
@@ -491,63 +450,49 @@ namespace MosPosudit.Services.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("MosPosudit.Services.DataBase.Data.PaymentTransaction", b =>
+            modelBuilder.Entity("MosPosudit.Services.DataBase.Data.Order", b =>
                 {
-                    b.HasOne("MosPosudit.Services.DataBase.Data.Rental", "Rental")
-                        .WithMany("Payments")
-                        .HasForeignKey("RentalId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
                     b.HasOne("MosPosudit.Services.DataBase.Data.User", "User")
-                        .WithMany("PaymentTransactions")
+                        .WithMany("Orders")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
-
-                    b.Navigation("Rental");
 
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("MosPosudit.Services.DataBase.Data.Rental", b =>
+            modelBuilder.Entity("MosPosudit.Services.DataBase.Data.OrderItem", b =>
                 {
-                    b.HasOne("MosPosudit.Services.DataBase.Data.User", "User")
-                        .WithMany("Rentals")
-                        .HasForeignKey("UserId")
+                    b.HasOne("MosPosudit.Services.DataBase.Data.Order", "Order")
+                        .WithMany("OrderItems")
+                        .HasForeignKey("OrderId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("MosPosudit.Services.DataBase.Data.RentalItem", b =>
-                {
-                    b.HasOne("MosPosudit.Services.DataBase.Data.Rental", "Rental")
-                        .WithMany("RentalItems")
-                        .HasForeignKey("RentalId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
                     b.HasOne("MosPosudit.Services.DataBase.Data.Tool", "Tool")
-                        .WithMany("RentalItems")
+                        .WithMany("OrderItems")
                         .HasForeignKey("ToolId")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
-                    b.Navigation("Rental");
+                    b.Navigation("Order");
 
                     b.Navigation("Tool");
                 });
 
-            modelBuilder.Entity("MosPosudit.Services.DataBase.Data.Review", b =>
+            modelBuilder.Entity("MosPosudit.Services.DataBase.Data.Payment", b =>
                 {
-                    b.HasOne("MosPosudit.Services.DataBase.Data.Rental", "Rental")
-                        .WithMany("Reviews")
-                        .HasForeignKey("RentalId")
-                        .OnDelete(DeleteBehavior.NoAction)
+                    b.HasOne("MosPosudit.Services.DataBase.Data.Order", "Order")
+                        .WithMany("Payments")
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.Navigation("Order");
+                });
+
+            modelBuilder.Entity("MosPosudit.Services.DataBase.Data.Review", b =>
+                {
                     b.HasOne("MosPosudit.Services.DataBase.Data.Tool", "Tool")
                         .WithMany("Reviews")
                         .HasForeignKey("ToolId")
@@ -559,8 +504,6 @@ namespace MosPosudit.Services.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
-
-                    b.Navigation("Rental");
 
                     b.Navigation("Tool");
 
@@ -613,13 +556,11 @@ namespace MosPosudit.Services.Migrations
                     b.Navigation("Tools");
                 });
 
-            modelBuilder.Entity("MosPosudit.Services.DataBase.Data.Rental", b =>
+            modelBuilder.Entity("MosPosudit.Services.DataBase.Data.Order", b =>
                 {
+                    b.Navigation("OrderItems");
+
                     b.Navigation("Payments");
-
-                    b.Navigation("RentalItems");
-
-                    b.Navigation("Reviews");
                 });
 
             modelBuilder.Entity("MosPosudit.Services.DataBase.Data.Role", b =>
@@ -631,7 +572,7 @@ namespace MosPosudit.Services.Migrations
                 {
                     b.Navigation("Favorites");
 
-                    b.Navigation("RentalItems");
+                    b.Navigation("OrderItems");
 
                     b.Navigation("Reviews");
                 });
@@ -642,11 +583,9 @@ namespace MosPosudit.Services.Migrations
 
                     b.Navigation("Notifications");
 
-                    b.Navigation("PaymentTransactions");
+                    b.Navigation("Orders");
 
                     b.Navigation("ReceivedMessages");
-
-                    b.Navigation("Rentals");
 
                     b.Navigation("Reviews");
 

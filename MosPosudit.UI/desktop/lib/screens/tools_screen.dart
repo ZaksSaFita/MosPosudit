@@ -300,9 +300,36 @@ class _ToolsManagementPageState extends State<ToolsManagementPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header
-            const Text(
-              'Tools',
-              style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Tools',
+                  style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                ),
+                if (!_isLoading && _error == null)
+                  Card(
+                    color: Colors.blue.shade50,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.build, color: Colors.blue.shade700, size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Total: ${_tools.length}',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue.shade700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(height: 24),
 
@@ -544,9 +571,51 @@ class _ToolListCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 8),
-                  // Score
+                  // Quantity and Score
                   Row(
                     children: [
+                      // Quantity
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: (tool.quantity ?? 0) > 0 
+                              ? Colors.green.shade50 
+                              : Colors.red.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: (tool.quantity ?? 0) > 0 
+                                ? Colors.green.shade200 
+                                : Colors.red.shade200,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              (tool.quantity ?? 0) > 0 
+                                  ? Icons.inventory_2 
+                                  : Icons.inventory_2_outlined,
+                              size: 14,
+                              color: (tool.quantity ?? 0) > 0 
+                                  ? Colors.green.shade700 
+                                  : Colors.red.shade700,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Quantity: ${tool.quantity ?? 0}',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: (tool.quantity ?? 0) > 0 
+                                    ? Colors.green.shade700 
+                                    : Colors.red.shade700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      // Score
                       Text(
                         '${_averageScore.toStringAsFixed(1)}',
                         style: const TextStyle(

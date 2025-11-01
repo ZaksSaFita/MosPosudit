@@ -2,13 +2,14 @@
 
 namespace MosPosudit.Services.Interfaces
 {
-    public interface ICrudService<T, TSearch, TInsert, TUpdate, TPatch> where T : class where TSearch : BaseSearchObject
+    public interface ICrudService<T, TSearch, TInsert, TUpdate> : IService<T, TSearch> 
+        where T : class 
+        where TSearch : BaseSearchObject 
+        where TInsert : class 
+        where TUpdate : class
     {
-        Task<IEnumerable<T>> Get(TSearch? search = null);
-        Task<T> GetById(int id);
-        Task<T> Insert(TInsert insert);
-        Task<T> Update(int id, TUpdate update);
-        Task<T> Patch(int id, TPatch patch);
-        Task<T> Delete(int id);
+        Task<T> CreateAsync(TInsert request);
+        Task<T?> UpdateAsync(int id, TUpdate request);
+        Task<bool> DeleteAsync(int id);
     }
 } 

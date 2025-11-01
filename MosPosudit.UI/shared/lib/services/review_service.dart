@@ -11,13 +11,19 @@ class ReviewService {
 
   Future<List<ReviewModel>> getReviews({Map<String, dynamic>? query}) async {
     try {
-      final res = await _api.get('/Review', query: query);
+      final res = await _api.get('/Review', query: query, auth: false);
       
       if (res.statusCode == 200) {
         final decoded = jsonDecode(res.body);
-        final List<dynamic> data = decoded is List 
-            ? decoded 
-            : (decoded['value'] ?? []);
+        // Backend vraća PagedResult<T> sa items i totalCount
+        final List<dynamic> data;
+        if (decoded is Map && decoded.containsKey('items')) {
+          data = decoded['items'] as List<dynamic>;
+        } else if (decoded is List) {
+          data = decoded;
+        } else {
+          throw Exception('Unexpected response format: $decoded');
+        }
         return data.map((e) => ReviewModel.fromJson(e)).toList();
       }
       
@@ -30,7 +36,7 @@ class ReviewService {
 
   Future<ReviewModel?> getById(int id) async {
     try {
-      final res = await _api.get('/Review/$id');
+      final res = await _api.get('/Review/$id', auth: false);
       
       if (res.statusCode == 200) {
         final decoded = jsonDecode(res.body);
@@ -46,13 +52,14 @@ class ReviewService {
 
   Future<List<ReviewModel>> getByToolId(int toolId) async {
     try {
-      final res = await _api.get('/Review/tool/$toolId');
+      final res = await _api.get('/Review/tool/$toolId', auth: false);
       
       if (res.statusCode == 200) {
         final decoded = jsonDecode(res.body);
+        // Backend vraća direktno listu za tool/{toolId} endpoint
         final List<dynamic> data = decoded is List 
             ? decoded 
-            : (decoded['value'] ?? []);
+            : [];
         return data.map((e) => ReviewModel.fromJson(e)).toList();
       }
       
