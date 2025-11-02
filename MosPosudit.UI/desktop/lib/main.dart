@@ -12,6 +12,7 @@ import 'package:mosposudit_shared/services/message_service.dart';
 import 'package:mosposudit_shared/services/auth_service.dart';
 import 'widgets/sidebar.dart';
 import 'core/constants.dart';
+import 'core/snackbar_helper.dart';
 
 void main() {
   AppConfig.instance = AppConfig(apiBaseUrl: apiBaseUrl);
@@ -55,6 +56,35 @@ class _AuthWrapperState extends State<AuthWrapper> {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
     final user = prefs.getString('user');
+    
+    // Validate that user is admin
+    if (token != null && user != null) {
+      try {
+        final userData = jsonDecode(user);
+        final roleName = userData['roleName'] ?? '';
+        final isAdmin = roleName.toString().toLowerCase() == 'admin';
+        
+        if (!isAdmin) {
+          // Clear invalid session - user is not admin
+          await prefs.remove('token');
+          await prefs.remove('user');
+          setState(() {
+            _isLoggedIn = false;
+            _isLoading = false;
+          });
+          return;
+        }
+      } catch (e) {
+        // If parsing fails, clear session
+        await prefs.remove('token');
+        await prefs.remove('user');
+        setState(() {
+          _isLoggedIn = false;
+          _isLoading = false;
+        });
+        return;
+      }
+    }
     
     setState(() {
       _isLoggedIn = token != null && user != null;
@@ -144,16 +174,7 @@ class _LoginScreenState extends State<LoginScreen> {
         final data = jsonDecode(response.body);
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('token', data['token']);
-        // Save credentials if remember me is checked
-        if (_rememberMe) {
-          await prefs.setString('saved_username', _usernameController.text);
-          await prefs.setString('saved_password', _passwordController.text);
-          await prefs.setBool('remember_me', true);
-        } else {
-          await prefs.remove('saved_username');
-          await prefs.remove('saved_password');
-          await prefs.setBool('remember_me', false);
-        }
+        
         // Dohvati podatke o korisniku preko /User/me
         final userResponse = await http.get(
           Uri.parse('$apiBaseUrl/User/me'),
@@ -163,21 +184,63 @@ class _LoginScreenState extends State<LoginScreen> {
         );
         if (userResponse.statusCode == 200) {
           final userDataFromDb = jsonDecode(userResponse.body);
+          
+          // Check if user has admin role
+          final roleName = userDataFromDb['roleName'] ?? '';
+          final isAdmin = roleName.toString().toLowerCase() == 'admin';
+          
+          if (!isAdmin) {
+            // Clear token and show error - only admins can access desktop app
+            await prefs.remove('token');
+            await prefs.remove('user');
+            if (mounted) {
+              SnackbarHelper.showError(
+                context,
+                'Only admin users can access the desktop application.',
+              );
+              setState(() {
+                _isLoading = false;
+              });
+            }
+            return;
+          }
+          
+          // User is admin - proceed with login
           await prefs.setString('user', jsonEncode(userDataFromDb));
+          
+          // Save credentials if remember me is checked
+          if (_rememberMe) {
+            await prefs.setString('saved_username', _usernameController.text);
+            await prefs.setString('saved_password', _passwordController.text);
+            await prefs.setBool('remember_me', true);
+          } else {
+            await prefs.remove('saved_username');
+            await prefs.remove('saved_password');
+            await prefs.setBool('remember_me', false);
+          }
+          
+          if (mounted) {
+            SnackbarHelper.showSuccess(
+              context,
+              'Successfully logged in!',
+            );
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (context) => const AuthWrapper()),
+            );
+          }
         } else {
           // fallback: obrisi user podatke ako ne možeš dohvatiti
+          await prefs.remove('token');
           await prefs.remove('user');
-        }
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Successfully logged in!'),
-              backgroundColor: Colors.green,
-            ),
-          );
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const AuthWrapper()),
-          );
+          if (mounted) {
+            SnackbarHelper.showError(
+              context,
+              'Failed to retrieve user information.',
+            );
+            setState(() {
+              _isLoading = false;
+            });
+          }
         }
       } else {
         if (mounted) {
@@ -201,22 +264,12 @@ class _LoginScreenState extends State<LoginScreen> {
               userMessage = 'Incorrect username or password.';
             }
           }
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(userMessage),
-              backgroundColor: Colors.red,
-            ),
-          );
+          SnackbarHelper.showError(context, userMessage);
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('$networkErrorMessage: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        SnackbarHelper.showError(context, '$networkErrorMessage: $e');
       }
     } finally {
       if (mounted) {
@@ -365,7 +418,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 20),
                       const Text(
-                        'Test credentials: admin / test',
+                        'Test credentials: samo-moze-admin / test',
                         style: TextStyle(
                           color: Colors.grey,
                           fontSize: 14,
@@ -463,38 +516,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
       // Show notification if new messages arrived and user is not on chat screen
       if (mounted && currentUnreadCount > _lastUnreadCount && _selectedIndex != 7) {
         final newMessagesCount = currentUnreadCount - _lastUnreadCount;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.message, color: Colors.white),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    newMessagesCount == 1
-                        ? 'Nova poruka je stigla'
-                        : '$newMessagesCount nove poruke su stigle',
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                ),
-                  TextButton(
-                    onPressed: () {
-                      setState(() {
-                        _selectedIndex = 7; // Navigate to chat screen
-                      });
-                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                    },
-                  child: const Text(
-                    'Otvori Chat',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-            ),
-            backgroundColor: Colors.blue,
-            duration: const Duration(seconds: 5),
-            behavior: SnackBarBehavior.floating,
-          ),
+        SnackbarHelper.showInfo(
+          context,
+          newMessagesCount == 1
+              ? 'Nova poruka je stigla'
+              : '$newMessagesCount nove poruke su stigle',
+          duration: const Duration(seconds: 5),
         );
       }
       

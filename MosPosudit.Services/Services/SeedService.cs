@@ -63,6 +63,34 @@ namespace MosPosudit.Services.Services
                 didChange = true;
             }
 
+            // Ensure samo-moze-admin user exists with admin role for desktop login
+            var samoMozeAdminUser = db.Users.FirstOrDefault(x => x.Username == "samo-moze-admin");
+            if (samoMozeAdminUser == null)
+            {
+                db.Users.Add(new User
+                {
+                    FirstName = "Admin",
+                    LastName = "Desktop",
+                    Username = "samo-moze-admin",
+                    Email = "admin@mosposudit.com",
+                    PhoneNumber = "123456789",
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("test"),
+                    RoleId = adminRoleId,
+                    IsActive = true,
+                    CreatedAt = now,
+                    UpdateDate = now,
+                    PasswordUpdateDate = now
+                });
+                didChange = true;
+            }
+            else if (samoMozeAdminUser.RoleId != adminRoleId)
+            {
+                // Ensure user has admin role
+                samoMozeAdminUser.RoleId = adminRoleId;
+                samoMozeAdminUser.UpdateDate = now;
+                didChange = true;
+            }
+
             // Ensure regular user exists with correct email
             var regularUser = db.Users.FirstOrDefault(x => x.Username == "user");
             if (regularUser == null)
