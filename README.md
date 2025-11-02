@@ -10,280 +10,319 @@ A microservices-based tool rental application built with .NET Core, Flutter, and
 - **Message Queue**: RabbitMQ
 - **Containerization**: Docker + docker-compose
 
-## 🐳 Quick Start with Docker
+## 📋 Prerequisites
 
-### Prerequisites
-- Docker Desktop
-- Docker Compose
+Before starting, ensure you have the following installed:
 
-### 1. Clone the repository
+- **Docker Desktop** (must be running)
+- **Flutter SDK** (latest version)
+- **Git** (for cloning the repository)
+
+## 🚀 Quick Start - Pokretanje aplikacije
+
+### Korak 1: Kloniranje repozitorija
+
 ```bash
 git clone <repository-url>
 cd MosPosudit
 ```
 
-### 2. Configure environment variables
+### Korak 2: Konfiguracija okruženja
 
-Copy `.env.example` to `.env` and update the configuration:
+Kreirajte `.env` fajl u root direktoriju projekta sa sljedećim varijablama:
 
-```bash
-cp .env.example .env
+```env
+# Database Configuration
+SQL_SERVER_PASSWORD=YourStrongPassword123!
+DATABASE_NAME=220116
+DB_CONNECTION_STRING=Server=sqlserver;Database=220116;User Id=sa;Password=YourStrongPassword123!;TrustServerCertificate=True;MultipleActiveResultSets=true;
+
+# RabbitMQ Configuration
+RABBITMQ_USERNAME=admin
+RABBITMQ_PASSWORD=admin123
+
+# JWT Configuration
+JWT_KEY=YourSuperSecretJWTKeyMustBeAtLeast32CharactersLong!
+JWT_ISSUER=MosPosudit
+JWT_AUDIENCE=MosPosuditUsers
+
+# PayPal Configuration (Optional - for payment features)
+PAYPAL_CLIENT_ID=your_paypal_client_id
+PAYPAL_SECRET=your_paypal_secret
+PAYPAL_MODE=sandbox
+PAYPAL_RETURN_URL=http://localhost:5001/api/Payment/paypal-return
+PAYPAL_CANCEL_URL=http://localhost:5001/api/Payment/paypal-cancel
+
+# SMTP Configuration (Optional - for email notifications)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=your_email@gmail.com
+SMTP_PASSWORD=your_app_password
+SMTP_ENABLE_SSL=true
+
+# API Configuration
+API_PORT=5001
+API_ENVIRONMENT=Development
 ```
 
-**Edit `.env` file with your configuration:**
+**Napomene:**
+- `SQL_SERVER_PASSWORD` mora biti kompleksan (min. 8 karaktera, uključuje velika i mala slova, brojeve i specijalne znakove)
+- `JWT_KEY` mora biti najmanje 32 karaktera dug
+- `DB_CONNECTION_STRING` mora koristiti isti password kao `SQL_SERVER_PASSWORD`
+- Za Gmail SMTP, koristite App Password (ne regularni password)
 
-- **Database**: Update `SQL_SERVER_PASSWORD` and `DATABASE_NAME` if needed
-- **RabbitMQ**: Update `RABBITMQ_USERNAME` and `RABBITMQ_PASSWORD` if needed
-- **JWT**: Update `JWT_KEY` (must be at least 32 characters)
-- **PayPal**: Update `PAYPAL_CLIENT_ID` and `PAYPAL_SECRET` with your PayPal credentials
-- **SMTP**: Update `SMTP_USERNAME` and `SMTP_PASSWORD` with your email credentials
-  - For Gmail, you'll need to generate an App Password
-- **API**: Update `API_PORT` if needed (default: 5001)
+### Korak 3: Pokretanje servisa pomoću Docker Compose
 
-**For Mobile App**: 
-- When running on physical device, use `--dart-define=API_URL=http://YOUR_IP:5001/api`
-- For Android emulator, default `10.0.2.2` is used automatically
-- To find your IP address, run `ipconfig` in Command Prompt and look for "IPv4 Address"
+U root direktoriju projekta, pokrenite:
 
-### 3. Start all services
 ```bash
 docker-compose up -d
 ```
 
-This will start:
-- SQL Server (port 1433)
-- RabbitMQ (ports 5672, 15672)
-- API Service (port 5001)
-- Worker Service (background processing)
+Ova komanda će pokrenuti:
+- **SQL Server** na portu 1433
+- **RabbitMQ** na portovima 5672 (AMQP) i 15672 (Management UI)
+- **API Service** na portu 5001
+- **Worker Service** (background processing)
 
-**Note**: First run may take 5-10 minutes to download images and build containers.
+**Napomena:** Prvo pokretanje može potrajati 5-10 minuta dok se slike preuzimaju i kontejneri grade.
 
-### 4. Check service status
+### Korak 4: Provjera statusa servisa
+
+Provjerite da li su svi servisi uspješno pokrenuti:
+
 ```bash
+# Provjera statusa svih servisa
 docker-compose ps
+
+# Provjera logova API servisa
 docker-compose logs api
+
+# Provjera logova Worker servisa
 docker-compose logs worker
+
+# Provjera logova svih servisa
+docker-compose logs -f
 ```
 
-### 5. Access the application
+### Korak 5: Pokretanje Flutter aplikacija
 
-- **API Documentation**: http://localhost:5001/swagger
-- **RabbitMQ Management**: http://localhost:15672 (admin/admin123)
-- **Desktop App**: Run `flutter run -d windows` in `MosPosudit.UI/desktop`
-- **Mobile App**: Run `flutter run` in `MosPosudit.UI/mobile`
+#### Desktop aplikacija
 
-### 6. Stop services
+```bash
+cd MosPosudit.UI/desktop
+flutter pub get
+flutter run -d windows
+```
+
+Aplikacija će se pokrenuti na Windows platformi i automatski se povezati na API na `http://localhost:5001/api`.
+
+#### Mobile aplikacija
+
+**Za Android emulator (preporučeno):**
+
+```bash
+cd MosPosudit.UI/mobile
+flutter pub get
+flutter run
+```
+
+Android emulator automatski koristi `10.0.2.2` koji se mapira na hostov `localhost`.
+
+**Za fizički uređaj:**
+
+1. Pronađite IP adresu vašeg računara:
+   ```bash
+   ipconfig
+   ```
+   Potražite "IPv4 Address" (npr. `192.168.1.100`)
+
+2. Pokrenite aplikaciju sa IP adresom:
+   ```bash
+   cd MosPosudit.UI/mobile
+   flutter pub get
+   flutter run --dart-define=API_URL=http://YOUR_IP:5001/api
+   ```
+
+**Za iOS simulator:**
+```bash
+cd MosPosudit.UI/mobile
+flutter pub get
+flutter run --dart-define=API_URL=http://localhost:5001/api
+```
+
+## 🔐 Login Credentials - Podaci za prijavu
+
+### Desktop aplikacija
+- **Username**: `desktop`
+- **Password**: `test`
+
+### Mobile aplikacija
+- **Username**: `mobile`
+- **Password**: `test`
+
+### Dodatne uloge (ako postoje)
+- **Username**: `{nazivUloge}`
+- **Password**: `test`
+
+## 🌐 Pristup servisima
+
+Nakon pokretanja, dostupni su sljedeći servisi:
+
+- **API Documentation (Swagger)**: http://localhost:5001/swagger
+- **RabbitMQ Management UI**: http://localhost:15672
+  - Username: `admin`
+  - Password: `admin123` (ili vaša konfigurirana lozinka iz `.env`)
+
+## 🛑 Zaustavljanje aplikacije
+
+### Zaustavljanje svih servisa (čuvanje podataka)
+
 ```bash
 docker-compose down
 ```
 
-To remove all data (volumes):
+### Zaustavljanje i brisanje svih podataka
+
 ```bash
 docker-compose down -v
 ```
 
-## 🔐 Login Credentials
+**Upozorenje:** Ova komanda će obrisati sve podatke iz baze podataka i RabbitMQ!
 
-### Desktop Application
-- **Username**: `desktop`
-- **Password**: `test`
+## 🔧 Troubleshooting - Rešavanje problema
 
-### Mobile Application
-- **Username**: `mobile`
-- **Password**: `test`
+### Problem: Port je zauzet
 
-### Additional Roles (if created)
-- **Username**: `{roleName}`
-- **Password**: `test`
+Ako dobijete grešku da je port zauzet:
+
+```bash
+# Windows - provjeri ko koristi port
+netstat -ano | findstr :5001
+
+# Zaustavi kontejnere
+docker-compose down
+
+# Promijeni port u .env fajlu
+API_PORT=5002
+```
+
+### Problem: Docker Desktop nije pokrenut
+
+Uvjerite se da je Docker Desktop pokrenut i da se servisi mogu pokrenuti:
+
+```bash
+docker ps
+```
+
+Ako dobijete grešku, pokrenite Docker Desktop i sačekajte da se potpuno učita.
+
+### Problem: Mobile aplikacija se ne može povezati na API
+
+1. **Provjerite IP adresu:**
+   ```bash
+   ipconfig
+   ```
+
+2. **Provjerite da li API radi:**
+   - Otvorite browser na mobilnom uređaju
+   - Idite na: `http://YOUR_IP:5001/swagger`
+   - Ako se stranica učitava, API radi
+
+3. **Provjerite firewall:**
+   - Windows Firewall mora dopustiti konekcije na portu 5001
+   - Dodajte izuzetak u Windows Firewall za port 5001
+
+4. **Za Android emulator:**
+   - Koristite `10.0.2.2` umjesto IP adrese
+   - Ili pokrenite: `flutter run` bez dodatnih parametara
+
+### Problem: Baza podataka se ne kreira
+
+Provjerite logove SQL Server kontejnera:
+
+```bash
+docker-compose logs sqlserver
+```
+
+Čekajte da SQL Server potpuno startuje (može potrajati 30-60 sekundi).
+
+### Problem: Worker servis ne radi
+
+Provjerite logove Worker servisa:
+
+```bash
+docker-compose logs worker -f
+```
+
+Uvjerite se da su RabbitMQ i API servisi pokrenuti i zdravi.
 
 ## 📁 Project Structure
 
 ```
 MosPosudit/
 ├── MosPosudit.Model/          # Data models and DTOs
-├── MosPosudit.Services/       # Business logic and data access
-├── MosPosudit.WebAPI/         # Main REST API service
-├── MosPosudit.Worker/         # Background worker service
+├── MosPosudit.Services/        # Business logic and data access
+├── MosPosudit.WebAPI/          # Main REST API service
+├── MosPosudit.Worker/          # Background worker service
 ├── MosPosudit.UI/
-│   ├── desktop/              # Flutter desktop application
-│   └── mobile/               # Flutter mobile application
-├── docker-compose.yml        # Docker orchestration
+│   ├── desktop/               # Flutter desktop application
+│   ├── mobile/                # Flutter mobile application
+│   └── shared/                # Shared Flutter code
+├── docker-compose.yml         # Docker orchestration
 └── README.md
 ```
 
-## 🔧 Services
+## 🔒 Security Notes
 
-### API Service (Port 5001/5002)
-- REST API endpoints
-- JWT authentication
-- User management
-- Tool rental operations
+- **NE COMMIT-UJTE `.env` fajl** - sadrži osjetljive podatke
+- `.env` fajl je već u `.gitignore`
+- JWT key mora biti siguran i dugačak (min. 32 karaktera)
+- Production okruženje zahtijeva dodatne sigurnosne mjere
 
-### Worker Service
-- Background task processing
-- Email notifications
-- Rental reminders
-- System notifications
+## 📝 Additional Notes
+
+- Svi konfiguracijski podaci su u `.env` fajlu (nikad hardkodirani u kodu)
+- Baza podataka se automatski kreira i seed-uje pri prvom pokretanju
+- RabbitMQ omogućava komunikaciju između API i Worker servisa
+- Flutter aplikacije koriste `--dart-define` za konfiguraciju API URL-a
+- Swagger dokumentacija dostupna na `/swagger` endpointu
+
+## 🐳 Docker Services Overview
+
+### SQL Server
+- **Port**: 1433
+- **Database**: 220116 (ili vaša konfigurirana vrijednost)
+- **Username**: sa
+- **Password**: iz `.env` fajla
 
 ### RabbitMQ
-- Message queue for inter-service communication
-- Queues: notifications, emails, rental_reminders
+- **AMQP Port**: 5672
+- **Management UI**: 15672
+- **Credentials**: iz `.env` fajla
 
-## 🗄️ Database
+### API Service
+- **Port**: 5001 (ili vaša konfigurirana vrijednost)
+- **Swagger**: http://localhost:5001/swagger
+- **Base URL**: http://localhost:5001/api
 
-- **Database Name**: 220116
-- **Tables**: 10+ functional tables (Users, Tools, Rentals, etc.)
-- **Seeding**: Test data included
+### Worker Service
+- **Background processing**
+- **Email notifications**
+- **Rental reminders**
+- **System notifications**
 
-## 🚀 Development
+## ✅ Verifikacija instalacije
 
-### Quick Start with Docker (Recommended)
-```bash
-# 1. Update mobile IP address in constants.dart
-# 2. Start all services
-docker-compose up -d
+Nakon pokretanja, provjerite sljedeće:
 
-# 3. Check services are running
-docker-compose ps
+1. ✅ Svi Docker kontejneri su pokrenuti (`docker-compose ps`)
+2. ✅ API je dostupan na http://localhost:5001/swagger
+3. ✅ RabbitMQ Management UI je dostupan na http://localhost:15672
+4. ✅ Desktop aplikacija se pokreće bez grešaka
+5. ✅ Mobile aplikacija se povezuje na API
+6. ✅ Login funkcionalnost radi sa navedenim credentials
 
-# 4. Run Flutter apps
-cd MosPosudit.UI/desktop && flutter run -d windows
-cd MosPosudit.UI/mobile && flutter run
-```
+---
 
-### Running Locally (without Docker)
-
-**Prerequisites**:
-- .NET 8.0 SDK
-- SQL Server 2022 Express
-- RabbitMQ Server
-- Flutter SDK
-
-**Setup**:
-
-1. **Database**: Start SQL Server locally
-   - Install SQL Server 2022 Express
-   - Create database named `220116`
-   - Update connection string in `appsettings.json`
-
-2. **RabbitMQ**: Install and start RabbitMQ locally
-   - Download from https://www.rabbitmq.com/download.html
-   - Start RabbitMQ service
-   - Access management UI at http://localhost:15672 (guest/guest)
-
-3. **API**: Run `dotnet run` in `MosPosudit.WebAPI`
-   - API will be available at http://localhost:5001
-
-4. **Worker**: Run `dotnet run` in `MosPosudit.Worker`
-   - Worker will process background tasks
-
-**Note**: For mobile development on physical devices, use `--dart-define=API_URL=http://YOUR_IP:5001/api` when running Flutter. For emulator, default `10.0.2.2` is used automatically.
-
-### Flutter Development
-
-```bash
-# Desktop
-cd MosPosudit.UI/desktop
-flutter pub get
-flutter run -d windows --dart-define=API_URL=http://localhost:5001/api
-
-# Mobile (Android Emulator - 10.0.2.2 maps to host's localhost)
-cd MosPosudit.UI/mobile
-flutter pub get
-flutter run --dart-define=API_URL=http://10.0.2.2:5001/api
-
-# Mobile (Physical Device - replace YOUR_IP with your computer's IP)
-flutter run --dart-define=API_URL=http://YOUR_IP:5001/api
-```
-
-**Note**: API URL can be configured via `--dart-define` parameter. Default values are set in `constants.dart` files.
-
-## 📋 Features
-
-- ✅ User authentication and authorization
-- ✅ Tool management and rental system
-- ✅ Real-time notifications
-- ✅ Email notifications
-- ✅ Microservices architecture
-- ✅ Docker containerization
-- ✅ RabbitMQ message queuing
-- ✅ Cross-platform Flutter applications
-
-## 🔍 Troubleshooting
-
-### Quick Fix for Mobile Connection
-If you're getting "check your internet connection" error on mobile:
-
-1. **Find your computer's IP**:
-   ```bash
-   ipconfig
-   ```
-   Look for "IPv4 Address" (e.g., 192.168.1.100)
-
-2. **Update mobile app**:
-   - Open `MosPosudit.UI/mobile/lib/core/constants.dart`
-   - Change `192.168.1.100` to your actual IP address
-
-3. **Test connection**:
-   - Open mobile browser
-   - Go to `http://YOUR_IP:5001/swagger`
-   - If it loads, the connection works
-
-4. **Alternative solutions**:
-   - Use `10.0.2.2` for Android emulator
-   - Use `localhost` for iOS simulator
-   - Use Docker with port forwarding
-
-### Mobile Connection Issues
-1. **Find your computer's IP address**:
-   - Open Command Prompt and run `ipconfig`
-   - Look for "IPv4 Address" under your network adapter
-   - Update `MosPosudit.UI/mobile/lib/core/constants.dart` with this IP
-
-2. **Check API service**:
-   - Ensure API is running on port 5001
-   - Test with: `curl http://localhost:5001/api/User/me`
-
-3. **Network connectivity**:
-   - Ensure mobile device and computer are on same network
-   - Check Windows Firewall allows connections on port 5001
-   - Try accessing API from mobile browser: `http://YOUR_IP:5001/swagger`
-
-4. **Alternative solution**:
-   - Use `10.0.2.2` for Android emulator
-   - Use `localhost` for iOS simulator
-   - Use Docker with port forwarding
-
-### Docker Issues
-1. Ensure Docker Desktop is running
-2. Check if ports 5001, 1433, 5672, 15672 are available
-3. Run `docker-compose logs` to check service status
-
-### Database Issues
-1. Wait for SQL Server to fully start (may take 30-60 seconds)
-2. Check connection string in appsettings.json
-3. Verify database name matches your index number
-
-## 📝 Notes
-
-- All configuration is externalized in `.env` file for Docker deployment
-- For local development without Docker, use `appsettings.json` files
-- `.env` file is in `.gitignore` - copy `.env.example` and configure your values
-- No hardcoded values in the application
-- Follows microservices best practices
-- Implements proper error handling and validation
-- Uses English language for all user-facing text
-- Mobile app requires your computer's IP address for network connectivity
-- Docker setup provides complete isolation and easy deployment
-- RabbitMQ enables reliable message queuing between services
-
-## 🔒 Environment Variables
-
-All sensitive configuration is stored in `.env` file (not committed to git):
-- Database credentials
-- JWT secret key
-- PayPal API credentials
-- SMTP email credentials
-- RabbitMQ credentials
-
-Make sure to create `.env` from `.env.example` and update with your values before running `docker-compose up`. 
+**Za dodatnu pomoć ili podršku, kontaktirajte tim za razvoj.**
