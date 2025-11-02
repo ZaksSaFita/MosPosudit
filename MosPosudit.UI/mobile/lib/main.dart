@@ -16,6 +16,7 @@ import 'package:mosposudit_shared/services/cart_service.dart';
 import 'package:mosposudit_shared/services/notification_service.dart';
 import 'package:mosposudit_shared/services/recommendation_service.dart';
 import 'package:mosposudit_shared/services/user_favorite_service.dart';
+import 'package:mosposudit_shared/services/review_service.dart';
 import 'package:mosposudit_shared/dtos/user_favorite/user_favorite_insert_request.dart';
 import 'package:mosposudit_shared/models/tool.dart';
 import 'package:mosposudit_shared/models/category.dart';
@@ -767,10 +768,12 @@ class _ToolsPageState extends State<ToolsPage> {
   final _toolService = ToolService();
   final _cartService = CartService();
   final _favoriteService = UserFavoriteService();
+  final _reviewService = ReviewService();
   List<ToolModel> _tools = [];
   List<CategoryModel> _categories = [];
   Set<int> _toolsInCart = {}; // Track which tools are in cart
   Set<int> _favoriteToolIds = {}; // Track which tools are favorites
+  Map<int, double> _toolRatings = {}; // Track average rating for each tool (toolId -> rating)
   bool _isLoading = true;
   String? _error;
   int? _selectedCategoryId;
@@ -827,11 +830,44 @@ class _ToolsPageState extends State<ToolsPage> {
         // Continue without favorites - not critical
       }
 
+      // Load ratings for all tools
+      Map<int, double> toolRatings = {};
+      try {
+        for (var tool in loadedTools) {
+          final toolId = tool.id ?? 0;
+          if (toolId > 0) {
+            try {
+              final reviews = await _reviewService.getByToolId(toolId);
+              if (reviews.isNotEmpty) {
+                final avgRating = reviews.map((r) => r.rating).reduce((a, b) => a + b) / reviews.length;
+                toolRatings[toolId] = avgRating;
+              } else {
+                // No reviews - show maximum rating (5.0)
+                toolRatings[toolId] = 5.0;
+              }
+            } catch (e) {
+              // If error getting reviews, default to 5.0
+              toolRatings[toolId] = 5.0;
+            }
+          }
+        }
+      } catch (e) {
+        print('Error loading ratings: $e');
+        // Continue without ratings - default to 5.0 for all
+        for (var tool in loadedTools) {
+          final toolId = tool.id ?? 0;
+          if (toolId > 0) {
+            toolRatings[toolId] = 5.0;
+          }
+        }
+      }
+
       setState(() {
         _tools = loadedTools;
         _categories = results[1] as List<CategoryModel>;
         _toolsInCart = toolsInCart;
         _favoriteToolIds = favoriteToolIds;
+        _toolRatings = toolRatings;
         _isLoading = false;
       });
     } catch (e) {
@@ -932,6 +968,28 @@ class _ToolsPageState extends State<ToolsPage> {
         borderRadius: BorderRadius.circular(12),
       ),
       child: Icon(Icons.build, size: 48, color: Colors.blue.shade700),
+    );
+  }
+
+  Widget _buildRatingStars(double rating) {
+    // Ensure rating is between 0 and 5
+    final clampedRating = rating.clamp(0.0, 5.0);
+    
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(5, (index) {
+        final starValue = index + 1;
+        if (clampedRating >= starValue) {
+          // Full star
+          return const Icon(Icons.star, color: Colors.amber, size: 20);
+        } else if (clampedRating > starValue - 1) {
+          // Half star
+          return const Icon(Icons.star_half, color: Colors.amber, size: 20);
+        } else {
+          // Empty star
+          return const Icon(Icons.star_border, color: Colors.amber, size: 20);
+        }
+      }),
     );
   }
 
@@ -1301,10 +1359,10 @@ class _ToolsPageState extends State<ToolsPage> {
                             Padding(
                               padding: const EdgeInsets.all(12.0),
                               child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
                                   // Left side - Image
-                                  _buildToolImage(tool, width: 120, height: 120),
+                                  _buildToolImage(tool, width: 140, height: 140),
                                   const SizedBox(width: 12),
                                   // Right side - Content
                                   Expanded(
@@ -1397,6 +1455,9 @@ class _ToolsPageState extends State<ToolsPage> {
                                         ),
                                       ),
                                       const SizedBox(height: 8),
+                                      // Rating stars - aligned with buttons
+                                      _buildRatingStars(_toolRatings[tool.id] ?? 5.0),
+                                      const SizedBox(height: 8),
                                       // Action buttons row - fixed at bottom
                                       Row(
                                         children: [
@@ -1411,13 +1472,15 @@ class _ToolsPageState extends State<ToolsPage> {
                                               },
                                               icon: const Icon(Icons.date_range, size: 16),
                                               label: const Text(
-                                                'Availability',
+                                                'Check Availability',
                                                 style: TextStyle(fontSize: 12),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
                                               ),
                                               style: ElevatedButton.styleFrom(
                                                 backgroundColor: Colors.orange.shade600,
                                                 foregroundColor: Colors.white,
-                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
                                                 shape: RoundedRectangleBorder(
                                                   borderRadius: BorderRadius.circular(8),
                                                 ),
@@ -1449,7 +1512,7 @@ class _ToolsPageState extends State<ToolsPage> {
                                                     ? Colors.grey
                                                     : Colors.blue,
                                                 foregroundColor: Colors.white,
-                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
                                                 shape: RoundedRectangleBorder(
                                                   borderRadius: BorderRadius.circular(8),
                                                 ),
