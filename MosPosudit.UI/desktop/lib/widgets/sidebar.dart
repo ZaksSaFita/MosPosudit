@@ -30,13 +30,11 @@ class _SidebarState extends State<Sidebar> {
     super.initState();
     loadUser();
     _loadUnreadMessageCount();
-    // Refresh unread count every 5 seconds
     _messageCountTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       if (mounted) {
         _loadUnreadMessageCount();
       }
     });
-    // Dodajemo i delayed load da se osiguramo da se podaci učitaju
     Future.delayed(const Duration(milliseconds: 100), () {
       if (mounted) {
         loadUser();
@@ -104,7 +102,7 @@ class _SidebarState extends State<Sidebar> {
         }
       }
     } catch (e) {
-      print('Error loading unread message count: $e');
+      // Error loading unread message count - silently fail
     }
   }
 

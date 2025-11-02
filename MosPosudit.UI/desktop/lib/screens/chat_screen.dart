@@ -21,7 +21,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   
   List<MessageModel> _pendingMessages = [];
-  Map<int, List<MessageModel>> _activeChats = {}; // userId -> messages
+  Map<int, List<MessageModel>> _activeChats = {};
   List<int> _activeUserIds = [];
   int? _selectedUserId;
   int? _currentAdminId;
@@ -37,7 +37,6 @@ class _ChatScreenState extends State<ChatScreen> {
     _loadActiveChats();
     _markMessagesAsRead();
     
-    // Auto-refresh every 3 seconds
     _refreshTimer = Timer.periodic(const Duration(seconds: 3), (_) {
       if (mounted) {
         _loadPendingMessages();
@@ -68,11 +67,9 @@ class _ChatScreenState extends State<ChatScreen> {
         try {
           await _messageService.markAsRead(msg.id);
         } catch (e) {
-          print('Error marking message as read: $e');
         }
       }
     } catch (e) {
-      print('Error marking messages as read: $e');
     }
   }
 
@@ -93,7 +90,6 @@ class _ChatScreenState extends State<ChatScreen> {
         });
       }
     } catch (e) {
-      print('Error loading user data: $e');
     }
   }
 
@@ -125,7 +121,6 @@ class _ChatScreenState extends State<ChatScreen> {
         }
       }
     } catch (e) {
-      print('Error loading pending messages: $e');
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -185,7 +180,6 @@ class _ChatScreenState extends State<ChatScreen> {
         }
       }
     } catch (e) {
-      print('Error loading active chats: $e');
     }
   }
 
@@ -193,19 +187,14 @@ class _ChatScreenState extends State<ChatScreen> {
     try {
       await _loadActiveChats();
       
-      // Ensure messages for this user are loaded
       if (mounted && _activeChats.containsKey(userId)) {
-        setState(() {
-          // Messages already loaded in _activeChats
-        });
+        setState(() {});
         _scrollToBottom();
       } else if (mounted) {
-        // If messages not found, reload active chats
         await _loadActiveChats();
         _scrollToBottom();
       }
     } catch (e) {
-      print('Error loading chat messages: $e');
     }
   }
 
@@ -217,17 +206,14 @@ class _ChatScreenState extends State<ChatScreen> {
         final message = _pendingMessages.firstWhere((m) => m.id == messageId);
         userId = message.fromUserId;
       } catch (e) {
-        print('Message not found in pending list: $e');
       }
       
       final success = await _messageService.startChat(messageId);
       
       if (success && userId != null) {
-        // Reload chats and messages
         await _loadPendingMessages();
         await _loadActiveChats();
         
-        // Select the user and load their messages
         setState(() {
           _selectedUserId = userId;
         });
@@ -275,8 +261,6 @@ class _ChatScreenState extends State<ChatScreen> {
 
     try {
       await _messageService.sendReply(content, _selectedUserId!);
-      
-      // Immediately reload messages to show the sent message
       await _loadChatMessages(_selectedUserId!);
       
       if (mounted) {
@@ -286,7 +270,6 @@ class _ChatScreenState extends State<ChatScreen> {
         _scrollToBottom();
       }
     } catch (e) {
-      print('Error sending message: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -333,7 +316,6 @@ class _ChatScreenState extends State<ChatScreen> {
         return '${user['firstName'] ?? ''} ${user['lastName'] ?? ''}'.trim();
       }
     } catch (e) {
-      print('Error getting user name: $e');
     }
     return 'User $userId';
   }
@@ -440,11 +422,9 @@ class _ChatScreenState extends State<ChatScreen> {
                                 overflow: TextOverflow.ellipsis,
                               ),
                               onTap: () async {
-                                // Show message details in chat area
                                 setState(() {
                                   _selectedUserId = userId;
                                 });
-                                // Reload pending messages to ensure we have the latest
                                 await _loadPendingMessages();
                               },
                               trailing: ElevatedButton(

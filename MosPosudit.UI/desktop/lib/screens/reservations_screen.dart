@@ -48,8 +48,6 @@ class _ReservationsManagementPageState extends State<ReservationsManagementPage>
         _error = 'Error: ${e.toString()}';
         _isLoading = false;
       });
-      print('Error loading reservations: $e');
-      print('Stack trace: $stackTrace');
     }
   }
 

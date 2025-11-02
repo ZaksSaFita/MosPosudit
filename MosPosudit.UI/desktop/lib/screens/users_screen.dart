@@ -51,8 +51,6 @@ class _UsersManagementPageState extends State<UsersManagementPage> {
         _error = 'Error: ${e.toString()}';
         _isLoading = false;
       });
-      print('Error loading users: $e');
-      print('Stack trace: $stackTrace');
     }
   }
 

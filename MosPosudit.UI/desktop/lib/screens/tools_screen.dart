@@ -62,8 +62,6 @@ class _ToolsManagementPageState extends State<ToolsManagementPage> {
         _error = 'Error: ${e.toString()}';
         _isLoading = false;
       });
-      print('Error loading tools: $e');
-      print('Stack trace: $stackTrace');
     }
   }
 
@@ -992,7 +990,6 @@ class _ToolListCard extends StatelessWidget {
         
         final bytes = base64Decode(base64Data);
         if (bytes.isEmpty) {
-          print('Warning: Empty base64 data for tool ${tool.id}');
           return _defaultIcon();
         }
         
@@ -1009,14 +1006,12 @@ class _ToolListCard extends StatelessWidget {
               bytes,
               fit: BoxFit.contain,
               errorBuilder: (context, error, stackTrace) {
-                print('Error loading base64 image for tool ${tool.id}: $error');
                 return _defaultIcon();
               },
             ),
           ),
         );
       } catch (e) {
-        print('Exception decoding base64 for tool ${tool.id}: $e');
         return _defaultIcon();
       }
     } else if (tool.name != null && tool.name!.isNotEmpty) {
@@ -1037,7 +1032,6 @@ class _ToolListCard extends StatelessWidget {
               assetPath,
               fit: BoxFit.contain,
               errorBuilder: (context, error, stackTrace) {
-                print('Asset image not found: $assetPath for tool "${tool.name}"');
                 return _defaultIcon();
               },
             ),
@@ -1068,8 +1062,7 @@ class _ToolListCard extends StatelessWidget {
     return category.name ?? 'Unknown';
   }
 
-  // Mock average score (until we have reviews in the model)
-  double get _averageScore => 4.2 + (tool.id % 3) * 0.3; // Temporary: 4.2, 4.5, or 3.8
+  double get _averageScore => 4.2 + (tool.id % 3) * 0.3;
 
   @override
   Widget build(BuildContext context) {

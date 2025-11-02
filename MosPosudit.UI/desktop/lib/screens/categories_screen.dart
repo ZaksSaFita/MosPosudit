@@ -52,8 +52,6 @@ class _CategoriesManagementPageState extends State<CategoriesManagementPage> {
         _error = 'Error: ${e.toString()}';
         _isLoading = false;
       });
-      print('Error loading categories: $e');
-      print('Stack trace: $stackTrace');
     }
   }
 

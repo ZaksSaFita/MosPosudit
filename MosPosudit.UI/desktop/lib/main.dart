@@ -61,7 +61,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
     final token = prefs.getString('token');
     final user = prefs.getString('user');
     
-    // Validate that user is admin
     if (token != null && user != null) {
       try {
         final userData = jsonDecode(user);
@@ -69,7 +68,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
         final isAdmin = roleName.toString().toLowerCase() == 'admin';
         
         if (!isAdmin) {
-          // Clear invalid session - user is not admin
           await prefs.remove('token');
           await prefs.remove('user');
           setState(() {
@@ -79,7 +77,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
           return;
         }
       } catch (e) {
-        // If parsing fails, clear session
         await prefs.remove('token');
         await prefs.remove('user');
         setState(() {
@@ -179,7 +176,6 @@ class _LoginScreenState extends State<LoginScreen> {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('token', data['token']);
         
-        // Dohvati podatke o korisniku preko /User/me
         final userResponse = await http.get(
           Uri.parse('$apiBaseUrl/User/me'),
           headers: {
@@ -189,12 +185,10 @@ class _LoginScreenState extends State<LoginScreen> {
         if (userResponse.statusCode == 200) {
           final userDataFromDb = jsonDecode(userResponse.body);
           
-          // Check if user has admin role
           final roleName = userDataFromDb['roleName'] ?? '';
           final isAdmin = roleName.toString().toLowerCase() == 'admin';
           
           if (!isAdmin) {
-            // Clear token and show error - only admins can access desktop app
             await prefs.remove('token');
             await prefs.remove('user');
             if (mounted) {
@@ -209,10 +203,8 @@ class _LoginScreenState extends State<LoginScreen> {
             return;
           }
           
-          // User is admin - proceed with login
           await prefs.setString('user', jsonEncode(userDataFromDb));
           
-          // Save credentials if remember me is checked
           if (_rememberMe) {
             await prefs.setString('saved_username', _usernameController.text);
             await prefs.setString('saved_password', _passwordController.text);
@@ -233,7 +225,6 @@ class _LoginScreenState extends State<LoginScreen> {
             );
           }
         } else {
-          // fallback: obrisi user podatke ako ne možeš dohvatiti
           await prefs.remove('token');
           await prefs.remove('user');
           if (mounted) {
@@ -469,7 +460,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
   void initState() {
     super.initState();
     _checkForNewMessages();
-    // Check for new messages every 5 seconds
     _notificationTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       if (mounted) {
         _checkForNewMessages();
@@ -517,7 +507,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
         ).length;
       }
       
-      // Show notification if new messages arrived and user is not on chat screen
       if (mounted && currentUnreadCount > _lastUnreadCount && _selectedIndex != 7) {
         final newMessagesCount = currentUnreadCount - _lastUnreadCount;
         SnackbarHelper.showInfo(
@@ -535,7 +524,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
         });
       }
     } catch (e) {
-      print('Error checking for new messages: $e');
     }
   }
 
@@ -549,7 +537,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
             selectedIndex: _selectedIndex,
             onItemSelected: (int index) {
               setState(() => _selectedIndex = index);
-              // Refresh notification check when navigating
               if (index == 7) {
                 _checkForNewMessages();
               }
@@ -564,13 +551,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 }
-
-// DashboardPage is now imported from screens/dashboard_screen.dart
-// ToolsManagementPage is now imported from screens/tools_screen.dart
-// CategoriesManagementPage is now imported from screens/categories_screen.dart
-// ReviewsManagementPage is now imported from screens/reviews_screen.dart
-// ReservationsManagementPage is now imported from screens/reservations_screen.dart
-// RecommendationsSettingsPage is now imported from screens/recommendations_settings_screen.dart
 
 class PlaceholderPage extends StatelessWidget {
   const PlaceholderPage({super.key});

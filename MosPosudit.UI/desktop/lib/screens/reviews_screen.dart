@@ -48,8 +48,6 @@ class _ReviewsManagementPageState extends State<ReviewsManagementPage> {
         _error = 'Error: ${e.toString()}';
         _isLoading = false;
       });
-      print('Error loading reviews: $e');
-      print('Stack trace: $stackTrace');
     }
   }
 

@@ -13,15 +13,12 @@ class SettingsService {
       
       if (res.statusCode == 200) {
         final decoded = jsonDecode(res.body);
-        print('Settings response: $decoded'); // Debug log
         return RecommendationSettingsModel.fromJson(decoded);
       }
       
       final errorBody = res.body;
-      print('Settings error: ${res.statusCode} - $errorBody'); // Debug log
       throw Exception('Failed to fetch recommendation settings: ${res.statusCode} - $errorBody');
     } catch (e) {
-      print('Settings service error: $e'); // Debug log
       rethrow;
     }
   }
