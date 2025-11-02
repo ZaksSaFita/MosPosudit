@@ -147,11 +147,19 @@ class _PayPalPaymentScreenState extends State<PayPalPaymentScreen> {
           ),
         );
 
-      // Platform-specific Android configuration to prevent crashes
+      // Platform-specific Android configuration to prevent crashes and enable keyboard input
       if (_controller!.platform is AndroidWebViewController) {
         final androidController = _controller!.platform as AndroidWebViewController;
         AndroidWebViewController.enableDebugging(kDebugMode);
         androidController.setMediaPlaybackRequiresUserGesture(false);
+        
+        // Enable keyboard input for WebView
+        // This ensures that input fields in the WebView can receive keyboard input
+        androidController.setOnShowFileSelector((params) async {
+          // This callback is required for proper WebView functionality on Android
+          // It enables keyboard input and other interactions
+          return [];
+        });
       }
 
       // Load the PayPal approval URL

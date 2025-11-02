@@ -6,6 +6,7 @@ import 'package:mosposudit_shared/services/utility_service.dart';
 import 'package:mosposudit_shared/models/cart.dart';
 import 'package:mosposudit_shared/models/tool.dart';
 import 'checkout_screen.dart';
+import '../utils/snackbar_helper.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -67,24 +68,62 @@ class _CartScreenState extends State<CartScreen> {
     if (success) {
       _loadCart();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Item removed from cart'),
-            backgroundColor: Colors.green,
-          ),
+        context.showTopSnackBar(
+          message: 'Item removed from cart',
+          backgroundColor: Colors.green,
         );
       }
     }
   }
 
-  Future<void> _updateQuantity(int itemId, int quantity) async {
+  Future<void> _updateQuantity(int itemId, int quantity, int? toolId) async {
     if (quantity <= 0) {
       await _removeItem(itemId);
       return;
     }
+
+    // Check if tool exists and validate quantity
+    if (toolId != null && _tools.containsKey(toolId)) {
+      final tool = _tools[toolId]!;
+      
+      // Check if tool is available
+      if (tool.isAvailable == false) {
+        if (mounted) {
+          context.showTopSnackBar(
+            message: '${tool.name ?? "This tool"} is not available.',
+            backgroundColor: Colors.orange,
+          );
+        }
+        return;
+      }
+
+      // Check if requested quantity exceeds available stock
+      if (tool.quantity != null && quantity > tool.quantity!) {
+        if (mounted) {
+          context.showTopSnackBar(
+            message: 'Cannot increase quantity. Only ${tool.quantity} available in stock.',
+            backgroundColor: Colors.orange,
+          );
+        }
+        return;
+      }
+    }
+
     final success = await _cartService.updateCartItemQuantity(itemId, quantity);
     if (success) {
       _loadCart();
+    }
+  }
+
+  Future<void> _increaseQuantity(CartItemModel item, ToolModel? tool) async {
+    await _updateQuantity(item.id, item.quantity + 1, item.toolId);
+  }
+
+  Future<void> _decreaseQuantity(CartItemModel item, ToolModel? tool) async {
+    if (item.quantity > 1) {
+      await _updateQuantity(item.id, item.quantity - 1, item.toolId);
+    } else {
+      await _removeItem(item.id);
     }
   }
 
@@ -113,11 +152,9 @@ class _CartScreenState extends State<CartScreen> {
       if (success) {
         _loadCart();
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Cart cleared'),
-              backgroundColor: Colors.green,
-            ),
+          context.showTopSnackBar(
+            message: 'Cart cleared',
+            backgroundColor: Colors.green,
           );
         }
       }
@@ -271,12 +308,74 @@ class _CartScreenState extends State<CartScreen> {
                                             ),
                                           ],
                                         ),
+                                        const SizedBox(height: 8),
+                                        // Quantity controls
+                                        Row(
+                                          children: [
+                                            const Text(
+                                              'Quantity: ',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.grey,
+                                              ),
+                                            ),
+                                            Container(
+                                              decoration: BoxDecoration(
+                                                border: Border.all(color: Colors.blue),
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  IconButton(
+                                                    icon: const Icon(Icons.remove, size: 18),
+                                                    padding: const EdgeInsets.all(4),
+                                                    constraints: const BoxConstraints(
+                                                      minWidth: 32,
+                                                      minHeight: 32,
+                                                    ),
+                                                    onPressed: () => _decreaseQuantity(item, tool),
+                                                  ),
+                                                  Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                                                    child: Text(
+                                                      '${item.quantity}',
+                                                      style: const TextStyle(
+                                                        fontSize: 16,
+                                                        fontWeight: FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  IconButton(
+                                                    icon: const Icon(Icons.add, size: 18),
+                                                    padding: const EdgeInsets.all(4),
+                                                    constraints: const BoxConstraints(
+                                                      minWidth: 32,
+                                                      minHeight: 32,
+                                                    ),
+                                                    onPressed: tool != null && 
+                                                              tool.isAvailable == true &&
+                                                              tool.quantity != null &&
+                                                              item.quantity < tool.quantity!
+                                                          ? () => _increaseQuantity(item, tool)
+                                                          : null,
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ],
                                     ),
                                   ),
-                                  IconButton(
-                                    icon: const Icon(Icons.delete_outline, color: Colors.red),
-                                    onPressed: () => _removeItem(item.id),
+                                  Column(
+                                    mainAxisAlignment: MainAxisAlignment.start,
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(Icons.delete_outline, color: Colors.red),
+                                        onPressed: () => _removeItem(item.id),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),

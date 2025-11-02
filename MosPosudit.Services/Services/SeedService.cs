@@ -124,11 +124,11 @@ namespace MosPosudit.Services.Services
                     new SeedToolDto{ id=2, name="Bosch GWS 750 Angle Grinder", categoryId=1, description="High-power angle grinder, 750W for metal and concrete cutting.", dailyPrice=8m, available=true },
                     new SeedToolDto{ id=3, name="500g Hammer", categoryId=2, description="Standard hammer suitable for basic household work.", dailyPrice=2m, available=true },
                     new SeedToolDto{ id=4, name="8-24mm Wrench Set", categoryId=2, description="Professional wrench set for mechanic and assembly work.", dailyPrice=3.5m, available=true },
-                    new SeedToolDto{ id=5, name="Husqvarna 120 Chainsaw", categoryId=3, description="Gas-powered chainsaw, 38cc engine, ideal for wood cutting.", dailyPrice=12m, available=false },
+                    new SeedToolDto{ id=5, name="Husqvarna 120 Chainsaw", categoryId=3, description="Gas-powered chainsaw, 38cc engine, ideal for wood cutting.", dailyPrice=12m, available=true },
                     new SeedToolDto{ id=6, name="Einhell Electric Lawn Mower", categoryId=3, description="Electric lawn mower, 1400W, great for medium yards.", dailyPrice=10m, available=true },
                     new SeedToolDto{ id=7, name="Bosch Digital Laser Level 60cm", categoryId=4, description="Digital level with laser guide, highly accurate.", dailyPrice=5m, available=true },
                     new SeedToolDto{ id=8, name="Hydraulic Car Jack 2T", categoryId=5, description="Strong hydraulic jack suitable for cars up to 2 tons.", dailyPrice=6.5m, available=true },
-                    new SeedToolDto{ id=9, name="Karcher WD5 Industrial Vacuum", categoryId=6, description="Industrial-grade vacuum for dust and water, 1100W.", dailyPrice=9m, available=false },
+                    new SeedToolDto{ id=9, name="Karcher WD5 Industrial Vacuum", categoryId=6, description="Industrial-grade vacuum for dust and water, 1100W.", dailyPrice=9m, available=true },
                 }
             };
 

@@ -25,7 +25,9 @@ import 'screens/chat_screen.dart';
 import 'screens/registration_screen.dart';
 import 'screens/cart_screen.dart';
 import 'screens/orders_screen.dart';
+import 'screens/change_password_screen.dart';
 import 'widgets/cart_recommendations_dialog.dart';
+import 'utils/snackbar_helper.dart';
 
 void main() {
   // Add error handling
@@ -56,6 +58,16 @@ class MosPosuditMobileApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
+        snackBarTheme: SnackBarThemeData(
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+          contentTextStyle: const TextStyle(
+            fontSize: 14,
+          ),
+          elevation: 4,
+        ),
       ),
       home: const AuthWrapper(),
     );
@@ -258,11 +270,9 @@ class _LoginScreenState extends State<LoginScreen> {
         }
         
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Successfully logged in!'),
-              backgroundColor: Colors.green,
-            ),
+          context.showTopSnackBar(
+            message: 'Successfully logged in!',
+            backgroundColor: Colors.green,
           );
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(builder: (context) => const AuthWrapper()),
@@ -280,23 +290,19 @@ class _LoginScreenState extends State<LoginScreen> {
         }
         
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(errorMessage),
-              backgroundColor: Colors.red,
-            ),
+          context.showTopSnackBar(
+            message: errorMessage,
+            backgroundColor: Colors.red,
           );
         }
       }
     } catch (e) {
       print('Login error: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: ${e.toString()}\n\nAPI URL: ${AppConfig.instance.apiBaseUrl}/Auth/login'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 5),
-          ),
+        context.showTopSnackBar(
+          message: 'Error: ${e.toString()}',
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
         );
       }
     } finally {
@@ -913,29 +919,18 @@ class _ToolsPageState extends State<ToolsPage> {
     try {
       final toolId = tool.id ?? 0;
       
-      // Check tool availability before adding to cart
-      if (tool.isAvailable == false) {
+      // Check if tool is available and has quantity
+      if (tool.isAvailable == false || (tool.quantity != null && tool.quantity! <= 0)) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                  content: Text('${tool.name ?? "This tool"} is currently not available.'),
-              backgroundColor: Colors.orange,
-              duration: const Duration(seconds: 3),
-            ),
-          );
-        }
-        return;
-      }
-      
-      // Check if tool has available quantity
-      if (tool.quantity != null && tool.quantity! <= 0) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('${tool.name ?? "This tool"} is out of stock.'),
-              backgroundColor: Colors.orange,
-              duration: const Duration(seconds: 3),
-            ),
+          String message = '${tool.name ?? "This tool"} cannot be added to cart.';
+          if (tool.isAvailable == false) {
+            message = '${tool.name ?? "This tool"} is not available.';
+          } else if (tool.quantity != null && tool.quantity! <= 0) {
+            message = '${tool.name ?? "This tool"} is out of stock.';
+          }
+          context.showTopSnackBar(
+            message: message,
+            backgroundColor: Colors.orange,
           );
         }
         return;
@@ -949,12 +944,9 @@ class _ToolsPageState extends State<ToolsPage> {
         final newQuantity = existingItem.quantity + 1;
         if (tool.quantity != null && newQuantity > tool.quantity!) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Cannot increase quantity. Only ${tool.quantity} available in stock.'),
-                backgroundColor: Colors.orange,
-                duration: const Duration(seconds: 3),
-              ),
+            context.showTopSnackBar(
+              message: 'Cannot increase quantity. Only ${tool.quantity} available in stock.',
+              backgroundColor: Colors.orange,
             );
           }
           return;
@@ -968,11 +960,9 @@ class _ToolsPageState extends State<ToolsPage> {
 
         if (success && mounted) {
           await _refreshCartStatus();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Quantity increased to $newQuantity'),
-              backgroundColor: Colors.green,
-            ),
+          context.showTopSnackBar(
+            message: 'Quantity increased to $newQuantity',
+            backgroundColor: Colors.green,
           );
         }
         return;
@@ -987,30 +977,24 @@ class _ToolsPageState extends State<ToolsPage> {
 
       if (success && mounted) {
         await _refreshCartStatus();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Added to cart'),
-            backgroundColor: Colors.green,
-          ),
+        context.showTopSnackBar(
+          message: 'Added to cart',
+          backgroundColor: Colors.green,
         );
         
         // Show recommendations popup after successfully adding to cart
         _showCartRecommendations(context, toolId);
       } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to add to cart'),
-            backgroundColor: Colors.red,
-          ),
+        context.showTopSnackBar(
+          message: 'Failed to add to cart',
+          backgroundColor: Colors.red,
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
+        context.showTopSnackBar(
+          message: 'Error: ${e.toString()}',
+          backgroundColor: Colors.red,
         );
       }
     }
@@ -1042,63 +1026,177 @@ class _ToolsPageState extends State<ToolsPage> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return RefreshIndicator(
-      onRefresh: () async {
-        await _loadData();
-        await _refreshCartStatus();
-      },
-      child: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Available Tools',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 16),
-                  // Category filter chips
-                  if (_categories.isNotEmpty)
-                    SizedBox(
-                      height: 50,
-                      child: ListView(
-                        scrollDirection: Axis.horizontal,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(right: 8.0),
-                            child: FilterChip(
-                              label: const Text('All'),
-                              selected: _selectedCategoryId == null,
-                              onSelected: (selected) {
-                                if (selected) {
-                                  setState(() => _selectedCategoryId = null);
-                                }
-                              },
-                            ),
-                          ),
-                          ..._categories.map((category) => Padding(
-                            padding: const EdgeInsets.only(right: 8.0),
-                            child: FilterChip(
-                              label: Text(category.name ?? 'Unknown'),
-                              selected: _selectedCategoryId == category.id,
-                              onSelected: (selected) {
-                                setState(() => _selectedCategoryId = selected ? category.id : null);
-                              },
-                            ),
-                          )),
-                        ],
-                      ),
-                    ),
-                  const SizedBox(height: 16),
-                ],
+  Future<void> _showCategoryFilter() async {
+    final selectedId = await showModalBottomSheet<int?>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
               ),
             ),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              child: Text(
+                'Filter by Category',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const Divider(),
+            ListTile(
+              leading: Icon(
+                _selectedCategoryId == null ? Icons.check_circle : Icons.circle_outlined,
+                color: _selectedCategoryId == null ? Colors.blue : Colors.grey,
+              ),
+              title: const Text('All Categories'),
+              onTap: () {
+                Navigator.pop(context, null);
+              },
+            ),
+            const Divider(),
+            ..._categories.map((category) => ListTile(
+              leading: Icon(
+                _selectedCategoryId == category.id ? Icons.check_circle : Icons.circle_outlined,
+                color: _selectedCategoryId == category.id ? Colors.blue : Colors.grey,
+              ),
+              title: Text(category.name ?? 'Unknown'),
+              onTap: () {
+                Navigator.pop(context, category.id);
+              },
+            )),
+            const SizedBox(height: 10),
+          ],
+        ),
+      ),
+    );
+
+    if (selectedId != null && selectedId != _selectedCategoryId) {
+      setState(() {
+        _selectedCategoryId = selectedId;
+      });
+    } else if (selectedId == null && _selectedCategoryId != null) {
+      setState(() {
+        _selectedCategoryId = null;
+      });
+    }
+  }
+
+  String _getSelectedCategoryName() {
+    if (_selectedCategoryId == null) return 'All Categories';
+    final category = _categories.firstWhere(
+      (c) => c.id == _selectedCategoryId,
+      orElse: () => CategoryModel(id: 0),
+    );
+    return category.id != 0 ? (category.name ?? 'Unknown') : 'All Categories';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Available Tools'),
+        backgroundColor: Colors.blue,
+        foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: Stack(
+              children: [
+                const Icon(Icons.filter_list),
+                if (_selectedCategoryId != null)
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: Colors.orange,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const SizedBox(
+                        width: 8,
+                        height: 8,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            onPressed: _showCategoryFilter,
+            tooltip: 'Filter by category',
           ),
+        ],
+      ),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await _loadData();
+          await _refreshCartStatus();
+        },
+        child: CustomScrollView(
+          slivers: [
+            // Show selected filter if any
+            if (_selectedCategoryId != null)
+              SliverToBoxAdapter(
+                child: Container(
+                  margin: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.filter_alt, size: 18, color: Colors.blue),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Filtered: ${_getSelectedCategoryName()}',
+                        style: const TextStyle(
+                          color: Colors.blue,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 18),
+                        onPressed: () {
+                          setState(() {
+                            _selectedCategoryId = null;
+                          });
+                        },
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            // Show tool count if not loading
+            if (!_isLoading && _filteredTools.isNotEmpty)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  child: Text(
+                    '${_filteredTools.length} tool${_filteredTools.length == 1 ? '' : 's'} found',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ),
+              ),
           if (_isLoading)
             const SliverFillRemaining(
               child: Center(child: CircularProgressIndicator()),
@@ -1144,9 +1242,7 @@ class _ToolsPageState extends State<ToolsPage> {
                     final categoryName = _getCategoryName(tool.categoryId);
                     final isOutOfStock = tool.isAvailable == false || (tool.quantity != null && tool.quantity! <= 0);
                     
-                    return Opacity(
-                      opacity: isOutOfStock ? 0.5 : 1.0,
-                      child: Card(
+                    return Card(
                         margin: const EdgeInsets.only(bottom: 12),
                         elevation: 2,
                         child: Padding(
@@ -1243,12 +1339,12 @@ class _ToolsPageState extends State<ToolsPage> {
                                     ),
                                   ),
                                     const SizedBox(height: 8),
-                                    // Add to cart button - disabled if already in cart or unavailable
+                                    // Add to cart button - disabled if already in cart or quantity is 0
                                     SizedBox(
                                       width: double.infinity,
                                       child: ElevatedButton.icon(
                                         onPressed: (_toolsInCart.contains(tool.id) || 
-                                                   tool.isAvailable == false || 
+                                                   tool.isAvailable == false ||
                                                    (tool.quantity != null && tool.quantity! <= 0))
                                             ? null
                                             : () => _addToCart(tool),
@@ -1261,9 +1357,11 @@ class _ToolsPageState extends State<ToolsPage> {
                                         label: Text(
                                           _toolsInCart.contains(tool.id)
                                               ? 'In cart'
-                                              : (tool.isAvailable == false || (tool.quantity != null && tool.quantity! <= 0))
-                                                  ? 'Unavailable'
-                                                  : 'Add to cart',
+                                              : (tool.isAvailable == false)
+                                                  ? 'Not available'
+                                                  : isOutOfStock
+                                                      ? 'Out of stock'
+                                                      : 'Add to cart',
                                         ),
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: _toolsInCart.contains(tool.id)
@@ -1285,7 +1383,6 @@ class _ToolsPageState extends State<ToolsPage> {
                           ],
                         ),
                       ),
-                    ),
                     );
                   },
                   childCount: _filteredTools.length,
@@ -1293,6 +1390,7 @@ class _ToolsPageState extends State<ToolsPage> {
               ),
             ),
         ],
+      ),
       ),
     );
   }
@@ -1355,11 +1453,9 @@ class _ProfilePageState extends State<ProfilePage> {
           await uploadImage();
         } catch (e) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Error reading image: $e'),
-                backgroundColor: Colors.red,
-              ),
+            context.showTopSnackBar(
+              message: 'Error reading image: $e',
+              backgroundColor: Colors.red,
             );
           }
         }
@@ -1400,11 +1496,9 @@ class _ProfilePageState extends State<ProfilePage> {
         await loadUserData();
         
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Image successfully updated'),
-              backgroundColor: Colors.green,
-            ),
+          context.showTopSnackBar(
+            message: 'Image successfully updated',
+            backgroundColor: Colors.green,
           );
         }
       } else {
@@ -1412,11 +1506,9 @@ class _ProfilePageState extends State<ProfilePage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error uploading image: $e'),
-            backgroundColor: Colors.red,
-          ),
+        context.showTopSnackBar(
+          message: 'Error uploading image: $e',
+          backgroundColor: Colors.red,
         );
       }
     } finally {
@@ -1549,10 +1641,9 @@ class _ProfilePageState extends State<ProfilePage> {
                   title: const Text('Change Password'),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                   onTap: () {
-                    // TODO: Implement password change
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Feature in development'),
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const ChangePasswordScreen(),
                       ),
                     );
                   },
