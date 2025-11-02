@@ -11,13 +11,7 @@ class RecommendationService {
   /// Gets personalized recommendations for home screen (4-6 tools)
   Future<List<ToolModel>> getHomeRecommendations({int count = 6}) async {
     try {
-      final userId = await AuthService.getUserId();
-      if (userId == null) {
-        // If user not authenticated, return empty list (no recommendations)
-        return [];
-      }
-
-      final res = await _api.get('/Recommendation/home/$userId', query: {'count': count});
+      final res = await _api.get('/Recommendation/home', query: {'count': count});
       
       if (res.statusCode == 200) {
         final decoded = jsonDecode(res.body);
