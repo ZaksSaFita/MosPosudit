@@ -204,6 +204,222 @@ namespace MosPosudit.Services.Services
             }
 
             if (didChange) db.SaveChanges();
+
+            // Seed additional data for recommendation system: users, orders, and reviews
+            SeedRecommendationData(db);
+        }
+
+        private void SeedRecommendationData(ApplicationDbContext db)
+        {
+            var didChange = false;
+            var now = DateTime.UtcNow;
+            var userRole = db.Roles.FirstOrDefault(x => x.Name == "User");
+            
+            if (userRole == null)
+                return; // Cannot seed if role doesn't exist
+
+            // Seed additional users
+            var additionalUsers = new[]
+            {
+                new { FirstName = "John", LastName = "Smith", Username = "john", Email = "john.smith@example.com", PhoneNumber = "111222333" },
+                new { FirstName = "Sarah", LastName = "Johnson", Username = "sarah", Email = "sarah.johnson@example.com", PhoneNumber = "222333444" },
+                new { FirstName = "Mike", LastName = "Williams", Username = "mike", Email = "mike.williams@example.com", PhoneNumber = "333444555" },
+                new { FirstName = "Emily", LastName = "Brown", Username = "emily", Email = "emily.brown@example.com", PhoneNumber = "444555666" },
+                new { FirstName = "David", LastName = "Davis", Username = "david", Email = "david.davis@example.com", PhoneNumber = "555666777" },
+            };
+
+            var userIds = new List<int>();
+            var existingUser = db.Users.FirstOrDefault(x => x.Username == "user");
+            if (existingUser != null)
+                userIds.Add(existingUser.Id);
+
+            foreach (var u in additionalUsers)
+            {
+                var existing = db.Users.FirstOrDefault(x => x.Username == u.Username);
+                if (existing == null)
+                {
+                    var newUser = new User
+                    {
+                        FirstName = u.FirstName,
+                        LastName = u.LastName,
+                        Username = u.Username,
+                        Email = u.Email,
+                        PhoneNumber = u.PhoneNumber,
+                        PasswordHash = BCrypt.Net.BCrypt.HashPassword("test"),
+                        RoleId = userRole.Id,
+                        IsActive = true,
+                        CreatedAt = now,
+                        UpdateDate = now,
+                        PasswordUpdateDate = now
+                    };
+                    db.Users.Add(newUser);
+                    didChange = true;
+                }
+                else
+                {
+                    userIds.Add(existing.Id);
+                }
+            }
+
+            if (didChange)
+            {
+                db.SaveChanges();
+                // Reload users to get IDs
+                userIds.Clear();
+                userIds.AddRange(db.Users.Where(x => x.RoleId == userRole.Id).Select(x => x.Id).ToList());
+            }
+
+            // Get all tools
+            var tools = db.Tools.Where(t => t.IsAvailable && t.Quantity > 0).ToList();
+            if (!tools.Any())
+                return; // Cannot seed orders/reviews without tools
+
+            // Seed orders (rentanije) - spread over last 60 days to make recommendations work
+            var random = new Random(42); // Fixed seed for consistency
+            var orderCount = 0;
+            
+            for (int day = 0; day < 60; day++)
+            {
+                var orderDate = now.AddDays(-day);
+                
+                // Create 1-3 orders per day (some days have no orders)
+                var ordersPerDay = random.Next(0, 4); // 0-3 orders
+                
+                for (int orderIndex = 0; orderIndex < ordersPerDay; orderIndex++)
+                {
+                    var userId = userIds[random.Next(userIds.Count)];
+                    var startDate = orderDate.AddDays(random.Next(-7, 0)); // Start date 0-7 days ago
+                    var endDate = startDate.AddDays(random.Next(1, 8)); // Rental period 1-7 days
+                    var toolIds = new List<int>();
+                    
+                    // 1-3 tools per order
+                    var toolsPerOrder = random.Next(1, 4);
+                    for (int i = 0; i < toolsPerOrder && toolIds.Count < tools.Count; i++)
+                    {
+                        var tool = tools[random.Next(tools.Count)];
+                        if (!toolIds.Contains(tool.Id))
+                            toolIds.Add(tool.Id);
+                    }
+
+                    if (toolIds.Any())
+                    {
+                        // Calculate total amount first
+                        decimal totalAmount = 0;
+                        var orderItemsToAdd = new List<(int toolId, int quantity, decimal dailyRate, decimal totalPrice)>();
+                        
+                        foreach (var toolId in toolIds)
+                        {
+                            var tool = tools.First(t => t.Id == toolId);
+                            var quantity = random.Next(1, 4); // 1-3 items
+                            var days = (endDate.Date - startDate.Date).Days + 1;
+                            var itemTotal = tool.DailyRate * quantity * days;
+                            orderItemsToAdd.Add((toolId, quantity, tool.DailyRate, itemTotal));
+                            totalAmount += itemTotal;
+                        }
+
+                        var order = new Order
+                        {
+                            UserId = userId,
+                            StartDate = startDate.Date,
+                            EndDate = endDate.Date,
+                            TotalAmount = totalAmount,
+                            TermsAccepted = true,
+                            ConfirmationEmailSent = true,
+                            IsReturned = random.Next(100) < 70, // 70% returned
+                            CreatedAt = orderDate
+                        };
+
+                        db.Orders.Add(order);
+                        db.SaveChanges(); // Save to get order ID
+
+                        // Add order items
+                        foreach (var (toolId, quantity, dailyRate, itemTotal) in orderItemsToAdd)
+                        {
+                            db.OrderItems.Add(new OrderItem
+                            {
+                                OrderId = order.Id,
+                                ToolId = toolId,
+                                Quantity = quantity,
+                                DailyRate = dailyRate,
+                                TotalPrice = itemTotal
+                            });
+                        }
+
+                        // Add payment (all completed)
+                        db.Payments.Add(new Payment
+                        {
+                            OrderId = order.Id,
+                            Amount = totalAmount,
+                            PaymentDate = orderDate,
+                            IsCompleted = true,
+                            CreatedAt = orderDate,
+                            TransactionId = $"TXN-{order.Id}-{orderDate:yyyyMMddHHmmss}"
+                        });
+
+                        orderCount++;
+                        didChange = true;
+                    }
+                }
+            }
+
+            if (didChange)
+                db.SaveChanges();
+
+            // Seed reviews for ratings - each tool gets 2-8 reviews from different users
+            foreach (var tool in tools)
+            {
+                var reviewCount = random.Next(2, 9); // 2-8 reviews per tool
+                var reviewedUserIds = new HashSet<int>();
+
+                for (int i = 0; i < reviewCount; i++)
+                {
+                    // Pick random user who hasn't reviewed this tool yet
+                    var availableUsers = userIds.Where(u => !reviewedUserIds.Contains(u)).ToList();
+                    if (!availableUsers.Any())
+                        break; // All users already reviewed
+
+                    var userId = availableUsers[random.Next(availableUsers.Count)];
+                    reviewedUserIds.Add(userId);
+
+                    // Rating distribution: mostly 4-5 stars, some 3 stars, rarely 1-2
+                    var ratingDistribution = new[] { 1, 1, 2, 2, 3, 3, 4, 4, 4, 5, 5, 5, 5, 5, 5 };
+                    var rating = ratingDistribution[random.Next(ratingDistribution.Length)];
+
+                    // Check if review already exists
+                    var existingReview = db.Reviews.FirstOrDefault(r => r.UserId == userId && r.ToolId == tool.Id);
+                    if (existingReview == null)
+                    {
+                        var reviewDate = now.AddDays(-random.Next(0, 90)); // Review in last 90 days
+                        var comments = new[]
+                        {
+                            "Great tool, highly recommend!",
+                            "Works perfectly for my needs.",
+                            "Good quality, would rent again.",
+                            "Excellent condition and easy to use.",
+                            "Very satisfied with this tool.",
+                            "Good value for money.",
+                            "Professional quality tool.",
+                            "Exceeded my expectations!",
+                            null, // Some reviews without comments
+                            null,
+                        };
+
+                        db.Reviews.Add(new Review
+                        {
+                            UserId = userId,
+                            ToolId = tool.Id,
+                            Rating = rating,
+                            Comment = rating >= 4 ? comments[random.Next(comments.Length)] : null, // Good ratings have comments
+                            CreatedAt = reviewDate
+                        });
+
+                        didChange = true;
+                    }
+                }
+            }
+
+            if (didChange)
+                db.SaveChanges();
         }
     }
 }

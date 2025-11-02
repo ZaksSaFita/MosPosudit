@@ -830,38 +830,18 @@ class _ToolsPageState extends State<ToolsPage> {
         // Continue without favorites - not critical
       }
 
-      // Load ratings for all tools
+      // Ratings are now loaded from backend in ToolResponse
+      // Extract ratings from tools
       Map<int, double> toolRatings = {};
-      try {
-        for (var tool in loadedTools) {
-          final toolId = tool.id ?? 0;
-          if (toolId > 0) {
-            try {
-              final reviews = await _reviewService.getByToolId(toolId);
-              if (reviews.isNotEmpty) {
-                final avgRating = reviews.map((r) => r.rating).reduce((a, b) => a + b) / reviews.length;
-                toolRatings[toolId] = avgRating;
-              } else {
-                // No reviews - show maximum rating (5.0)
-                toolRatings[toolId] = 5.0;
-              }
-            } catch (e) {
-              // If error getting reviews, default to 5.0
-              toolRatings[toolId] = 5.0;
-            }
-          }
-        }
-      } catch (e) {
-        print('Error loading ratings: $e');
-        // Continue without ratings - default to 5.0 for all
-        for (var tool in loadedTools) {
-          final toolId = tool.id ?? 0;
-          if (toolId > 0) {
-            toolRatings[toolId] = 5.0;
-          }
+      for (var tool in loadedTools) {
+        final toolId = tool.id ?? 0;
+        if (toolId > 0) {
+          // Use rating from backend, or default to 5.0 if null (no reviews)
+          toolRatings[toolId] = tool.averageRating ?? 5.0;
         }
       }
 
+      if (!mounted) return;
       setState(() {
         _tools = loadedTools;
         _categories = results[1] as List<CategoryModel>;

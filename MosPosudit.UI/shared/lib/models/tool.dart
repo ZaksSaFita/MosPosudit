@@ -13,6 +13,7 @@ class ToolModel {
   final DateTime? lastMaintenanceDate;
   final DateTime? nextMaintenanceDate;
   final String? imageBase64; // For uploaded data: base64 encoded image (null for seeded data - Flutter will load from assets based on name)
+  final double? averageRating; // Average rating from reviews, null if no reviews (defaults to 5.0 on frontend)
 
   ToolModel({
     required this.id,
@@ -29,6 +30,7 @@ class ToolModel {
     this.lastMaintenanceDate,
     this.nextMaintenanceDate,
     this.imageBase64,
+    this.averageRating,
   });
 
   factory ToolModel.fromJson(Map<String, dynamic> json) {
@@ -59,6 +61,7 @@ class ToolModel {
       lastMaintenanceDate: parseDateTime(json['lastMaintenanceDate'] ?? json['LastMaintenanceDate']),
       nextMaintenanceDate: parseDateTime(json['nextMaintenanceDate'] ?? json['NextMaintenanceDate']),
       imageBase64: json['imageBase64'] ?? json['ImageBase64'],
+      averageRating: json['averageRating'] != null ? (json['averageRating'] as num).toDouble() : (json['AverageRating'] != null ? (json['AverageRating'] as num).toDouble() : null),
     );
   }
 
@@ -77,6 +80,7 @@ class ToolModel {
         'lastMaintenanceDate': lastMaintenanceDate?.toIso8601String(),
         'nextMaintenanceDate': nextMaintenanceDate?.toIso8601String(),
         'imageBase64': imageBase64,
+        'averageRating': averageRating,
       };
 }
 

@@ -12,6 +12,7 @@ namespace MosPosudit.Model.Responses.Tool
         public bool IsAvailable { get; set; }
         public decimal DepositAmount { get; set; }
         public string? ImageBase64 { get; set; }
+        public double? AverageRating { get; set; } // Average rating from reviews, null if no reviews (defaults to 5.0 on frontend)
     }
 }
 

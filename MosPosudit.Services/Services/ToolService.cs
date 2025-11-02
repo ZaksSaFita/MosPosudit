@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using MosPosudit.Model.Requests.Tool;
 using MosPosudit.Model.Responses.Tool;
+using MosPosudit.Model.Responses;
 using MosPosudit.Model.SearchObjects;
 using MosPosudit.Services.DataBase;
 using MosPosudit.Services.DataBase.Data;
@@ -31,6 +32,62 @@ namespace MosPosudit.Services.Services
             return query;
         }
 
+        public override async Task<PagedResult<ToolResponse>> GetAsync(ToolSearchObject search)
+        {
+            var query = _context.Set<Tool>().AsQueryable();
+            query = ApplyFilter(query, search);
+            
+            int? totalCount = null;
+            if (search.IncludeTotalCount)
+            {
+                totalCount = await query.CountAsync();
+            }
+
+            // Apply pagination
+            if (!search.RetrieveAll)
+            {
+                if (search.Page.HasValue && search.PageSize.HasValue)
+                {
+                    query = query.Skip((search.Page.Value - 1) * search.PageSize.Value);
+                }
+                if (search.PageSize.HasValue)
+                {
+                    query = query.Take(search.PageSize.Value);
+                }
+            }
+
+            var entities = await query.ToListAsync();
+            
+            // Get all tool IDs
+            var toolIds = entities.Select(e => e.Id).ToList();
+            
+            // Load all ratings in one query (optimized batch load)
+            var ratings = await _context.Set<Review>()
+                .Where(r => toolIds.Contains(r.ToolId))
+                .GroupBy(r => r.ToolId)
+                .Select(g => new
+                {
+                    ToolId = g.Key,
+                    AverageRating = g.Average(r => (double)r.Rating)
+                })
+                .ToDictionaryAsync(x => x.ToolId, x => x.AverageRating);
+
+            // Map entities to responses with ratings
+            var items = entities.Select(entity =>
+            {
+                var response = _mapper.Map<ToolResponse>(entity);
+                response.CategoryName = entity.Category?.Name;
+                response.AverageRating = ratings.TryGetValue(entity.Id, out var rating) ? rating : (double?)null;
+                return response;
+            }).ToList();
+
+            return new PagedResult<ToolResponse>
+            {
+                Items = items,
+                TotalCount = totalCount ?? items.Count
+            };
+        }
+
         public override async Task<ToolResponse?> GetByIdAsync(int id)
         {
             var entity = await _context.Set<Tool>()
@@ -40,13 +97,24 @@ namespace MosPosudit.Services.Services
             if (entity == null)
                 return null;
 
-            return MapToResponse(entity);
+            var response = MapToResponse(entity);
+            
+            // Calculate average rating from reviews
+            var averageRating = await _context.Set<Review>()
+                .Where(r => r.ToolId == entity.Id)
+                .Select(r => (double?)r.Rating)
+                .AverageAsync();
+            
+            response.AverageRating = averageRating; // null if no reviews
+            
+            return response;
         }
 
         protected override ToolResponse MapToResponse(Tool entity)
         {
             var response = _mapper.Map<ToolResponse>(entity);
             response.CategoryName = entity.Category?.Name;
+            // AverageRating will be set in GetAsync method via batch loading
             return response;
         }
 
