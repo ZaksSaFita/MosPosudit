@@ -12,11 +12,13 @@ namespace MosPosudit.Services.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly IMapper _mapper;
+        private readonly ISettingsService _settingsService;
 
-        public RecommendationService(ApplicationDbContext context, IMapper mapper)
+        public RecommendationService(ApplicationDbContext context, IMapper mapper, ISettingsService settingsService)
         {
             _context = context;
             _mapper = mapper;
+            _settingsService = settingsService;
         }
 
         /// <summary>
@@ -28,9 +30,15 @@ namespace MosPosudit.Services.Services
             var recommendations = new List<ToolResponse>();
             var addedToolIds = new HashSet<int>();
 
-            // 1. Get user's favorite categories from their orders (Content-based - 30%)
+            // Get settings from database
+            var settings = await _settingsService.GetRecommendationSettingsAsync();
+            var homePopularWeight = settings.HomePopularWeight / 100.0;
+            var homeContentBasedWeight = settings.HomeContentBasedWeight / 100.0;
+            var homeTopRatedWeight = settings.HomeTopRatedWeight / 100.0;
+
+            // 1. Get user's favorite categories from their orders (Content-based)
             var userFavoriteCategories = await GetUserFavoriteCategoriesAsync(userId);
-            var contentBasedCount = (int)(count * 0.3);
+            var contentBasedCount = (int)(count * homeContentBasedWeight);
 
             if (userFavoriteCategories.Any() && contentBasedCount > 0)
             {
@@ -43,16 +51,16 @@ namespace MosPosudit.Services.Services
                 recommendations.AddRange(contentBased);
             }
 
-            // 2. Get popular/trending tools (40%)
-            var popularCount = (int)(count * 0.4);
+            // 2. Get popular/trending tools
+            var popularCount = (int)(count * homePopularWeight);
             if (popularCount > 0)
             {
                 var popular = await GetPopularRecommendationsAsync(popularCount, addedToolIds);
                 recommendations.AddRange(popular);
             }
 
-            // 3. Get top rated tools (30%)
-            var topRatedCount = count - recommendations.Count;
+            // 3. Get top rated tools
+            var topRatedCount = (int)(count * homeTopRatedWeight);
             if (topRatedCount > 0)
             {
                 var topRated = await GetTopRatedRecommendationsAsync(topRatedCount, addedToolIds);
@@ -97,13 +105,18 @@ namespace MosPosudit.Services.Services
             var recommendations = new List<ToolResponse>();
             var addedToolIds = new HashSet<int> { toolId };
 
-            // 1. Frequently Bought Together (60% - 2 tools)
-            var frequentlyBoughtCount = (int)(count * 0.6);
+            // Get settings from database
+            var settings = await _settingsService.GetRecommendationSettingsAsync();
+            var cartFrequentlyBoughtWeight = settings.CartFrequentlyBoughtWeight / 100.0;
+            var cartSimilarToolsWeight = settings.CartSimilarToolsWeight / 100.0;
+
+            // 1. Frequently Bought Together
+            var frequentlyBoughtCount = (int)(count * cartFrequentlyBoughtWeight);
             var frequentlyBought = await GetFrequentlyBoughtTogetherAsync(toolId, frequentlyBoughtCount, addedToolIds);
             recommendations.AddRange(frequentlyBought);
 
-            // 2. Similar Tools from same category (40% - 1 tool)
-            var similarCount = count - recommendations.Count;
+            // 2. Similar Tools from same category
+            var similarCount = (int)(count * cartSimilarToolsWeight);
             if (similarCount > 0)
             {
                 var similar = await GetSimilarToolsAsync(toolId, similarCount, addedToolIds);

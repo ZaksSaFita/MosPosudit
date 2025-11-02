@@ -249,7 +249,7 @@ class _SidebarState extends State<Sidebar> {
                 ),
                 _SidebarItem(
                   icon: Icons.settings,
-                  label: 'Settings',
+                  label: 'Recommendations Settings',
                   selected: widget.selectedIndex == 8,
                   onTap: () => widget.onItemSelected(8),
                 ),

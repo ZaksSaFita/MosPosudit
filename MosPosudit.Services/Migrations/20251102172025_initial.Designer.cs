@@ -12,8 +12,8 @@ using MosPosudit.Services.DataBase;
 namespace MosPosudit.Services.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251102131203_init")]
-    partial class init
+    [Migration("20251102172025_initial")]
+    partial class initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -236,6 +236,40 @@ namespace MosPosudit.Services.Migrations
                     b.HasIndex("OrderId");
 
                     b.ToTable("Payments");
+                });
+
+            modelBuilder.Entity("MosPosudit.Services.DataBase.Data.RecommendationSettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<double>("CartFrequentlyBoughtWeight")
+                        .HasColumnType("float");
+
+                    b.Property<double>("CartSimilarToolsWeight")
+                        .HasColumnType("float");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<double>("HomeContentBasedWeight")
+                        .HasColumnType("float");
+
+                    b.Property<double>("HomePopularWeight")
+                        .HasColumnType("float");
+
+                    b.Property<double>("HomeTopRatedWeight")
+                        .HasColumnType("float");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("RecommendationSettings");
                 });
 
             modelBuilder.Entity("MosPosudit.Services.DataBase.Data.Review", b =>

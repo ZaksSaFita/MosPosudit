@@ -235,6 +235,40 @@ namespace MosPosudit.Services.Migrations
                     b.ToTable("Payments");
                 });
 
+            modelBuilder.Entity("MosPosudit.Services.DataBase.Data.RecommendationSettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<double>("CartFrequentlyBoughtWeight")
+                        .HasColumnType("float");
+
+                    b.Property<double>("CartSimilarToolsWeight")
+                        .HasColumnType("float");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<double>("HomeContentBasedWeight")
+                        .HasColumnType("float");
+
+                    b.Property<double>("HomePopularWeight")
+                        .HasColumnType("float");
+
+                    b.Property<double>("HomeTopRatedWeight")
+                        .HasColumnType("float");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("RecommendationSettings");
+                });
+
             modelBuilder.Entity("MosPosudit.Services.DataBase.Data.Review", b =>
                 {
                     b.Property<int>("Id")

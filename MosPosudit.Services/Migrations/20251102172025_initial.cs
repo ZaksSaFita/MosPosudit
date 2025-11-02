@@ -6,11 +6,12 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace MosPosudit.Services.Migrations
 {
     /// <inheritdoc />
-    public partial class init : Migration
+    public partial class initial : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            // PHASE 1: Independent tables (no foreign keys)
             migrationBuilder.CreateTable(
                 name: "Categories",
                 columns: table => new
@@ -27,6 +28,25 @@ namespace MosPosudit.Services.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "RecommendationSettings",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    HomePopularWeight = table.Column<double>(type: "float", nullable: false),
+                    HomeContentBasedWeight = table.Column<double>(type: "float", nullable: false),
+                    HomeTopRatedWeight = table.Column<double>(type: "float", nullable: false),
+                    CartFrequentlyBoughtWeight = table.Column<double>(type: "float", nullable: false),
+                    CartSimilarToolsWeight = table.Column<double>(type: "float", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RecommendationSettings", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Roles",
                 columns: table => new
                 {
@@ -40,6 +60,7 @@ namespace MosPosudit.Services.Migrations
                     table.PrimaryKey("PK_Roles", x => x.Id);
                 });
 
+            // PHASE 2: Tables with single foreign key dependency
             migrationBuilder.CreateTable(
                 name: "Tools",
                 columns: table => new
@@ -98,6 +119,7 @@ namespace MosPosudit.Services.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            // PHASE 3: Tables dependent on Users or Tools
             migrationBuilder.CreateTable(
                 name: "Messages",
                 columns: table => new
@@ -236,6 +258,7 @@ namespace MosPosudit.Services.Migrations
                         principalColumn: "Id");
                 });
 
+            // PHASE 4: Tables dependent on Orders (OrderItems, Payments)
             migrationBuilder.CreateTable(
                 name: "OrderItems",
                 columns: table => new
@@ -373,6 +396,9 @@ namespace MosPosudit.Services.Migrations
 
             migrationBuilder.DropTable(
                 name: "Payments");
+
+            migrationBuilder.DropTable(
+                name: "RecommendationSettings");
 
             migrationBuilder.DropTable(
                 name: "Reviews");

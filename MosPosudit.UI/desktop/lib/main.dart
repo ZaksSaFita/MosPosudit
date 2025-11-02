@@ -8,6 +8,7 @@ import 'screens/tools_screen.dart';
 import 'screens/categories_screen.dart';
 import 'screens/reviews_screen.dart';
 import 'screens/reservations_screen.dart';
+import 'screens/recommendations_settings_screen.dart';
 import 'screens/chat_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'package:mosposudit_shared/core/config.dart';
@@ -461,7 +462,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     const ReviewsManagementPage(), // Reviews (index 5)
     const ReservationsManagementPage(), // Reservations (index 6)
     const ChatScreen(), // Chat (index 7)
-    const SettingsPage(), // Settings (index 8)
+    const RecommendationsSettingsPage(), // Recommendations Settings (index 8)
   ];
 
   @override
@@ -568,6 +569,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
 // ToolsManagementPage is now imported from screens/tools_screen.dart
 // CategoriesManagementPage is now imported from screens/categories_screen.dart
 // ReviewsManagementPage is now imported from screens/reviews_screen.dart
+// ReservationsManagementPage is now imported from screens/reservations_screen.dart
+// RecommendationsSettingsPage is now imported from screens/recommendations_settings_screen.dart
 
 class PlaceholderPage extends StatelessWidget {
   const PlaceholderPage({super.key});
@@ -575,39 +578,5 @@ class PlaceholderPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container();
-  }
-}
-
-class SettingsPage extends StatelessWidget {
-  const SettingsPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.all(24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Settings',
-            style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-          ),
-          SizedBox(height: 24),
-          Card(
-            child: Padding(
-              padding: EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  Icon(Icons.settings, size: 64, color: Colors.grey),
-                  SizedBox(height: 16),
-                  Text('Feature in development', style: TextStyle(fontSize: 18)),
-                  Text('Settings will be implemented', style: TextStyle(color: Colors.grey)),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }

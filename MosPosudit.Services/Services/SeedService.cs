@@ -17,6 +17,7 @@ namespace MosPosudit.Services.Services
         {
             var didChange = false;
 
+            // PHASE 1: Seed Roles (independent)
             if (!db.Roles.Any())
             {
                 db.Roles.AddRange(new Role { Name = "Admin", Description = "Administrator role" }, new Role { Name = "User", Description = "Regular user role" });
@@ -35,6 +36,7 @@ namespace MosPosudit.Services.Services
             var adminRoleId = adminRole.Id;
             var userRoleId = userRole.Id;
 
+            // PHASE 2: Seed Users (depends on Roles)
             // Ensure admin user exists with correct email
             var adminUser = db.Users.FirstOrDefault(x => x.Username == "admin");
             if (adminUser == null)
@@ -121,7 +123,7 @@ namespace MosPosudit.Services.Services
 
             if (didChange) db.SaveChanges();
 
-
+            // PHASE 3: Seed Categories (independent)
             // Load categories/tools from JSON if present; otherwise use built-in defaults
             SeedPayload? payload = null;
             try
@@ -196,7 +198,7 @@ namespace MosPosudit.Services.Services
                 if (dbCat != null) map[c.id] = dbCat.Id;
             }
 
-            // Seed Tools
+            // PHASE 4: Seed Tools (depends on Categories)
             foreach (var t in payload.tools)
             {
                 var mappedCatId = map.TryGetValue(t.categoryId, out var v) ? v : t.categoryId;
@@ -233,8 +235,42 @@ namespace MosPosudit.Services.Services
 
             if (didChange) db.SaveChanges();
 
+            // PHASE 5: Seed recommendation data (depends on Users, Tools, Categories)
             // Seed additional data for recommendation system: users, orders, and reviews
             SeedRecommendationData(db);
+        }
+
+        /// <summary>
+        /// Seeds recommendation settings - should be called AFTER migrations are applied
+        /// </summary>
+        public void SeedRecommendationSettingsIfNeeded(ApplicationDbContext db)
+        {
+            try
+            {
+                // Create default recommendation settings if they don't exist
+                if (!db.RecommendationSettings.Any())
+                {
+                    var defaultSettings = new RecommendationSettings
+                    {
+                        HomePopularWeight = 40.0,
+                        HomeContentBasedWeight = 30.0,
+                        HomeTopRatedWeight = 30.0,
+                        CartFrequentlyBoughtWeight = 60.0,
+                        CartSimilarToolsWeight = 40.0,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+                    
+                    db.RecommendationSettings.Add(defaultSettings);
+                    db.SaveChanges();
+                }
+            }
+            catch (Exception ex)
+            {
+                // If table doesn't exist yet or any error occurs, skip seeding
+                // This is safe - SettingsService.GetRecommendationSettingsAsync will create defaults if needed
+                System.Diagnostics.Debug.WriteLine($"Could not seed RecommendationSettings: {ex.Message}");
+            }
         }
 
         private void SeedRecommendationData(ApplicationDbContext db)
