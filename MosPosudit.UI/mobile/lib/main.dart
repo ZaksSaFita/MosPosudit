@@ -15,6 +15,8 @@ import 'package:mosposudit_shared/services/message_service.dart';
 import 'package:mosposudit_shared/services/cart_service.dart';
 import 'package:mosposudit_shared/services/notification_service.dart';
 import 'package:mosposudit_shared/services/recommendation_service.dart';
+import 'package:mosposudit_shared/services/user_favorite_service.dart';
+import 'package:mosposudit_shared/dtos/user_favorite/user_favorite_insert_request.dart';
 import 'package:mosposudit_shared/models/tool.dart';
 import 'package:mosposudit_shared/models/category.dart';
 import 'package:mosposudit_shared/core/config.dart';
@@ -27,6 +29,7 @@ import 'screens/cart_screen.dart';
 import 'screens/orders_screen.dart';
 import 'screens/change_password_screen.dart';
 import 'screens/review_list_screen.dart';
+import 'screens/favorites_screen.dart';
 import 'widgets/cart_recommendations_dialog.dart';
 import 'package:mosposudit_shared/widgets/tool_availability_dialog.dart';
 import 'utils/snackbar_helper.dart';
@@ -510,9 +513,15 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
   Timer? _messageCountTimer;
   final _cartService = CartService();
   
-  void switchToOrders() {
+  void switchToProfile() {
     setState(() {
-      _selectedIndex = 4; // Orders tab
+      _selectedIndex = 4; // Profile tab
+    });
+  }
+
+  void switchToHome() {
+    setState(() {
+      _selectedIndex = 0; // Home tab
     });
   }
 
@@ -577,24 +586,20 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
     });
   }
 
-  void _navigateToProfile() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const ProfilePage(),
-      ),
-    );
+  void navigateToToolsWithTool(int? toolId, int? categoryId) {
+    _navigateToToolsWithTool(toolId, categoryId);
   }
+
 
   List<Widget> get _pages => [
     HomeScreen(
       onCategoryTap: _navigateToToolsWithCategory,
       onToolTap: _navigateToToolsWithTool,
-      onProfileTap: _navigateToProfile,
     ),
     ToolsPage(key: ValueKey(_selectedCategoryId), initialCategoryId: _selectedCategoryId),
     ChatScreen(),
     const CartScreen(),
-    const OrdersScreen(),
+    const ProfilePage(),
   ];
 
   @override
@@ -629,9 +634,9 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
             if (index == 3) {
               _loadCartCount();
             }
-            // Reload orders when navigating to orders
+            // Reload profile when navigating to profile
             if (index == 4) {
-              // Orders screen will reload itself
+              // Profile screen will reload itself if needed
             }
           },
           backgroundColor: Colors.transparent,
@@ -737,10 +742,10 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
             ),
             BottomNavigationBarItem(
               icon: Icon(
-                _selectedIndex == 4 ? Icons.receipt_long : Icons.receipt_long_outlined,
+                _selectedIndex == 4 ? Icons.person : Icons.person_outline,
                 size: 24,
               ),
-              label: 'Orders',
+              label: 'Profile',
             ),
           ],
         ),
@@ -761,9 +766,11 @@ class ToolsPage extends StatefulWidget {
 class _ToolsPageState extends State<ToolsPage> {
   final _toolService = ToolService();
   final _cartService = CartService();
+  final _favoriteService = UserFavoriteService();
   List<ToolModel> _tools = [];
   List<CategoryModel> _categories = [];
   Set<int> _toolsInCart = {}; // Track which tools are in cart
+  Set<int> _favoriteToolIds = {}; // Track which tools are favorites
   bool _isLoading = true;
   String? _error;
   int? _selectedCategoryId;
@@ -810,10 +817,21 @@ class _ToolsPageState extends State<ToolsPage> {
       }
       print('==========================');
 
+      // Load favorite status for all tools
+      Set<int> favoriteToolIds = {};
+      try {
+        final favorites = await _favoriteService.getFavorites();
+        favoriteToolIds = favorites.map((f) => f.toolId).toSet();
+      } catch (e) {
+        print('Error loading favorites: $e');
+        // Continue without favorites - not critical
+      }
+
       setState(() {
         _tools = loadedTools;
         _categories = results[1] as List<CategoryModel>;
         _toolsInCart = toolsInCart;
+        _favoriteToolIds = favoriteToolIds;
         _isLoading = false;
       });
     } catch (e) {
@@ -968,6 +986,47 @@ class _ToolsPageState extends State<ToolsPage> {
           message: 'Failed to add to cart',
           backgroundColor: Colors.red,
         );
+      }
+    } catch (e) {
+      if (mounted) {
+        context.showTopSnackBar(
+          message: 'Error: ${e.toString()}',
+          backgroundColor: Colors.red,
+        );
+      }
+    }
+  }
+
+  Future<void> _toggleFavorite(ToolModel tool) async {
+    try {
+      final toolId = tool.id ?? 0;
+      final isFavorite = _favoriteToolIds.contains(toolId);
+
+      if (isFavorite) {
+        // Remove from favorites
+        final success = await _favoriteService.removeFavorite(toolId);
+        if (success && mounted) {
+          setState(() {
+            _favoriteToolIds.remove(toolId);
+          });
+          context.showTopSnackBar(
+            message: 'Removed from favorites',
+            backgroundColor: Colors.green,
+          );
+        }
+      } else {
+        // Add to favorites
+        final request = UserFavoriteInsertRequestDto(toolId: toolId);
+        await _favoriteService.addFavorite(request);
+        if (mounted) {
+          setState(() {
+            _favoriteToolIds.add(toolId);
+          });
+          context.showTopSnackBar(
+            message: 'Added to favorites',
+            backgroundColor: Colors.green,
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -1237,16 +1296,18 @@ class _ToolsPageState extends State<ToolsPage> {
                         margin: const EdgeInsets.only(bottom: 12),
                         elevation: 2,
                         color: Colors.white,
-                        child: Padding(
-                        padding: const EdgeInsets.all(12.0),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Stack(
                           children: [
-                            // Left side - Image
-                            _buildToolImage(tool, width: 120, height: 120),
-                            const SizedBox(width: 12),
-                            // Right side - Content
-                            Expanded(
+                            Padding(
+                              padding: const EdgeInsets.all(12.0),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Left side - Image
+                                  _buildToolImage(tool, width: 120, height: 120),
+                                  const SizedBox(width: 12),
+                                  // Right side - Content
+                                  Expanded(
                               child: LayoutBuilder(
                                 builder: (context, constraints) {
                                   return Column(
@@ -1406,7 +1467,31 @@ class _ToolsPageState extends State<ToolsPage> {
                               ),
                             ),
                           ],
-                        ),
+                            ),
+                          ),
+                          // Favorite icon - top right
+                          Positioned(
+                            top: 8,
+                            right: 8,
+                            child: IconButton(
+                              icon: Icon(
+                                _favoriteToolIds.contains(tool.id)
+                                    ? Icons.favorite
+                                    : Icons.favorite_border,
+                                color: _favoriteToolIds.contains(tool.id)
+                                    ? Colors.red
+                                    : Colors.grey.shade600,
+                                size: 24,
+                              ),
+                              onPressed: () => _toggleFavorite(tool),
+                              padding: const EdgeInsets.all(8),
+                              constraints: const BoxConstraints(
+                                minWidth: 40,
+                                minHeight: 40,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     );
                   },
@@ -1642,6 +1727,32 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ],
                 const SizedBox(height: 24),
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.receipt_long, color: Colors.blue),
+                  title: const Text('My Orders'),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const OrdersScreen(),
+                      ),
+                    );
+                  },
+                ),
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.favorite, color: Colors.red),
+                  title: const Text('My Favorites'),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const FavoritesScreen(),
+                      ),
+                    );
+                  },
+                ),
                 const Divider(),
                 ListTile(
                   leading: const Icon(Icons.edit, color: Colors.blue),

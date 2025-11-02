@@ -226,11 +226,11 @@ class _PayPalPaymentScreenState extends State<PayPalPaymentScreen> {
             // Pop all routes back to ClientHomeScreen
             Navigator.of(context).popUntil((route) => route.isFirst);
             
-            // After popping, switch to Orders tab using the GlobalKey
+            // After popping, switch to Home tab (index 0) using the GlobalKey
             WidgetsBinding.instance.addPostFrameCallback((_) {
               final homeState = ClientHomeScreen.navigatorKey.currentState;
               if (homeState != null) {
-                homeState.switchToOrders();
+                homeState.switchToHome();
               }
             });
           }

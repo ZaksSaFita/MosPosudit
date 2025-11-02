@@ -13,9 +13,8 @@ import '../utils/snackbar_helper.dart';
 class HomeScreen extends StatefulWidget {
   final void Function(int categoryId)? onCategoryTap;
   final void Function(int? toolId, int? categoryId)? onToolTap;
-  final void Function()? onProfileTap;
   
-  const HomeScreen({super.key, this.onCategoryTap, this.onToolTap, this.onProfileTap});
+  const HomeScreen({super.key, this.onCategoryTap, this.onToolTap});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -249,12 +248,6 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('MosPosudit'),
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.person),
-            onPressed: widget.onProfileTap,
-          ),
-        ],
       ),
       body: RefreshIndicator(
         onRefresh: _loadData,
