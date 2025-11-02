@@ -1,6 +1,3 @@
-
----
-
 ## ✅ Setup Instructions
 
 ### 1️⃣ Requirements
