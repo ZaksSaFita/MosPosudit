@@ -132,27 +132,35 @@ class _AvailabilityCalendarState extends State<AvailabilityCalendar> {
 
     setState(() {
       if (_isSelectingStart) {
-        // First click (or third, fifth, etc.) - set start date
+        // First click (or third, fifth, etc.) - set start date and automatically set end date to same day
+        // This allows 1-day rental with single click
         _selectedStartDate = selectedDay;
-        _selectedEndDate = selectedDay;
-        _isSelectingStart = false; // Next click will be for end date
+        _selectedEndDate = selectedDay; // Automatically set end date to same day (1-day rental by default)
+        _isSelectingStart = false; // Next click will be for end date (optional)
+        
+        // Immediately notify callback with 1-day rental (start and end same day)
+        if (widget.onDateRangeSelected != null) {
+          widget.onDateRangeSelected!(_selectedStartDate!, _selectedEndDate!);
+        }
       } else {
-        // Second click (or fourth, sixth, etc.) - set end date
-        // Ensure minimum 1 day difference
-        if (selectedDay.isBefore(_selectedStartDate!) || 
-            isSameDay(_selectedStartDate!, selectedDay)) {
-          // If selected date is before or same as start, set end to start + 1 day
-          _selectedEndDate = _selectedStartDate!.add(const Duration(days: 1));
+        // Second click (or fourth, sixth, etc.) - optionally set end date for multi-day rental
+        // If user clicks same day again, keeps 1-day rental
+        // If user clicks different day, sets end date to that day for multi-day rental
+        if (selectedDay.isBefore(_selectedStartDate!)) {
+          // If selected date is before start, don't allow it - keep end same as start (1 day rental)
+          _selectedEndDate = _selectedStartDate!;
         } else {
+          // Selected date is same as or after start - use selected day as end date
+          // If same day: stays 1-day rental
+          // If later day: becomes multi-day rental
           _selectedEndDate = selectedDay;
         }
         _isSelectingStart = true; // Next click will be for new start date (cycle repeats)
         
-        // Notify callback if we have valid date range (minimum 1 day)
+        // Notify callback after setting end date
         if (widget.onDateRangeSelected != null && 
             _selectedStartDate != null && 
-            _selectedEndDate != null &&
-            _selectedEndDate!.difference(_selectedStartDate!).inDays >= 1) {
+            _selectedEndDate != null) {
           widget.onDateRangeSelected!(_selectedStartDate!, _selectedEndDate!);
         }
       }

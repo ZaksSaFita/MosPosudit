@@ -110,6 +110,8 @@ namespace MosPosudit.Services.Services
 
         public void PublishEmail(string to, string subject, string body, bool isHtml = true)
         {
+            _logger.LogInformation($"PublishEmail called: To={to}, Subject={subject}, IsHtml={isHtml}");
+            
             var emailMessage = new
             {
                 To = to,
@@ -140,7 +142,7 @@ namespace MosPosudit.Services.Services
                     basicProperties: null,
                     body: body);
 
-                _logger.LogInformation($"Message published to queue: {queueName}");
+                _logger.LogInformation($"Message published successfully to queue: {queueName}. Message size: {body.Length} bytes");
             }
             catch (Exception ex)
             {

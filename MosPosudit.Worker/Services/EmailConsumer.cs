@@ -122,18 +122,21 @@ namespace MosPosudit.Worker.Services
                     var emailMessage = JsonConvert.DeserializeObject<EmailMessage>(message);
                     if (emailMessage != null && !string.IsNullOrEmpty(emailMessage.To))
                     {
+                        _logger.LogInformation($"EmailConsumer: Processing email to {emailMessage.To}, Subject: {emailMessage.Subject}");
                         _emailService.SendEmail(
                             emailMessage.To,
                             emailMessage.Subject,
                             emailMessage.Body,
                             emailMessage.IsHtml);
+                        _logger.LogInformation($"EmailConsumer: Email sent successfully to {emailMessage.To}");
                     }
                     else
                     {
-                        _logger.LogWarning("EmailConsumer: Invalid email message received");
+                        _logger.LogWarning("EmailConsumer: Invalid email message received. To is null or empty.");
                     }
 
                     _channel.BasicAck(ea.DeliveryTag, false);
+                    _logger.LogInformation($"EmailConsumer: Message acknowledged for queue 'emails'");
                 }
                 catch (Exception ex)
                 {

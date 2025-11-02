@@ -26,6 +26,7 @@ import 'screens/registration_screen.dart';
 import 'screens/cart_screen.dart';
 import 'screens/orders_screen.dart';
 import 'screens/change_password_screen.dart';
+import 'screens/review_list_screen.dart';
 import 'widgets/cart_recommendations_dialog.dart';
 import 'package:mosposudit_shared/widgets/tool_availability_dialog.dart';
 import 'utils/snackbar_helper.dart';
@@ -1007,18 +1008,21 @@ class _ToolsPageState extends State<ToolsPage> {
   Future<void> _showCategoryFilter() async {
     final selectedId = await showModalBottomSheet<int?>(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) => Container(
-        padding: const EdgeInsets.symmetric(vertical: 20),
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.7,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
               width: 40,
               height: 4,
-              margin: const EdgeInsets.only(bottom: 20),
+              margin: const EdgeInsets.only(bottom: 20, top: 10),
               decoration: BoxDecoration(
                 color: Colors.grey.shade300,
                 borderRadius: BorderRadius.circular(2),
@@ -1035,27 +1039,36 @@ class _ToolsPageState extends State<ToolsPage> {
               ),
             ),
             const Divider(),
-            ListTile(
-              leading: Icon(
-                _selectedCategoryId == null ? Icons.check_circle : Icons.circle_outlined,
-                color: _selectedCategoryId == null ? Colors.blue : Colors.grey,
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ListTile(
+                      leading: Icon(
+                        _selectedCategoryId == null ? Icons.check_circle : Icons.circle_outlined,
+                        color: _selectedCategoryId == null ? Colors.blue : Colors.grey,
+                      ),
+                      title: const Text('All Categories'),
+                      onTap: () {
+                        Navigator.pop(context, null);
+                      },
+                    ),
+                    const Divider(),
+                    ..._categories.map((category) => ListTile(
+                      leading: Icon(
+                        _selectedCategoryId == category.id ? Icons.check_circle : Icons.circle_outlined,
+                        color: _selectedCategoryId == category.id ? Colors.blue : Colors.grey,
+                      ),
+                      title: Text(category.name ?? 'Unknown'),
+                      onTap: () {
+                        Navigator.pop(context, category.id);
+                      },
+                    )),
+                  ],
+                ),
               ),
-              title: const Text('All Categories'),
-              onTap: () {
-                Navigator.pop(context, null);
-              },
             ),
-            const Divider(),
-            ..._categories.map((category) => ListTile(
-              leading: Icon(
-                _selectedCategoryId == category.id ? Icons.check_circle : Icons.circle_outlined,
-                color: _selectedCategoryId == category.id ? Colors.blue : Colors.grey,
-              ),
-              title: Text(category.name ?? 'Unknown'),
-              onTap: () {
-                Navigator.pop(context, category.id);
-              },
-            )),
             const SizedBox(height: 10),
           ],
         ),
@@ -1284,6 +1297,39 @@ class _ToolsPageState extends State<ToolsPage> {
                                                 fontSize: 16,
                                                 fontWeight: FontWeight.bold,
                                                 color: Colors.blue,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 8),
+                                            // Review link
+                                            GestureDetector(
+                                              onTap: () {
+                                                Navigator.of(context).push(
+                                                  MaterialPageRoute(
+                                                    builder: (context) => ReviewListScreen(
+                                                      toolId: tool.id ?? 0,
+                                                      toolName: tool.name,
+                                                    ),
+                                                  ),
+                                                );
+                                              },
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(
+                                                    Icons.rate_review_outlined,
+                                                    size: 16,
+                                                    color: Colors.grey.shade600,
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    'Reviews',
+                                                    style: TextStyle(
+                                                      fontSize: 13,
+                                                      color: Colors.grey.shade600,
+                                                      decoration: TextDecoration.underline,
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
                                             ),
                                           ],

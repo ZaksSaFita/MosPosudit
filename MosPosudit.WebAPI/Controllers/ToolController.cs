@@ -71,11 +71,11 @@ namespace MosPosudit.WebAPI.Controllers
                 return BadRequest("Start date cannot be in the past");
             }
 
-            // Minimum 1 day rental period
+            // Minimum 1 day rental period (same day is allowed for 1-day rental)
             var daysDifference = (endDate.Date - startDate.Date).Days;
-            if (daysDifference < 1)
+            if (daysDifference < 0)
             {
-                return BadRequest("Rental period must be at least 1 day");
+                return BadRequest("End date must be on or after start date");
             }
 
             var result = await _toolService.GetAvailabilityAsync(id, startDate, endDate);

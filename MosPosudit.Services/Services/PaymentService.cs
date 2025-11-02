@@ -24,6 +24,7 @@ namespace MosPosudit.Services.Services
         private readonly IConfiguration _configuration;
         private readonly ILogger<PaymentService> _logger;
         private readonly IToolService _toolService;
+        private readonly IMessageService _messageService;
         private PayPalEnvironment? _paypalEnvironment;
 
         public PaymentService(
@@ -31,11 +32,13 @@ namespace MosPosudit.Services.Services
             IMapper mapper,
             IConfiguration configuration,
             ILogger<PaymentService> logger,
-            IToolService toolService) : base(context, mapper)
+            IToolService toolService,
+            IMessageService messageService) : base(context, mapper)
         {
             _configuration = configuration;
             _logger = logger;
             _toolService = toolService;
+            _messageService = messageService;
         }
 
         protected override IQueryable<Payment> ApplyFilter(IQueryable<Payment> query, PaymentSearchObject search)
@@ -372,6 +375,14 @@ namespace MosPosudit.Services.Services
             _context.Set<DataOrder>().Add(order);
             await _context.SaveChangesAsync(); // Save to get Order.Id
 
+            // Load order with items for email
+            var orderWithItems = await _context.Set<DataOrder>()
+                .Include(o => o.OrderItems)
+                .FirstOrDefaultAsync(o => o.Id == order.Id);
+            
+            if (orderWithItems == null)
+                throw new ValidationException("Failed to load order after creation");
+
             // Create Payment entity
             var payment = new Payment
             {
@@ -384,10 +395,40 @@ namespace MosPosudit.Services.Services
             };
 
             _context.Set<Payment>().Add(payment);
-            order.ConfirmationEmailSent = true; // Will be sent by worker
             await _context.SaveChangesAsync();
 
-            return (order.Id, payment.Id);
+            // Get user email and send confirmation email
+            var user = await _context.Set<User>().FindAsync(orderData.UserId);
+            if (user != null && !string.IsNullOrEmpty(user.Email))
+            {
+                // Build email content
+                var emailSubject = $"Order Confirmation - Order #{orderWithItems.Id}";
+                var emailBody = BuildOrderConfirmationEmail(orderWithItems, user, orderData);
+                
+                // Send email via RabbitMQ
+                try
+                {
+                    _logger.LogInformation($"Attempting to send order confirmation email to {user.Email} for order {orderWithItems.Id}");
+                    _messageService.PublishEmail(user.Email, emailSubject, emailBody, isHtml: true);
+                    _logger.LogInformation($"Order confirmation email queued successfully for user {user.Email} for order {orderWithItems.Id}");
+                    
+                    orderWithItems.ConfirmationEmailSent = true;
+                    await _context.SaveChangesAsync();
+                    _logger.LogInformation($"Order {orderWithItems.Id} marked as ConfirmationEmailSent=true");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"Failed to queue order confirmation email for order {orderWithItems.Id}. Error: {ex.Message}");
+                    // Don't fail the payment if email fails - just log it
+                    // Email will be queued later or sent manually
+                }
+            }
+            else
+            {
+                _logger.LogWarning($"User {orderData.UserId} has no email address. Cannot send order confirmation email.");
+            }
+
+            return (orderWithItems.Id, payment.Id);
         }
 
         /// <summary>
@@ -437,6 +478,92 @@ namespace MosPosudit.Services.Services
         }
 
         // ==================== Private Helper Methods ====================
+
+        private string BuildOrderConfirmationEmail(DataOrder order, User user, OrderInsertRequest orderData)
+        {
+            var days = (orderData.EndDate - orderData.StartDate).Days + 1;
+            var orderItemsHtml = new System.Text.StringBuilder();
+            
+            foreach (var item in order.OrderItems)
+            {
+                var tool = _context.Set<Tool>().Find(item.ToolId);
+                var toolName = tool?.Name ?? "Unknown Tool";
+                orderItemsHtml.AppendLine($@"
+                    <tr>
+                        <td style=""padding: 10px; border-bottom: 1px solid #ddd;"">{toolName}</td>
+                        <td style=""padding: 10px; border-bottom: 1px solid #ddd; text-align: center;"">{item.Quantity}</td>
+                        <td style=""padding: 10px; border-bottom: 1px solid #ddd; text-align: right;"">€{item.DailyRate:F2}</td>
+                        <td style=""padding: 10px; border-bottom: 1px solid #ddd; text-align: right;"">€{item.TotalPrice:F2}</td>
+                    </tr>");
+            }
+
+            return $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset=""utf-8"">
+    <style>
+        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+        .header {{ background-color: #4CAF50; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }}
+        .content {{ background-color: #f9f9f9; padding: 20px; border-radius: 0 0 8px 8px; }}
+        .info-box {{ background-color: white; padding: 15px; margin: 15px 0; border-radius: 5px; border-left: 4px solid #4CAF50; }}
+        table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
+        th {{ background-color: #4CAF50; color: white; padding: 12px; text-align: left; }}
+        .total {{ font-size: 18px; font-weight: bold; color: #4CAF50; text-align: right; margin-top: 20px; }}
+        .footer {{ text-align: center; margin-top: 30px; color: #666; font-size: 12px; }}
+    </style>
+</head>
+<body>
+    <div class=""container"">
+        <div class=""header"">
+            <h1>Order Confirmation</h1>
+            <p>Thank you for your order!</p>
+        </div>
+        <div class=""content"">
+            <p>Dear {user.FirstName} {user.LastName},</p>
+            <p>Your order has been confirmed. We have received your payment successfully.</p>
+            
+            <div class=""info-box"">
+                <strong>Order Details:</strong><br>
+                Order Number: <strong>#{order.Id}</strong><br>
+                Order Date: <strong>{order.CreatedAt:dd.MM.yyyy HH:mm}</strong><br>
+                Rental Period: <strong>{orderData.StartDate:dd.MM.yyyy}</strong> to <strong>{orderData.EndDate:dd.MM.yyyy}</strong><br>
+                Duration: <strong>{days} day{(days > 1 ? "s" : "")}</strong>
+            </div>
+
+            <h3>Order Items:</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Tool</th>
+                        <th style=""text-align: center;"">Quantity</th>
+                        <th style=""text-align: right;"">Daily Rate</th>
+                        <th style=""text-align: right;"">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {orderItemsHtml}
+                </tbody>
+            </table>
+            
+            <div class=""total"">
+                Total Amount: €{order.TotalAmount:F2}
+            </div>
+
+            <p>Your rental period starts on <strong>{orderData.StartDate:dd.MM.yyyy}</strong> and ends on <strong>{orderData.EndDate:dd.MM.yyyy}</strong>.</p>
+            
+            <p>If you have any questions about your order, please contact us.</p>
+            
+            <div class=""footer"">
+                <p>Best regards,<br>MošPosudit Team</p>
+                <p>This is an automated email. Please do not reply to this message.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>";
+        }
 
         private PayPalEnvironment GetPayPalEnvironment()
         {

@@ -34,6 +34,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   DateTime _selectedEndDate = DateTime.now().add(const Duration(days: 1));
   ToolAvailabilityModel? _combinedAvailability;
   bool _isLoadingAvailability = false;
+  bool _datesSelected = false; // Track if user has selected dates
   
   @override
   void initState() {
@@ -164,6 +165,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     setState(() {
       _selectedStartDate = startDate;
       _selectedEndDate = endDate;
+      _datesSelected = true; // Mark that user has selected dates
     });
     
     // Reload availability for new date range
@@ -715,49 +717,50 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             ),
                           const SizedBox(height: 24),
                           
-                          // Selected dates
-                          Card(
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      const Text('Start Date:'),
-                                      Text(
-                                        '${_selectedStartDate.day}/${_selectedStartDate.month}/${_selectedStartDate.year}',
-                                        style: const TextStyle(fontWeight: FontWeight.bold),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      const Text('End Date:'),
-                                      Text(
-                                        '${_selectedEndDate.day}/${_selectedEndDate.month}/${_selectedEndDate.year}',
-                                        style: const TextStyle(fontWeight: FontWeight.bold),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      const Text('Days:'),
-                                      Text(
-                                        '${_selectedEndDate.difference(_selectedStartDate).inDays + 1}',
-                                        style: const TextStyle(fontWeight: FontWeight.bold),
-                                      ),
-                                    ],
-                                  ),
-                                ],
+                          // Selected dates - only show when user has selected dates
+                          if (_datesSelected)
+                            Card(
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        const Text('Start Date:'),
+                                        Text(
+                                          '${_selectedStartDate.day}/${_selectedStartDate.month}/${_selectedStartDate.year}',
+                                          style: const TextStyle(fontWeight: FontWeight.bold),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        const Text('End Date:'),
+                                        Text(
+                                          '${_selectedEndDate.day}/${_selectedEndDate.month}/${_selectedEndDate.year}',
+                                          style: const TextStyle(fontWeight: FontWeight.bold),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        const Text('Days:'),
+                                        Text(
+                                          '${_selectedEndDate.difference(_selectedStartDate).inDays + 1}',
+                                          style: const TextStyle(fontWeight: FontWeight.bold),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
-                          ),
                           const SizedBox(height: 24),
                           
                           // Order items summary
@@ -793,7 +796,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                           ),
                                           const SizedBox(height: 4),
                                           Text(
-                                            '€${item.dailyRate.toStringAsFixed(2)}/day x $days days',
+                                            _datesSelected
+                                                ? '€${item.dailyRate.toStringAsFixed(2)}/day x $days days'
+                                                : '€${item.dailyRate.toStringAsFixed(2)}/day',
                                             style: TextStyle(
                                               fontSize: 14,
                                               color: Colors.grey.shade600,
@@ -850,7 +855,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                         ),
                                         const SizedBox(width: 12),
                                         Text(
-                                          '€${itemTotal.toStringAsFixed(2)}',
+                                          _datesSelected
+                                              ? '€${itemTotal.toStringAsFixed(2)}'
+                                              : '€${(item.dailyRate * item.quantity).toStringAsFixed(2)}',
                                           style: const TextStyle(
                                             fontWeight: FontWeight.bold,
                                             fontSize: 16,
@@ -865,25 +872,26 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           }),
                           const SizedBox(height: 24),
                           
-                          // Total amount
-                          Card(
-                            color: Colors.blue.shade50,
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text(
-                                    'Total Amount:',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
+                          // Total amount - only show when dates are selected
+                          if (_datesSelected)
+                            Card(
+                              color: Colors.blue.shade50,
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text(
+                                      'Total Amount:',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
-                                  ),
-                                  Text(
-                                    '€${_totalAmount.toStringAsFixed(2)}',
-                                    style: TextStyle(
-                                      fontSize: 20,
+                                    Text(
+                                      '€${_totalAmount.toStringAsFixed(2)}',
+                                      style: TextStyle(
+                                        fontSize: 20,
                                       fontWeight: FontWeight.bold,
                                       color: Colors.blue.shade700,
                                     ),
@@ -961,9 +969,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       width: double.infinity,
                       height: 50,
                       child: ElevatedButton(
-                        onPressed: (_isProcessing || !_termsAccepted) ? null : _handleCheckout,
+                        onPressed: (_isProcessing || !_termsAccepted || !_datesSelected) ? null : _handleCheckout,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: (_termsAccepted && !_isProcessing) ? Colors.blue : Colors.grey,
+                          backgroundColor: (_termsAccepted && !_isProcessing && _datesSelected) ? Colors.blue : Colors.grey,
                           foregroundColor: Colors.white,
                           disabledBackgroundColor: Colors.grey.shade300,
                           disabledForegroundColor: Colors.grey.shade600,
