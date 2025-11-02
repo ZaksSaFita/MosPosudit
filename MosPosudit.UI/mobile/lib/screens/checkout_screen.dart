@@ -160,13 +160,80 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
   }
   
-  void _onDateRangeSelected(DateTime startDate, DateTime endDate) {
+  Future<void> _onDateRangeSelected(DateTime startDate, DateTime endDate) async {
     setState(() {
       _selectedStartDate = startDate;
       _selectedEndDate = endDate;
     });
+    
     // Reload availability for new date range
-    _loadCombinedAvailability();
+    await _loadCombinedAvailability();
+    
+    // Validate availability after loading
+    await _validateAvailabilityForSelectedPeriod();
+  }
+  
+  Future<void> _validateAvailabilityForSelectedPeriod() async {
+    if (_cartItems.isEmpty || _tools.isEmpty || _combinedAvailability == null) {
+      return;
+    }
+
+    final now = DateTime.now();
+    final startDate = _selectedStartDate.isBefore(now) ? now : _selectedStartDate;
+    
+    // Check each cart item against availability
+    for (var cartItem in _cartItems) {
+      final tool = _tools[cartItem.toolId];
+      if (tool == null) continue;
+
+      // Get availability for this specific tool
+      final availability = await _toolService.getAvailability(
+        tool.id,
+        startDate,
+        _selectedEndDate,
+      );
+
+      if (availability == null) continue;
+
+      // Check each day in the selected date range
+      var currentDate = startDate;
+      while (currentDate.isBefore(_selectedEndDate) || currentDate.isAtSameMomentAs(_selectedEndDate)) {
+        final dateKey = '${currentDate.year.toString().padLeft(4, '0')}-'
+            '${currentDate.month.toString().padLeft(2, '0')}-'
+            '${currentDate.day.toString().padLeft(2, '0')}';
+        
+        final available = availability.getAvailableQuantityForDateString(dateKey) ?? 0;
+        
+        if (available < cartItem.quantity) {
+          final dateStr = '${currentDate.day}.${currentDate.month}.${currentDate.year}';
+          
+          // Show popup dialog with error message
+          if (mounted) {
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Insufficient Devices'),
+                content: Text(
+                  'Not enough ${tool.name ?? 'devices'} available for the selected period.\n\n'
+                  'For date $dateStr:\n'
+                  'Requested: ${cartItem.quantity}\n'
+                  'Available: $available/${availability.totalQuantity}',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('OK'),
+                  ),
+                ],
+              ),
+            );
+          }
+          return;
+        }
+
+        currentDate = currentDate.add(const Duration(days: 1));
+      }
+    }
   }
   
   Future<void> _updateCartItemQuantity(int itemId, int newQuantity, int toolId) async {
@@ -370,6 +437,48 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       final userId = await AuthService.getUserId();
       if (userId == null) {
         throw Exception('User not logged in');
+      }
+
+      // Validate availability for all tools in cart before proceeding
+      final now = DateTime.now();
+      final startDate = _selectedStartDate.isBefore(now) ? now : _selectedStartDate;
+      
+      for (var cartItem in _cartItems) {
+        final tool = _tools[cartItem.toolId];
+        if (tool == null) {
+          throw Exception('Tool information not available for tool ID ${cartItem.toolId}');
+        }
+
+        // Check availability for this tool
+        final availability = await _toolService.getAvailability(
+          tool.id,
+          startDate,
+          _selectedEndDate,
+        );
+
+        if (availability == null) {
+          throw Exception('Unable to check availability for ${tool.name ?? 'tool'}');
+        }
+
+        // Check each day in the selected date range
+        var currentDate = startDate;
+        while (currentDate.isBefore(_selectedEndDate) || currentDate.isAtSameMomentAs(_selectedEndDate)) {
+          final dateKey = '${currentDate.year.toString().padLeft(4, '0')}-'
+              '${currentDate.month.toString().padLeft(2, '0')}-'
+              '${currentDate.day.toString().padLeft(2, '0')}';
+          
+          final available = availability.getAvailableQuantityForDateString(dateKey) ?? 0;
+          
+          if (available < cartItem.quantity) {
+            final dateStr = '${currentDate.day}.${currentDate.month}.${currentDate.year}';
+            throw Exception(
+              'Not enough ${tool.name ?? 'tools'} available. '
+              'Requested: ${cartItem.quantity}, Available on $dateStr: $available/${availability.totalQuantity}'
+            );
+          }
+
+          currentDate = currentDate.add(const Duration(days: 1));
+        }
       }
 
       // Create order items from cart

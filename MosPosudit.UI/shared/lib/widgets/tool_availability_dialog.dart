@@ -271,7 +271,7 @@ class _ToolAvailabilityDialogState extends State<ToolAvailabilityDialog> {
                         const Icon(Icons.check_circle, size: 16, color: Colors.green),
                         const SizedBox(width: 4),
                         Text(
-                          'Dostupno: $available/$total',
+                          'Available: $available/$total',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.green.shade700,
@@ -286,7 +286,7 @@ class _ToolAvailabilityDialogState extends State<ToolAvailabilityDialog> {
                         const Icon(Icons.cancel, size: 16, color: Colors.red),
                         const SizedBox(width: 4),
                         Text(
-                          'Zauzeto: $rented/$total',
+                          'Reserved: $rented/$total',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.red.shade700,

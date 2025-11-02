@@ -140,7 +140,7 @@ class _ToolsManagementPageState extends State<ToolsManagementPage> {
                 ),
                 const SizedBox(height: 16),
                 SwitchListTile(
-                  title: const Text('Dostupno'),
+                  title: const Text('Available'),
                   value: isAvailable,
                   onChanged: (value) => setDialogState(() => isAvailable = value),
                 ),

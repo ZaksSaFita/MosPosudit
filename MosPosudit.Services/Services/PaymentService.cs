@@ -23,16 +23,19 @@ namespace MosPosudit.Services.Services
     {
         private readonly IConfiguration _configuration;
         private readonly ILogger<PaymentService> _logger;
+        private readonly IToolService _toolService;
         private PayPalEnvironment? _paypalEnvironment;
 
         public PaymentService(
             ApplicationDbContext context, 
             IMapper mapper,
             IConfiguration configuration,
-            ILogger<PaymentService> logger) : base(context, mapper)
+            ILogger<PaymentService> logger,
+            IToolService toolService) : base(context, mapper)
         {
             _configuration = configuration;
             _logger = logger;
+            _toolService = toolService;
         }
 
         protected override IQueryable<Payment> ApplyFilter(IQueryable<Payment> query, PaymentSearchObject search)
@@ -285,14 +288,44 @@ namespace MosPosudit.Services.Services
         /// </summary>
         private async Task<(int OrderId, int PaymentId)> SavePaymentToDatabaseAsync(OrderInsertRequest orderData, decimal amount, string transactionId)
         {
-            // Validate tools exist - availability is checked through availability API, not through fixed quantity
+            // Validate tools exist and check availability for selected date range
             foreach (var item in orderData.OrderItems)
             {
                 var tool = await _context.Set<Tool>().FindAsync(item.ToolId);
                 if (tool == null)
                     throw new ValidationException($"Tool with ID {item.ToolId} no longer exists");
-                // Availability is checked through availability calendar in frontend, not here
-                // Quantity in database represents original stock and doesn't change
+
+                // Check availability for this tool for the selected date range
+                var availability = await _toolService.GetAvailabilityAsync(
+                    item.ToolId,
+                    orderData.StartDate,
+                    orderData.EndDate
+                );
+
+                if (availability == null)
+                    throw new ValidationException($"Unable to check availability for tool ID {item.ToolId}");
+
+                // Check each day in the selected date range
+                var currentDate = orderData.StartDate.Date;
+                var endDate = orderData.EndDate.Date;
+
+                while (currentDate <= endDate)
+                {
+                    var dateKey = currentDate.ToString("yyyy-MM-dd");
+                    var available = availability.DailyAvailability.ContainsKey(dateKey)
+                        ? availability.DailyAvailability[dateKey]
+                        : 0;
+
+                    if (available < item.Quantity)
+                    {
+                        throw new ValidationException(
+                            $"Not enough {tool.Name} available. " +
+                            $"Requested: {item.Quantity}, Available on {currentDate:dd.MM.yyyy}: {available}/{availability.TotalQuantity}"
+                        );
+                    }
+
+                    currentDate = currentDate.AddDays(1);
+                }
             }
 
             // Create Order in database
