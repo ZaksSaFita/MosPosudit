@@ -60,6 +60,7 @@ class _AvailabilityCalendarState extends State<AvailabilityCalendar> {
   }
 
   /// Get color for a day based on availability
+  /// Green if no devices reserved, Orange if at least one reserved (but not all), Dark red if all reserved
   Color? _getDayColor(DateTime day) {
     final dateKey = _formatDate(day);
     final available = widget.availability.getAvailableQuantityForDateString(dateKey);
@@ -69,18 +70,15 @@ class _AvailabilityCalendarState extends State<AvailabilityCalendar> {
     }
 
     final total = widget.availability.totalQuantity;
-    if (total == 0) return Colors.red.shade700;
+    if (total == 0) return Colors.red.shade800;
 
-    final percentage = available / total;
-
-    if (available == 0) {
-      return Colors.red.shade700; // Unavailable
-    } else if (percentage <= 0.25) {
-      return Colors.orange.shade600; // Low availability (1-25%)
-    } else if (percentage <= 0.50) {
-      return Colors.yellow.shade600; // Medium availability (25-50%)
+    // Three color scheme:
+    if (available == total) {
+      return Colors.green.shade600; // No devices reserved
+    } else if (available == 0) {
+      return Colors.red.shade800; // All devices reserved (dark red)
     } else {
-      return Colors.green.shade600; // High availability (>50%)
+      return Colors.orange.shade600; // At least one reserved (but not all) - beautiful orange
     }
   }
 
@@ -235,7 +233,66 @@ class _AvailabilityCalendarState extends State<AvailabilityCalendar> {
               final dateKey = _formatDate(date);
               final available = widget.availability.getAvailableQuantityForDateString(dateKey);
               
-              // Check if date is part of selected range
+              // If selection is disabled, don't show yellow highlight for selected range
+              // Only show availability colors (green/red)
+              if (!widget.allowSelection) {
+                // For dates outside range, show availability if available
+                if (available == null) {
+                  // Date not in availability range - show with grey color
+                  return Container(
+                    margin: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      border: Border.all(color: Colors.grey.shade300, width: 1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      '${date.day}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  );
+                }
+
+                // Date has availability - show original colors (green/red)
+                final color = _getDayColor(date);
+                return Container(
+                  margin: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: color?.withOpacity(0.3),
+                    border: Border.all(color: color ?? Colors.grey, width: 1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  alignment: Alignment.center,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        '${date.day}',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: color ?? Colors.black87,
+                        ),
+                      ),
+                      Text(
+                        '$available/${widget.availability.totalQuantity}',
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w500,
+                          color: color ?? Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              // Selection enabled - check if date is part of selected range
               final isStart = _selectedStartDate != null && 
                             isSameDay(_selectedStartDate!, date);
               final isEnd = _selectedEndDate != null && 
@@ -349,7 +406,44 @@ class _AvailabilityCalendarState extends State<AvailabilityCalendar> {
                 return null;
               }
 
-              // Check if date is part of selected range
+              final color = _getDayColor(date);
+
+              // If selection is disabled, don't show yellow highlight
+              if (!widget.allowSelection) {
+                // Just show availability colors with blue border for today
+                return Container(
+                  margin: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: color?.withOpacity(0.3),
+                    border: Border.all(color: Colors.blue.shade700, width: 2), // Blue border for today
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  alignment: Alignment.center,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        '${date.day}',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: color ?? Colors.black87,
+                        ),
+                      ),
+                      Text(
+                        '$available/${widget.availability.totalQuantity}',
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w500,
+                          color: color ?? Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              // Selection enabled - check if date is part of selected range
               final isStart = _selectedStartDate != null && 
                             isSameDay(_selectedStartDate!, date);
               final isEnd = _selectedEndDate != null && 
@@ -359,8 +453,6 @@ class _AvailabilityCalendarState extends State<AvailabilityCalendar> {
                               date.isAfter(_selectedStartDate!) &&
                               date.isBefore(_selectedEndDate!);
 
-              final color = _getDayColor(date);
-              
               // Determine decoration based on whether date is in range
               BoxDecoration decoration;
               if (isStart || isEnd || isInRange) {

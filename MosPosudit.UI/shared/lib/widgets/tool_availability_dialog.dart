@@ -187,40 +187,8 @@ class _ToolAvailabilityDialogState extends State<ToolAvailabilityDialog> {
                 availability: _availability!,
                 startDate: _selectedStartDate ?? DateTime.now(),
                 endDate: _selectedEndDate ?? DateTime.now().add(const Duration(days: 90)),
-                onDateRangeSelected: _onDateRangeSelected,
-                allowSelection: true,
-              ),
-            
-            // Selected dates info
-            if (_selectedStartDate != null && _selectedEndDate != null && _availability != null)
-              Container(
-                padding: const EdgeInsets.all(12),
-                margin: const EdgeInsets.only(top: 16),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey.shade300),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      'Daily Breakdown:',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: _buildDailyBreakdown(),
-                    ),
-                  ],
-                ),
+                onDateRangeSelected: null, // No date selection in availability dialog
+                allowSelection: false, // Disable date selection - only viewing availability
               ),
             ],
           ),
@@ -229,83 +197,5 @@ class _ToolAvailabilityDialogState extends State<ToolAvailabilityDialog> {
     );
   }
   
-  List<Widget> _buildDailyBreakdown() {
-    if (_selectedStartDate == null || _selectedEndDate == null || _availability == null) {
-      return [];
-    }
-    
-    final breakdown = <Widget>[];
-    var currentDate = _selectedStartDate!;
-    final monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-                        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    
-    while (currentDate.isBefore(_selectedEndDate!) || 
-           currentDate.isAtSameMomentAs(_selectedEndDate!)) {
-      final dateKey = '${currentDate.year.toString().padLeft(4, '0')}-'
-          '${currentDate.month.toString().padLeft(2, '0')}-'
-          '${currentDate.day.toString().padLeft(2, '0')}';
-      final available = _availability!.getAvailableQuantityForDateString(dateKey) ?? 0;
-      final total = _availability!.totalQuantity;
-      final rented = total - available;
-      
-      final isAvailable = available > 0;
-      
-      breakdown.add(
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '${currentDate.day}. ${monthNames[currentDate.month - 1]}',
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              Row(
-                children: [
-                  if (isAvailable)
-                    Row(
-                      children: [
-                        const Icon(Icons.check_circle, size: 16, color: Colors.green),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Available: $available/$total',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.green.shade700,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    )
-                  else
-                    Row(
-                      children: [
-                        const Icon(Icons.cancel, size: 16, color: Colors.red),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Reserved: $rented/$total',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.red.shade700,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      );
-      
-      currentDate = currentDate.add(const Duration(days: 1));
-    }
-    
-    return breakdown;
-  }
 }
 
