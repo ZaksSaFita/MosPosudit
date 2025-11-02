@@ -1,7 +1,3 @@
-Perfect ✅ — here’s the **fully updated version** including PayPal credentials:
-
----
-
 ## ✅ Setup Instructions
 
 ### 1️⃣ Requirements
