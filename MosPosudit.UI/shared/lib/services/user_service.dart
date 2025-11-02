@@ -137,5 +137,28 @@ class UserService {
       return null;
     }
   }
+
+  Future<UserModel> create(Map<String, dynamic> data) async {
+    final res = await _api.post('/User', body: data);
+    if (res.statusCode == 201 || res.statusCode == 200) {
+      final decoded = jsonDecode(res.body);
+      return UserModel.fromJson(decoded);
+    }
+    throw Exception('Failed to create user: ${res.statusCode} - ${res.body}');
+  }
+
+  Future<UserModel> update(int id, Map<String, dynamic> data) async {
+    final res = await _api.put('/User/$id', body: data);
+    if (res.statusCode == 200) {
+      final decoded = jsonDecode(res.body);
+      return UserModel.fromJson(decoded);
+    }
+    throw Exception('Failed to update user: ${res.statusCode} - ${res.body}');
+  }
+
+  Future<bool> deleteUser(int id) async {
+    final res = await _api.delete('/User/$id');
+    return res.statusCode == 200 || res.statusCode == 204;
+  }
 }
 

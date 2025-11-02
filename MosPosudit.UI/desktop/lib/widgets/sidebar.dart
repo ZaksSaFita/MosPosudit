@@ -219,30 +219,21 @@ class _SidebarState extends State<Sidebar> {
                     ),
                   ],
                 ),
-                _ExpandableSidebarItem(
+                _SidebarItem(
                   icon: Icons.people,
                   label: 'Users',
-                  selected: widget.selectedIndex >= 4 && widget.selectedIndex <= 5,
-                  children: [
-                    _SidebarItem(
-                      icon: Icons.list,
-                      label: 'All Users',
-                      selected: widget.selectedIndex == 4,
-                      onTap: () => widget.onItemSelected(4),
-                      isSubItem: true,
-                    ),
-                    _SidebarItem(
-                      icon: Icons.add,
-                      label: 'Add User',
-                      selected: widget.selectedIndex == 5,
-                      onTap: () => widget.onItemSelected(5),
-                      isSubItem: true,
-                    ),
-                  ],
+                  selected: widget.selectedIndex == 4,
+                  onTap: () => widget.onItemSelected(4),
                 ),
                 _SidebarItem(
-                  icon: Icons.description,
-                  label: 'Reports',
+                  icon: Icons.star,
+                  label: 'Reviews',
+                  selected: widget.selectedIndex == 5,
+                  onTap: () => widget.onItemSelected(5),
+                ),
+                _SidebarItem(
+                  icon: Icons.assignment,
+                  label: 'Reservations',
                   selected: widget.selectedIndex == 6,
                   onTap: () => widget.onItemSelected(6),
                 ),

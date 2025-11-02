@@ -6,6 +6,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/users_screen.dart';
 import 'screens/tools_screen.dart';
 import 'screens/categories_screen.dart';
+import 'screens/reviews_screen.dart';
+import 'screens/reservations_screen.dart';
 import 'screens/chat_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'package:mosposudit_shared/core/config.dart';
@@ -455,9 +457,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
     const ToolsManagementPage(), // Tool Management (index 1)
     const CategoriesManagementPage(), // Category Management (index 2)
     const PlaceholderPage(), // Not used in sidebar (index 3)
-    const UsersManagementPage(), // All Users (index 4)
-    const UsersManagementPage(), // Add User (index 5)
-    const ReportsPage(), // Reports (index 6)
+    const UsersManagementPage(), // Users (index 4)
+    const ReviewsManagementPage(), // Reviews (index 5)
+    const ReservationsManagementPage(), // Reservations (index 6)
     const ChatScreen(), // Chat (index 7)
     const SettingsPage(), // Settings (index 8)
   ];
@@ -563,44 +565,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
 }
 
 // DashboardPage is now imported from screens/dashboard_screen.dart
-
 // ToolsManagementPage is now imported from screens/tools_screen.dart
 // CategoriesManagementPage is now imported from screens/categories_screen.dart
-// RentalsManagementPage is now imported from screens/reservations_screen.dart
-
-class ReportsPage extends StatelessWidget {
-  const ReportsPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.all(24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Reports',
-            style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-          ),
-          SizedBox(height: 24),
-          Card(
-            child: Padding(
-              padding: EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  Icon(Icons.assessment, size: 64, color: Colors.red),
-                  SizedBox(height: 16),
-                  Text('Feature in development', style: TextStyle(fontSize: 18)),
-                  Text('Reports will be implemented', style: TextStyle(color: Colors.grey)),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+// ReviewsManagementPage is now imported from screens/reviews_screen.dart
 
 class PlaceholderPage extends StatelessWidget {
   const PlaceholderPage({super.key});
