@@ -451,15 +451,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
   final MessageService _messageService = MessageService();
 
   final List<Widget> _pages = [
-    const DashboardPage(), // Dashboard
-    const ToolsManagementPage(), // All Tools
-    const CategoriesManagementPage(), // Categories
-    const ToolsManagementPage(), // Reviews (temporary)
-    const UsersManagementPage(), // All Users
-    const UsersManagementPage(), // Add User (temporary, should be Add User page)
-    const ReportsPage(), // Reports
-    const ChatScreen(), // Chat
-    const SettingsPage(), // Settings
+    const DashboardPage(), // Dashboard (index 0)
+    const ToolsManagementPage(), // Tool Management (index 1)
+    const CategoriesManagementPage(), // Category Management (index 2)
+    const PlaceholderPage(), // Not used in sidebar (index 3)
+    const UsersManagementPage(), // All Users (index 4)
+    const UsersManagementPage(), // Add User (index 5)
+    const ReportsPage(), // Reports (index 6)
+    const ChatScreen(), // Chat (index 7)
+    const SettingsPage(), // Settings (index 8)
   ];
 
   @override
@@ -599,6 +599,15 @@ class ReportsPage extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class PlaceholderPage extends StatelessWidget {
+  const PlaceholderPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container();
   }
 }
 

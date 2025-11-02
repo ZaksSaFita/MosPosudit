@@ -774,7 +774,7 @@ class _ToolsManagementPageState extends State<ToolsManagementPage> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  'Tools Management',
+                  'Tool Management',
                   style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
                 ),
                 Row(
@@ -984,7 +984,18 @@ class _ToolListCard extends StatelessWidget {
     // Priority: base64 > asset filename (generated from name) > default icon
     if (tool.imageBase64 != null && tool.imageBase64!.isNotEmpty) {
       try {
-        final bytes = base64Decode(tool.imageBase64!);
+        // Remove data URL prefix if present (e.g., "data:image/jpeg;base64,")
+        String base64Data = tool.imageBase64!;
+        if (base64Data.contains(',')) {
+          base64Data = base64Data.split(',').last;
+        }
+        
+        final bytes = base64Decode(base64Data);
+        if (bytes.isEmpty) {
+          print('Warning: Empty base64 data for tool ${tool.id}');
+          return _defaultIcon();
+        }
+        
         return Container(
           width: 120,
           height: 120,
@@ -998,12 +1009,14 @@ class _ToolListCard extends StatelessWidget {
               bytes,
               fit: BoxFit.contain,
               errorBuilder: (context, error, stackTrace) {
+                print('Error loading base64 image for tool ${tool.id}: $error');
                 return _defaultIcon();
               },
             ),
           ),
         );
       } catch (e) {
+        print('Exception decoding base64 for tool ${tool.id}: $e');
         return _defaultIcon();
       }
     } else if (tool.name != null && tool.name!.isNotEmpty) {
@@ -1024,6 +1037,7 @@ class _ToolListCard extends StatelessWidget {
               assetPath,
               fit: BoxFit.contain,
               errorBuilder: (context, error, stackTrace) {
+                print('Asset image not found: $assetPath for tool "${tool.name}"');
                 return _defaultIcon();
               },
             ),
@@ -1658,7 +1672,17 @@ class _ToolsTableView extends StatelessWidget {
   Widget _buildToolImage(ToolModel tool) {
     if (tool.imageBase64 != null && tool.imageBase64!.isNotEmpty) {
       try {
-        final bytes = base64Decode(tool.imageBase64!);
+        // Remove data URL prefix if present (e.g., "data:image/jpeg;base64,")
+        String base64Data = tool.imageBase64!;
+        if (base64Data.contains(',')) {
+          base64Data = base64Data.split(',').last;
+        }
+        
+        final bytes = base64Decode(base64Data);
+        if (bytes.isEmpty) {
+          return _defaultIcon();
+        }
+        
         return Container(
           width: 50,
           height: 50,
