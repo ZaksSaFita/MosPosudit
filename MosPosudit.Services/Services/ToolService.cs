@@ -63,27 +63,14 @@ namespace MosPosudit.Services.Services
             if (tool == null)
                 return null;
 
-            // Calculate original total quantity: current quantity + all rented quantities from active orders
-            // This ensures we get the original stock quantity before any orders were placed
-            var allActiveOrders = await _context.Set<Order>()
-                .Include(o => o.OrderItems)
-                .Where(o => !o.IsReturned && o.OrderItems.Any(oi => oi.ToolId == toolId))
-                .ToListAsync();
-
-            int originalQuantity = tool.Quantity; // Start with current quantity
-            foreach (var order in allActiveOrders)
-            {
-                var orderItem = order.OrderItems.FirstOrDefault(oi => oi.ToolId == toolId);
-                if (orderItem != null)
-                {
-                    originalQuantity += orderItem.Quantity; // Add back rented quantity
-                }
-            }
+            // tool.Quantity represents the original stock quantity and doesn't change when orders are created
+            // We can use it directly as the total available quantity
+            int totalQuantity = tool.Quantity;
 
             var response = new ToolAvailabilityResponse
             {
                 ToolId = toolId,
-                TotalQuantity = originalQuantity, // Use original quantity, not current
+                TotalQuantity = totalQuantity,
                 DailyAvailability = new Dictionary<string, int>()
             };
 
@@ -126,8 +113,8 @@ namespace MosPosudit.Services.Services
                     }
                 }
 
-                // Available quantity = original total - rented
-                var availableQuantity = Math.Max(0, originalQuantity - rentedQuantity);
+                // Available quantity = total stock - rented
+                var availableQuantity = Math.Max(0, totalQuantity - rentedQuantity);
                 response.DailyAvailability[dateKey] = availableQuantity;
 
                 // Move to next day

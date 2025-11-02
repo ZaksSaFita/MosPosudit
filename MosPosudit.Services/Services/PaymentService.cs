@@ -285,14 +285,14 @@ namespace MosPosudit.Services.Services
         /// </summary>
         private async Task<(int OrderId, int PaymentId)> SavePaymentToDatabaseAsync(OrderInsertRequest orderData, decimal amount, string transactionId)
         {
-            // Validate tools are available before creating order
+            // Validate tools exist - availability is checked through availability API, not through fixed quantity
             foreach (var item in orderData.OrderItems)
             {
                 var tool = await _context.Set<Tool>().FindAsync(item.ToolId);
                 if (tool == null)
                     throw new ValidationException($"Tool with ID {item.ToolId} no longer exists");
-                if (!tool.IsAvailable || tool.Quantity < item.Quantity)
-                    throw new ValidationException($"Tool '{tool.Name}' is no longer available in requested quantity");
+                // Availability is checked through availability calendar in frontend, not here
+                // Quantity in database represents original stock and doesn't change
             }
 
             // Create Order in database
@@ -330,10 +330,9 @@ namespace MosPosudit.Services.Services
 
                 totalAmount += itemTotalPrice;
 
-                // Decrease tool quantity - ONLY AFTER PAYMENT SUCCESS
-                tool.Quantity -= itemRequest.Quantity;
-                if (tool.Quantity <= 0)
-                    tool.IsAvailable = false;
+                // Don't decrease tool quantity - availability is calculated based on orders, not fixed quantity
+                // Quantity represents original stock and doesn't change when orders are created
+                // Availability is calculated dynamically using GetAvailabilityAsync method
             }
 
             order.TotalAmount = totalAmount;

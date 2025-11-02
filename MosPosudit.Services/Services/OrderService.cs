@@ -120,10 +120,9 @@ namespace MosPosudit.Services.Services
                 entity.OrderItems.Add(orderItem);
                 totalAmount += itemTotalPrice;
 
-                // Decrease tool quantity
-                tool.Quantity -= itemRequest.Quantity;
-                if (tool.Quantity <= 0)
-                    tool.IsAvailable = false;
+                // Don't decrease tool quantity - availability is calculated based on orders, not fixed quantity
+                // Quantity represents original stock and doesn't change when orders are created
+                // Availability is calculated dynamically using GetAvailabilityAsync method
             }
 
             entity.TotalAmount = totalAmount;
@@ -133,23 +132,16 @@ namespace MosPosudit.Services.Services
         {
             entity.UpdatedAt = DateTime.UtcNow;
 
-            // If marking as returned, increase tool quantities
+            // If marking as returned, don't change tool quantities
+            // Quantity represents original stock and doesn't change when orders are returned
+            // Availability is calculated dynamically using GetAvailabilityAsync method
             if (request.IsReturned.HasValue && request.IsReturned.Value && !entity.IsReturned)
             {
                 entity.IsReturned = true;
                 entity.ReturnDate = request.ReturnDate ?? DateTime.UtcNow;
 
-                // Increase tool quantities
-                foreach (var orderItem in entity.OrderItems)
-                {
-                    var tool = await _context.Set<Tool>().FindAsync(orderItem.ToolId);
-                    if (tool != null)
-                    {
-                        tool.Quantity += orderItem.Quantity;
-                        if (tool.Quantity > 0)
-                            tool.IsAvailable = true;
-                    }
-                }
+                // Don't change tool quantities - availability is calculated based on orders
+                // When order is marked as returned, it's automatically excluded from availability calculations
             }
         }
     }

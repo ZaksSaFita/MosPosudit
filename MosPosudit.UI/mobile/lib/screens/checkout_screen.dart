@@ -168,6 +168,89 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     // Reload availability for new date range
     _loadCombinedAvailability();
   }
+  
+  Future<void> _updateCartItemQuantity(int itemId, int newQuantity, int toolId) async {
+    if (newQuantity <= 0) {
+      return; // Don't remove items from checkout, user should go back to cart
+    }
+
+    // Find the tool
+    final tool = _tools[toolId];
+    if (tool == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Tool information not available'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Check against stock quantity (how many devices we have in total)
+    final maxQuantity = tool.quantity ?? 0;
+    if (maxQuantity <= 0) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Tool is out of stock'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Check if new quantity exceeds stock
+    if (newQuantity > maxQuantity) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Maximum quantity: $maxQuantity'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Quantity is valid, update it
+    try {
+      final success = await _cartService.updateCartItemQuantity(itemId, newQuantity);
+      if (success) {
+        // Update local state directly instead of full reload
+        setState(() {
+          final itemIndex = _cartItems.indexWhere((item) => item.id == itemId);
+          if (itemIndex != -1) {
+            final item = _cartItems[itemIndex];
+            _cartItems[itemIndex] = CartItemModel(
+              id: item.id,
+              cartId: item.cartId,
+              toolId: item.toolId,
+              quantity: newQuantity,
+              startDate: item.startDate,
+              endDate: item.endDate,
+              dailyRate: item.dailyRate,
+              notes: item.notes,
+            );
+          }
+        });
+        // Reload availability to reflect updated quantity
+        await _loadCombinedAvailability();
+      }
+    } catch (e) {
+      print('Error updating quantity: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error updating quantity: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   num get _totalAmount {
     num total = 0;
@@ -452,15 +535,89 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             
                             return Card(
                               margin: const EdgeInsets.only(bottom: 8),
-                              child: ListTile(
-                                title: Text(tool?.name ?? 'Unknown tool'),
-                                subtitle: Text('Quantity: ${item.quantity} x €${item.dailyRate.toStringAsFixed(2)}/day x $days days'),
-                                trailing: Text(
-                                  '€${itemTotal.toStringAsFixed(2)}',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                  ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            tool?.name ?? 'Unknown tool',
+                                            style: const TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            '€${item.dailyRate.toStringAsFixed(2)}/day x $days days',
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              color: Colors.grey.shade600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    // Quantity controls
+                                    Row(
+                                      children: [
+                                        Container(
+                                          decoration: BoxDecoration(
+                                            border: Border.all(color: Colors.blue),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                                     IconButton(
+                                                       icon: const Icon(Icons.remove, size: 18),
+                                                       padding: const EdgeInsets.all(4),
+                                                       constraints: const BoxConstraints(
+                                                         minWidth: 32,
+                                                         minHeight: 32,
+                                                       ),
+                                                       onPressed: item.quantity > 1
+                                                           ? () => _updateCartItemQuantity(item.id, item.quantity - 1, item.toolId)
+                                                           : null,
+                                                     ),
+                                                     Container(
+                                                       padding: const EdgeInsets.symmetric(horizontal: 12),
+                                                       child: Text(
+                                                         '${item.quantity}',
+                                                         style: const TextStyle(
+                                                           fontSize: 16,
+                                                           fontWeight: FontWeight.bold,
+                                                         ),
+                                                       ),
+                                                     ),
+                                                     IconButton(
+                                                       icon: const Icon(Icons.add, size: 18),
+                                                       padding: const EdgeInsets.all(4),
+                                                       constraints: const BoxConstraints(
+                                                         minWidth: 32,
+                                                         minHeight: 32,
+                                                       ),
+                                                       onPressed: (tool?.quantity != null && item.quantity >= tool!.quantity!)
+                                                           ? null // Disable if quantity reached maximum
+                                                           : () => _updateCartItemQuantity(item.id, item.quantity + 1, item.toolId),
+                                                     ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Text(
+                                          '€${itemTotal.toStringAsFixed(2)}',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
                                 ),
                               ),
                             );

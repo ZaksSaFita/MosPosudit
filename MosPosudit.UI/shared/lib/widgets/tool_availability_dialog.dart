@@ -68,14 +68,12 @@ class _ToolAvailabilityDialogState extends State<ToolAvailabilityDialog> {
     });
 
     try {
-      // Use custom dates if provided, otherwise use selected dates or default to next 3 months
+      // Always load availability from today to 90 days ahead, regardless of selected dates
+      // This ensures all dates in the calendar view have availability data
       final now = DateTime.now();
-      final startDate = customStartDate ?? _selectedStartDate ?? now;
-      // For end date, if we have selected dates, use them; otherwise load 90 days ahead
-      final selectedEndDate = customEndDate ?? _selectedEndDate;
-      final endDate = selectedEndDate ?? (customStartDate != null 
-          ? customStartDate.add(const Duration(days: 90))
-          : now.add(const Duration(days: 90)));
+      final startDate = now; // Always start from today
+      // Load 90 days ahead to ensure calendar has full availability data
+      final endDate = now.add(const Duration(days: 90));
       
       final availability = await _toolService.getAvailability(
         widget.tool.id,
@@ -111,8 +109,8 @@ class _ToolAvailabilityDialogState extends State<ToolAvailabilityDialog> {
       _selectedEndDate = validEndDate;
     });
 
-    // Reload availability for the selected date range
-    _loadAvailability(customStartDate: startDate, customEndDate: validEndDate);
+    // Don't reload availability - we already have data from today to 90 days ahead
+    // Availability data is sufficient for all dates in the calendar view
   }
 
   @override

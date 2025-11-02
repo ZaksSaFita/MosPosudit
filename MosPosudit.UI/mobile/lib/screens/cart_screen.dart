@@ -77,53 +77,86 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   Future<void> _updateQuantity(int itemId, int quantity, int? toolId) async {
-    if (quantity <= 0) {
-      await _removeItem(itemId);
+    // Don't allow quantity less than 1 - items can only be removed via delete button
+    if (quantity < 1) {
       return;
     }
 
-    // Check if tool exists and validate quantity
-    if (toolId != null && _tools.containsKey(toolId)) {
-      final tool = _tools[toolId]!;
-      
-      // Check if tool is available
-      if (tool.isAvailable == false) {
-        if (mounted) {
-          context.showTopSnackBar(
-            message: '${tool.name ?? "This tool"} is not available.',
-            backgroundColor: Colors.orange,
-          );
-        }
-        return;
-      }
-
-      // Check if requested quantity exceeds available stock
-      if (tool.quantity != null && quantity > tool.quantity!) {
-        if (mounted) {
-          context.showTopSnackBar(
-            message: 'Cannot increase quantity. Only ${tool.quantity} available in stock.',
-            backgroundColor: Colors.orange,
-          );
-        }
-        return;
-      }
-    }
-
+    // Update quantity without full reload to avoid loading screen
     final success = await _cartService.updateCartItemQuantity(itemId, quantity);
     if (success) {
-      _loadCart();
+      // Update local state directly instead of full reload
+      setState(() {
+        final itemIndex = _cartItems.indexWhere((item) => item.id == itemId);
+        if (itemIndex != -1) {
+          final item = _cartItems[itemIndex];
+          _cartItems[itemIndex] = CartItemModel(
+            id: item.id,
+            cartId: item.cartId,
+            toolId: item.toolId,
+            quantity: quantity,
+            startDate: item.startDate,
+            endDate: item.endDate,
+            dailyRate: item.dailyRate,
+            notes: item.notes,
+          );
+        }
+        // Recalculate total price
+        num total = 0;
+        for (var item in _cartItems) {
+          var days = item.endDate.difference(item.startDate).inDays;
+          if (days <= 0) days = 1;
+          total += item.dailyRate * item.quantity * days;
+        }
+        _totalPrice = total;
+      });
     }
   }
 
   Future<void> _increaseQuantity(CartItemModel item, ToolModel? tool) async {
-    await _updateQuantity(item.id, item.quantity + 1, item.toolId);
+    if (tool == null) {
+      if (mounted) {
+        context.showTopSnackBar(
+          message: 'Tool information not available',
+          backgroundColor: Colors.orange,
+        );
+      }
+      return;
+    }
+
+    // Check against stock quantity (how many devices we have in total)
+    final maxQuantity = tool.quantity ?? 0;
+    if (maxQuantity <= 0) {
+      if (mounted) {
+        context.showTopSnackBar(
+          message: 'Tool is out of stock',
+          backgroundColor: Colors.red,
+        );
+      }
+      return;
+    }
+
+    // Check if we can add one more item
+    final newQuantity = item.quantity + 1;
+    if (newQuantity > maxQuantity) {
+      if (mounted) {
+        context.showTopSnackBar(
+          message: 'Maximum quantity: $maxQuantity',
+          backgroundColor: Colors.red,
+        );
+      }
+      return;
+    }
+
+    // Quantity is valid, update it
+    await _updateQuantity(item.id, newQuantity, item.toolId);
   }
 
   Future<void> _decreaseQuantity(CartItemModel item, ToolModel? tool) async {
+    // Only decrease if quantity is greater than 1
+    // Items can only be removed via delete button, not by reducing quantity to 0
     if (item.quantity > 1) {
       await _updateQuantity(item.id, item.quantity - 1, item.toolId);
-    } else {
-      await _removeItem(item.id);
     }
   }
 
@@ -334,7 +367,9 @@ class _CartScreenState extends State<CartScreen> {
                                                       minWidth: 32,
                                                       minHeight: 32,
                                                     ),
-                                                    onPressed: () => _decreaseQuantity(item, tool),
+                                                    onPressed: item.quantity > 1
+                                                        ? () => _decreaseQuantity(item, tool)
+                                                        : null, // Disable if quantity is already 1
                                                   ),
                                                   Container(
                                                     padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -353,12 +388,9 @@ class _CartScreenState extends State<CartScreen> {
                                                       minWidth: 32,
                                                       minHeight: 32,
                                                     ),
-                                                    onPressed: tool != null && 
-                                                              tool.isAvailable == true &&
-                                                              tool.quantity != null &&
-                                                              item.quantity < tool.quantity!
-                                                          ? () => _increaseQuantity(item, tool)
-                                                          : null,
+                                                    onPressed: (tool?.quantity != null && item.quantity >= tool!.quantity!)
+                                                        ? null // Disable if quantity reached maximum
+                                                        : () => _increaseQuantity(item, tool),
                                                   ),
                                                 ],
                                               ),
