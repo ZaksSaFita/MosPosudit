@@ -3,10 +3,12 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:mosposudit_shared/services/tool_service.dart';
+import 'package:mosposudit_shared/services/category_service.dart';
 import 'package:mosposudit_shared/services/utility_service.dart';
 import 'package:mosposudit_shared/models/tool.dart';
 import 'package:mosposudit_shared/models/category.dart';
 import 'package:mosposudit_shared/widgets/tool_availability_dialog.dart';
+import '../core/snackbar_helper.dart';
 
 class ToolsManagementPage extends StatefulWidget {
   const ToolsManagementPage({super.key});
@@ -17,11 +19,13 @@ class ToolsManagementPage extends StatefulWidget {
 
 class _ToolsManagementPageState extends State<ToolsManagementPage> {
   final ToolService _toolService = ToolService();
+  final CategoryService _categoryService = CategoryService();
   List<ToolModel> _tools = [];
   List<CategoryModel> _categories = [];
   bool _isLoading = true;
   String? _error;
   int? _selectedCategoryId;
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -48,7 +52,7 @@ class _ToolsManagementPageState extends State<ToolsManagementPage> {
       });
     } catch (e, stackTrace) {
       setState(() {
-        _error = 'Greška: ${e.toString()}';
+        _error = 'Error: ${e.toString()}';
         _isLoading = false;
       });
       print('Error loading tools: $e');
@@ -57,9 +61,24 @@ class _ToolsManagementPageState extends State<ToolsManagementPage> {
   }
 
   List<ToolModel> get _filteredTools {
-    // Filter by category if selected, otherwise show all
-    if (_selectedCategoryId == null) return _tools;
-    return _tools.where((tool) => tool.categoryId == _selectedCategoryId).toList();
+    var filtered = _tools;
+    
+    // Filter by search query
+    if (_searchQuery.isNotEmpty) {
+      filtered = filtered.where((tool) {
+        final name = (tool.name ?? '').toLowerCase();
+        final description = (tool.description ?? '').toLowerCase();
+        final query = _searchQuery.toLowerCase();
+        return name.contains(query) || description.contains(query);
+      }).toList();
+    }
+    
+    // Filter by category if selected
+    if (_selectedCategoryId != null) {
+      filtered = filtered.where((tool) => tool.categoryId == _selectedCategoryId).toList();
+    }
+    
+    return filtered;
   }
 
   Future<void> _showAddEditDialog({ToolModel? tool}) async {
@@ -77,7 +96,7 @@ class _ToolsManagementPageState extends State<ToolsManagementPage> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: Text(tool == null ? 'Dodaj alat' : 'Uredi alat'),
+          title: Text(tool == null ? 'Add Tool' : 'Edit Tool'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -85,7 +104,7 @@ class _ToolsManagementPageState extends State<ToolsManagementPage> {
                 TextField(
                   controller: nameController,
                   decoration: const InputDecoration(
-                    labelText: 'Naziv *',
+                    labelText: 'Name *',
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -93,38 +112,53 @@ class _ToolsManagementPageState extends State<ToolsManagementPage> {
                 TextField(
                   controller: descriptionController,
                   decoration: const InputDecoration(
-                    labelText: 'Opis',
+                    labelText: 'Description',
                     border: OutlineInputBorder(),
                   ),
                   maxLines: 3,
                 ),
                 const SizedBox(height: 16),
-                DropdownButtonFormField<int?>(
-                  value: selectedCategoryId,
-                  decoration: const InputDecoration(
-                    labelText: 'Kategorija *',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: _categories.map((c) => DropdownMenuItem<int?>(
-                    value: c.id,
-                    child: Text(c.name ?? 'Nepoznato'),
-                  )).toList(),
-                  onChanged: (value) => setDialogState(() => selectedCategoryId = value),
+                Row(
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<int?>(
+                        value: selectedCategoryId,
+                        decoration: const InputDecoration(
+                          labelText: 'Category *',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: _categories.map((c) => DropdownMenuItem<int?>(
+                          value: c.id,
+                          child: Text(c.name ?? 'Unknown'),
+                        )).toList(),
+                        onChanged: (value) => setDialogState(() => selectedCategoryId = value),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: const Icon(Icons.add),
+                      onPressed: () async {
+                        await _showAddCategoryDialog();
+                        setDialogState(() {});
+                      },
+                      tooltip: 'Add Category',
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: dailyRateController,
                   decoration: const InputDecoration(
-                    labelText: 'Cijena po danu (KM) *',
+                    labelText: 'Daily Rate (\$) *',
                     border: OutlineInputBorder(),
                   ),
-                  keyboardType: TextInputType.number,
+                  keyboardType: TextInputType.numberWithOptions(decimal: true),
                 ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: quantityController,
                   decoration: const InputDecoration(
-                    labelText: 'Količina *',
+                    labelText: 'Quantity *',
                     border: OutlineInputBorder(),
                   ),
                   keyboardType: TextInputType.number,
@@ -133,10 +167,10 @@ class _ToolsManagementPageState extends State<ToolsManagementPage> {
                 TextField(
                   controller: depositAmountController,
                   decoration: const InputDecoration(
-                    labelText: 'Depozit (KM)',
+                    labelText: 'Deposit Amount (\$)',
                     border: OutlineInputBorder(),
                   ),
-                  keyboardType: TextInputType.number,
+                  keyboardType: TextInputType.numberWithOptions(decimal: true),
                 ),
                 const SizedBox(height: 16),
                 SwitchListTile(
@@ -159,21 +193,18 @@ class _ToolsManagementPageState extends State<ToolsManagementPage> {
                         setDialogState(() {
                           selectedImageBase64 = base64;
                         });
+                        SnackbarHelper.showSuccess(context, 'Image selected');
                       } catch (e) {
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Greška pri učitavanju slike: $e')),
-                          );
-                        }
+                        SnackbarHelper.showError(context, 'Error loading image: $e');
                       }
                     }
                   },
-                  icon: const Icon(Icons.image),
+                  icon: Icon(selectedImageBase64 != null ? Icons.check_circle : Icons.image),
                   label: Text(selectedImageBase64 != null 
-                      ? 'Slika odabrana' 
+                      ? 'Image Selected' 
                       : tool?.imageBase64 != null 
-                          ? 'Promijeni sliku' 
-                          : 'Odaberi sliku'),
+                          ? 'Change Image' 
+                          : 'Select Image'),
                 ),
               ],
             ),
@@ -181,25 +212,21 @@ class _ToolsManagementPageState extends State<ToolsManagementPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Otkaži'),
+              child: const Text('Cancel'),
             ),
             ElevatedButton(
               onPressed: () {
                 if (nameController.text.trim().isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Naziv je obavezan')),
-                  );
+                  SnackbarHelper.showError(context, 'Name is required');
                   return;
                 }
                 if (selectedCategoryId == null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Kategorija je obavezna')),
-                  );
+                  SnackbarHelper.showError(context, 'Category is required');
                   return;
                 }
                 Navigator.pop(context, true);
               },
-              child: const Text('Sačuvaj'),
+              child: const Text('Save'),
             ),
           ],
         ),
@@ -228,26 +255,275 @@ class _ToolsManagementPageState extends State<ToolsManagementPage> {
 
         if (tool == null) {
           await _toolService.create(data);
+          SnackbarHelper.showSuccess(context, 'Tool added successfully');
         } else {
           await _toolService.update(tool.id, data);
+          SnackbarHelper.showSuccess(context, 'Tool updated successfully');
         }
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(tool == null
-                  ? 'Alat uspješno dodat'
-                  : 'Alat uspješno ažuriran'),
-            ),
-          );
-          _loadData();
-        }
+        _loadData();
       } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Greška: $e')),
-          );
-        }
+        SnackbarHelper.showError(context, 'Error: $e');
+      }
+    }
+  }
+
+  Future<void> _showAddCategoryDialog() async {
+    final nameController = TextEditingController();
+    final descriptionController = TextEditingController();
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add Category'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Category Name *',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: descriptionController,
+                decoration: const InputDecoration(
+                  labelText: 'Description',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 3,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (nameController.text.trim().isEmpty) {
+                SnackbarHelper.showError(context, 'Category name is required');
+                return;
+              }
+              Navigator.pop(context, true);
+            },
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true) {
+      try {
+        await _categoryService.create({
+          'name': nameController.text.trim(),
+          'description': descriptionController.text.trim().isEmpty
+              ? null
+              : descriptionController.text.trim(),
+        });
+        SnackbarHelper.showSuccess(context, 'Category added successfully');
+        _loadData();
+      } catch (e) {
+        SnackbarHelper.showError(context, 'Error: $e');
+      }
+    }
+  }
+
+  Future<void> _showManageCategoriesDialog() async {
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Manage Categories'),
+        content: SizedBox(
+          width: 500,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Categories',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () async {
+                      Navigator.pop(context);
+                      await _showAddCategoryDialog();
+                    },
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('Add Category'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                height: 400,
+                child: _categories.isEmpty
+                    ? Center(
+                        child: Text(
+                          'No categories',
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                      )
+                    : ListView.builder(
+                        itemCount: _categories.length,
+                        itemBuilder: (context, index) {
+                          final category = _categories[index];
+                          return Card(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            child: ListTile(
+                              leading: CircleAvatar(
+                                backgroundColor: Colors.blue.shade100,
+                                child: Icon(Icons.category, color: Colors.blue.shade700),
+                              ),
+                              title: Text(
+                                category.name ?? 'Unknown',
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              subtitle: category.description != null && category.description!.isNotEmpty
+                                  ? Text(category.description!)
+                                  : null,
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.edit, size: 20),
+                                    onPressed: () async {
+                                      Navigator.pop(context);
+                                      await _showEditCategoryDialog(category);
+                                    },
+                                    tooltip: 'Edit',
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete, size: 20, color: Colors.red),
+                                    onPressed: () async {
+                                      Navigator.pop(context);
+                                      await _showDeleteCategoryDialog(category);
+                                    },
+                                    tooltip: 'Delete',
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showEditCategoryDialog(CategoryModel category) async {
+    final nameController = TextEditingController(text: category.name);
+    final descriptionController = TextEditingController(text: category.description);
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Category'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Category Name *',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: descriptionController,
+                decoration: const InputDecoration(
+                  labelText: 'Description',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 3,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (nameController.text.trim().isEmpty) {
+                SnackbarHelper.showError(context, 'Category name is required');
+                return;
+              }
+              Navigator.pop(context, true);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true) {
+      try {
+        await _categoryService.update(category.id, {
+          'name': nameController.text.trim(),
+          'description': descriptionController.text.trim().isEmpty
+              ? null
+              : descriptionController.text.trim(),
+        });
+        SnackbarHelper.showSuccess(context, 'Category updated successfully');
+        _loadData();
+      } catch (e) {
+        SnackbarHelper.showError(context, 'Error: $e');
+      }
+    }
+  }
+
+  Future<void> _showDeleteCategoryDialog(CategoryModel category) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirm Delete'),
+        content: Text('Are you sure you want to delete category "${category.name}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        await _categoryService.delete(category.id);
+        SnackbarHelper.showSuccess(context, 'Category deleted successfully');
+        _loadData();
+      } catch (e) {
+        SnackbarHelper.showError(context, 'Error: $e');
       }
     }
   }
@@ -256,17 +532,17 @@ class _ToolsManagementPageState extends State<ToolsManagementPage> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Potvrdi brisanje'),
-        content: Text('Da li ste sigurni da želite da obrišete alat "${tool.name}"?'),
+        title: const Text('Confirm Delete'),
+        content: Text('Are you sure you want to delete tool "${tool.name}"?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Otkaži'),
+            child: const Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Obriši'),
+            child: const Text('Delete'),
           ),
         ],
       ),
@@ -275,18 +551,10 @@ class _ToolsManagementPageState extends State<ToolsManagementPage> {
     if (confirm == true) {
       try {
         await _toolService.delete(tool.id);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Alat uspješno obrisan')),
-          );
-          _loadData();
-        }
+        SnackbarHelper.showSuccess(context, 'Tool deleted successfully');
+        _loadData();
       } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Greška: $e')),
-          );
-        }
+        SnackbarHelper.showError(context, 'Error: $e');
       }
     }
   }
@@ -296,7 +564,7 @@ class _ToolsManagementPageState extends State<ToolsManagementPage> {
     return Container(
       color: Colors.white,
       child: Padding(
-        padding: const EdgeInsets.all(32.0),
+        padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -305,31 +573,51 @@ class _ToolsManagementPageState extends State<ToolsManagementPage> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  'Tools',
+                  'Tools Management',
                   style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
                 ),
-                if (!_isLoading && _error == null)
-                  Card(
-                    color: Colors.blue.shade50,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.build, color: Colors.blue.shade700, size: 20),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Total: ${_tools.length}',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blue.shade700,
-                            ),
+                Row(
+                  children: [
+                    if (!_isLoading && _error == null)
+                      Card(
+                        color: Colors.blue.shade50,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.build, color: Colors.blue.shade700, size: 20),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Total: ${_tools.length}',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.blue.shade700,
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
+                      ),
+                    const SizedBox(width: 12),
+                    IconButton(
+                      icon: const Icon(Icons.refresh),
+                      onPressed: _loadData,
+                      tooltip: 'Refresh',
+                    ),
+                    const SizedBox(width: 12),
+                    ElevatedButton.icon(
+                      onPressed: () => _showAddEditDialog(),
+                      icon: const Icon(Icons.add),
+                      label: const Text('Add Tool'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
                       ),
                     ),
-                  ),
+                  ],
+                ),
               ],
             ),
             const SizedBox(height: 24),
@@ -339,8 +627,13 @@ class _ToolsManagementPageState extends State<ToolsManagementPage> {
               children: [
                 Expanded(
                   child: TextField(
+                    onChanged: (value) {
+                      setState(() {
+                        _searchQuery = value;
+                      });
+                    },
                     decoration: InputDecoration(
-                      hintText: 'Search tool...',
+                      hintText: 'Search tools...',
                       prefixIcon: const Icon(Icons.search),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -355,21 +648,48 @@ class _ToolsManagementPageState extends State<ToolsManagementPage> {
                   ),
                 ),
                 const SizedBox(width: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey[300]!),
+                    borderRadius: BorderRadius.circular(12),
+                    color: Colors.white,
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<int?>(
+                      value: _selectedCategoryId,
+                      hint: const Text('All Categories'),
+                      items: [
+                        const DropdownMenuItem<int?>(
+                          value: null,
+                          child: Text('All Categories'),
+                        ),
+                        ..._categories.map((c) => DropdownMenuItem<int?>(
+                          value: c.id,
+                          child: Text(c.name ?? 'Unknown'),
+                        )),
+                      ],
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedCategoryId = value;
+                        });
+                      },
+                      style: const TextStyle(color: Colors.black87),
+                      icon: const Icon(Icons.arrow_drop_down),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
                 ElevatedButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(Icons.filter_list),
-                  label: const Text('Filter'),
+                  onPressed: () => _showManageCategoriesDialog(),
+                  icon: const Icon(Icons.category),
+                  label: const Text('Manage Categories'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.black87,
-                    elevation: 0,
-                    side: BorderSide(color: Colors.grey[300]!),
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 18,
                     ),
                   ),
                 ),
@@ -388,23 +708,28 @@ class _ToolsManagementPageState extends State<ToolsManagementPage> {
                             children: [
                               const Icon(Icons.error_outline, size: 64, color: Colors.red),
                               const SizedBox(height: 16),
-                              Text('Greška: $_error', style: const TextStyle(color: Colors.red)),
+                              Text('Error: $_error', style: const TextStyle(color: Colors.red)),
                               const SizedBox(height: 16),
                               ElevatedButton(
                                 onPressed: _loadData,
-                                child: const Text('Pokušaj ponovo'),
+                                child: const Text('Retry'),
                               ),
                             ],
                           ),
                         )
                       : _filteredTools.isEmpty
-                          ? const Center(
+                          ? Center(
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.build_circle_outlined, size: 64, color: Colors.grey),
-                                  SizedBox(height: 16),
-                                  Text('Nema dostupnih alata', style: TextStyle(color: Colors.grey, fontSize: 18)),
+                                  Icon(Icons.build_circle_outlined, size: 64, color: Colors.grey[400]),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    _searchQuery.isNotEmpty || _selectedCategoryId != null
+                                        ? 'No tools match your filters'
+                                        : 'No tools available',
+                                    style: TextStyle(color: Colors.grey[600], fontSize: 18),
+                                  ),
                                 ],
                               ),
                             )
@@ -452,7 +777,6 @@ class _ToolListCard extends StatelessWidget {
     required this.onDelete,
     required this.onCheckAvailability,
   });
-
 
   Widget _buildToolImage() {
     // Priority: base64 > asset filename (generated from name) > default icon
@@ -520,6 +844,14 @@ class _ToolListCard extends StatelessWidget {
     );
   }
 
+  String get _categoryName {
+    final category = categories.firstWhere(
+      (c) => c.id == tool.categoryId,
+      orElse: () => CategoryModel(id: 0, name: 'Unknown'),
+    );
+    return category.name ?? 'Unknown';
+  }
+
   // Mock average score (until we have reviews in the model)
   double get _averageScore => 4.2 + (tool.id % 3) * 0.3; // Temporary: 4.2, 4.5, or 3.8
 
@@ -560,12 +892,59 @@ class _ToolListCard extends StatelessWidget {
                 children: [
                   // Tool name
                   Text(
-                    tool.name ?? 'Nepoznat alat',
+                    tool.name ?? 'Unknown Tool',
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: Colors.black87,
                     ),
+                  ),
+                  const SizedBox(height: 8),
+                  // Category badge
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.blue.shade200),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.category, size: 14, color: Colors.blue.shade700),
+                            const SizedBox(width: 4),
+                            Text(
+                              _categoryName,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.blue.shade700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      // Daily rate
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.green.shade200),
+                        ),
+                        child: Text(
+                          '\$${tool.dailyRate?.toStringAsFixed(2) ?? '0.00'}/day',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.green.shade700,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 8),
                   // Description
@@ -624,21 +1003,42 @@ class _ToolListCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      // Score
-                      Text(
-                        '${_averageScore.toStringAsFixed(1)}',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
+                      // Available status
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: (tool.isAvailable ?? true)
+                              ? Colors.green.shade50
+                              : Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: (tool.isAvailable ?? true)
+                                ? Colors.green.shade200
+                                : Colors.grey.shade300,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'score',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              (tool.isAvailable ?? true) ? Icons.check_circle : Icons.cancel,
+                              size: 14,
+                              color: (tool.isAvailable ?? true)
+                                  ? Colors.green.shade700
+                                  : Colors.grey.shade700,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              (tool.isAvailable ?? true) ? 'Available' : 'Unavailable',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: (tool.isAvailable ?? true)
+                                    ? Colors.green.shade700
+                                    : Colors.grey.shade700,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -656,7 +1056,7 @@ class _ToolListCard extends StatelessWidget {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.orange,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
@@ -666,7 +1066,7 @@ class _ToolListCard extends StatelessWidget {
                 ElevatedButton(
                   onPressed: onEdit,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
+                    backgroundColor: Colors.blue,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                     shape: RoundedRectangleBorder(

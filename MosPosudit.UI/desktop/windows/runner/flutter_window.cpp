@@ -28,7 +28,10 @@ bool FlutterWindow::OnCreate() {
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
-    this->Show();
+    HWND hwnd = GetHandle();
+    if (hwnd) {
+      ShowWindow(hwnd, SW_SHOWMAXIMIZED);
+    }
   });
 
   // Flutter can complete the first frame before the "show window" callback is
@@ -65,6 +68,20 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
     case WM_FONTCHANGE:
       flutter_controller_->engine()->ReloadSystemFonts();
       break;
+    
+    case WM_CLOSE: {
+      int result = MessageBox(
+          hwnd,
+          L"Are you sure you want to exit the application?",
+          L"Exit Confirmation",
+          MB_YESNO | MB_ICONQUESTION
+      );
+      
+      if (result == IDYES) {
+        return Win32Window::MessageHandler(hwnd, message, wparam, lparam);
+      }
+      return 0;
+    }
   }
 
   return Win32Window::MessageHandler(hwnd, message, wparam, lparam);
