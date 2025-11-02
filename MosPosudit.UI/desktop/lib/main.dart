@@ -7,6 +7,7 @@ import 'screens/users_screen.dart';
 import 'screens/tools_screen.dart';
 import 'screens/categories_screen.dart';
 import 'screens/chat_screen.dart';
+import 'screens/dashboard_screen.dart';
 import 'package:mosposudit_shared/core/config.dart';
 import 'package:mosposudit_shared/services/message_service.dart';
 import 'package:mosposudit_shared/services/auth_service.dart';
@@ -450,9 +451,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
   final MessageService _messageService = MessageService();
 
   final List<Widget> _pages = [
-    const DashboardPage(),
+    const DashboardPage(), // Dashboard
     const ToolsManagementPage(), // All Tools
-    const CategoriesManagementPage(), // Add Tools (temporary, should be Add Tool page)
+    const CategoriesManagementPage(), // Categories
     const ToolsManagementPage(), // Reviews (temporary)
     const UsersManagementPage(), // All Users
     const UsersManagementPage(), // Add User (temporary, should be Add User page)
@@ -561,73 +562,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 }
 
-class DashboardPage extends StatelessWidget {
-  const DashboardPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.all(24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Dashboard',
-            style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-          ),
-          SizedBox(height: 24),
-          Row(
-            children: [
-              Expanded(
-                child: Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Column(
-                      children: [
-                        Icon(Icons.build, size: 48, color: Colors.blue),
-                        SizedBox(height: 16),
-                        Text('Total tools', style: TextStyle(fontSize: 18)),
-                        Text('0', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(width: 16),
-              Expanded(
-                child: Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Column(
-                      children: [
-                        Icon(Icons.people, size: 48, color: Colors.green),
-                        SizedBox(height: 16),
-                        Text('Registered users', style: TextStyle(fontSize: 18)),
-                        Text('2', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(width: 16),
-              Expanded(
-                child: Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Column(
-                      children: [
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
+// DashboardPage is now imported from screens/dashboard_screen.dart
 
 // ToolsManagementPage is now imported from screens/tools_screen.dart
 // CategoriesManagementPage is now imported from screens/categories_screen.dart
