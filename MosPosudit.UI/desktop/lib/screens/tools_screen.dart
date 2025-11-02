@@ -6,6 +6,7 @@ import 'package:mosposudit_shared/services/tool_service.dart';
 import 'package:mosposudit_shared/services/utility_service.dart';
 import 'package:mosposudit_shared/models/tool.dart';
 import 'package:mosposudit_shared/models/category.dart';
+import 'package:mosposudit_shared/widgets/tool_availability_dialog.dart';
 
 class ToolsManagementPage extends StatefulWidget {
   const ToolsManagementPage({super.key});
@@ -418,6 +419,12 @@ class _ToolsManagementPageState extends State<ToolsManagementPage> {
                                   categories: _categories,
                                   onEdit: () => _showAddEditDialog(tool: tool),
                                   onDelete: () => _deleteTool(tool),
+                                  onCheckAvailability: () {
+                                    ToolAvailabilityDialog.show(
+                                      context,
+                                      tool,
+                                    );
+                                  },
                                 );
                               },
                             ),
@@ -435,6 +442,7 @@ class _ToolListCard extends StatelessWidget {
   final List<CategoryModel> categories;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
+  final VoidCallback onCheckAvailability;
 
   const _ToolListCard({
     required this.tool,
@@ -442,6 +450,7 @@ class _ToolListCard extends StatelessWidget {
     required this.categories,
     required this.onEdit,
     required this.onDelete,
+    required this.onCheckAvailability,
   });
 
 
@@ -640,6 +649,20 @@ class _ToolListCard extends StatelessWidget {
             // Action buttons
             Column(
               children: [
+                ElevatedButton.icon(
+                  onPressed: onCheckAvailability,
+                  icon: const Icon(Icons.date_range, size: 18),
+                  label: const Text('Check Availability'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
                 ElevatedButton(
                   onPressed: onEdit,
                   style: ElevatedButton.styleFrom(

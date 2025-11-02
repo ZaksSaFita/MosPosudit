@@ -27,6 +27,7 @@ import 'screens/cart_screen.dart';
 import 'screens/orders_screen.dart';
 import 'screens/change_password_screen.dart';
 import 'widgets/cart_recommendations_dialog.dart';
+import 'package:mosposudit_shared/widgets/tool_availability_dialog.dart';
 import 'utils/snackbar_helper.dart';
 
 void main() {
@@ -1107,6 +1108,7 @@ class _ToolsPageState extends State<ToolsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text('Available Tools'),
         backgroundColor: Colors.blue,
@@ -1240,144 +1242,146 @@ class _ToolsPageState extends State<ToolsPage> {
                   (context, index) {
                     final tool = _filteredTools[index];
                     final categoryName = _getCategoryName(tool.categoryId);
-                    final isOutOfStock = tool.isAvailable == false || (tool.quantity != null && tool.quantity! <= 0);
                     
                     return Card(
                         margin: const EdgeInsets.only(bottom: 12),
                         elevation: 2,
+                        color: Colors.white,
                         child: Padding(
                         padding: const EdgeInsets.all(12.0),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Image on the left
+                            // Left side - Image
                             _buildToolImage(tool, width: 120, height: 120),
                             const SizedBox(width: 12),
-                            // Content on the right
+                            // Right side - Content
                             Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Tool name
-                                  Text(
-                                    tool.name ?? 'Unknown tool',
-                                    style: const TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  // Category
-                                  if (categoryName != null)
-                                    Text(
-                                      categoryName,
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.grey.shade600,
-                                      ),
-                                    ),
-                                  const SizedBox(height: 6),
-                                  // Quantity indicator
-                                  Row(
+                              child: LayoutBuilder(
+                                builder: (context, constraints) {
+                                  return Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: (tool.quantity != null && tool.quantity! > 0)
-                                              ? Colors.green.shade100 
-                                              : Colors.red.shade100,
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        child: Row(
+                                      // Top content - flexible
+                                      Flexible(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            Icon(
-                                              (tool.quantity != null && tool.quantity! > 0)
-                                                  ? Icons.inventory_2
-                                                  : Icons.block,
-                                              size: 14,
-                                              color: (tool.quantity != null && tool.quantity! > 0)
-                                                  ? Colors.green.shade700 
-                                                  : Colors.red.shade700,
-                                            ),
-                                            const SizedBox(width: 4),
+                                            // Tool name
                                             Text(
-                                              'Quantity: ${tool.quantity ?? 0}',
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: (tool.quantity != null && tool.quantity! > 0)
-                                                    ? Colors.green.shade700 
-                                                    : Colors.red.shade700,
+                                              tool.name ?? 'Unknown tool',
+                                              style: const TextStyle(
+                                                fontSize: 18,
                                                 fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            // Category
+                                            if (categoryName != null)
+                                              Text(
+                                                categoryName,
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  color: Colors.grey.shade600,
+                                                ),
+                                              ),
+                                            const SizedBox(height: 6),
+                                            // Description
+                                            if (tool.description != null && tool.description!.isNotEmpty)
+                                              Text(
+                                                tool.description!,
+                                                style: TextStyle(
+                                                  fontSize: 13,
+                                                  color: Colors.grey.shade700,
+                                                ),
+                                                maxLines: 3,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            const SizedBox(height: 8),
+                                            // Price
+                                            Text(
+                                              '\$${tool.dailyRate?.toStringAsFixed(2) ?? '0.00'} / day',
+                                              style: const TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.blue,
                                               ),
                                             ),
                                           ],
                                         ),
                                       ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 6),
-                                  // Description
-                                  if (tool.description != null && tool.description!.isNotEmpty)
-                                    Text(
-                                      tool.description!,
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        color: Colors.grey.shade700,
-                                      ),
-                                      maxLines: 3,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  const SizedBox(height: 8),
-                                  // Price
-                                  Text(
-                                    '\$${tool.dailyRate?.toStringAsFixed(2) ?? '0.00'} / day',
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.blue,
-                                    ),
-                                  ),
-                                    const SizedBox(height: 8),
-                                    // Add to cart button - disabled if already in cart or quantity is 0
-                                    SizedBox(
-                                      width: double.infinity,
-                                      child: ElevatedButton.icon(
-                                        onPressed: (_toolsInCart.contains(tool.id) || 
-                                                   tool.isAvailable == false ||
-                                                   (tool.quantity != null && tool.quantity! <= 0))
-                                            ? null
-                                            : () => _addToCart(tool),
-                                        icon: Icon(
-                                          _toolsInCart.contains(tool.id)
-                                              ? Icons.check_circle
-                                              : Icons.shopping_cart,
-                                          size: 18,
-                                        ),
-                                        label: Text(
-                                          _toolsInCart.contains(tool.id)
-                                              ? 'In cart'
-                                              : (tool.isAvailable == false)
-                                                  ? 'Not available'
-                                                  : isOutOfStock
-                                                      ? 'Out of stock'
-                                                      : 'Add to cart',
-                                        ),
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: _toolsInCart.contains(tool.id)
-                                              ? Colors.grey
-                                              : Colors.blue,
-                                          foregroundColor: Colors.white,
-                                          padding: const EdgeInsets.symmetric(vertical: 12),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(8),
+                                      const SizedBox(height: 8),
+                                      // Action buttons row - fixed at bottom
+                                      Row(
+                                        children: [
+                                          // Check Availability button - bottom left
+                                          Expanded(
+                                            child: ElevatedButton.icon(
+                                              onPressed: () {
+                                                ToolAvailabilityDialog.show(
+                                                  context,
+                                                  tool,
+                                                );
+                                              },
+                                              icon: const Icon(Icons.date_range, size: 16),
+                                              label: const Text(
+                                                'Availability',
+                                                style: TextStyle(fontSize: 12),
+                                              ),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Colors.orange.shade600,
+                                                foregroundColor: Colors.white,
+                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius: BorderRadius.circular(8),
+                                                ),
+                                                elevation: 2,
+                                              ),
+                                            ),
                                           ),
-                                          disabledBackgroundColor: Colors.grey.shade400,
-                                          disabledForegroundColor: Colors.white,
-                                        ),
+                                          const SizedBox(width: 8),
+                                          // Add to cart button - bottom right
+                                          Expanded(
+                                            child: ElevatedButton.icon(
+                                              onPressed: (_toolsInCart.contains(tool.id) || 
+                                                         tool.isAvailable == false ||
+                                                         (tool.quantity != null && tool.quantity! <= 0))
+                                                  ? null
+                                                  : () => _addToCart(tool),
+                                              icon: Icon(
+                                                _toolsInCart.contains(tool.id)
+                                                    ? Icons.check_circle
+                                                    : Icons.shopping_cart,
+                                                size: 16,
+                                              ),
+                                              label: Text(
+                                                _toolsInCart.contains(tool.id)
+                                                    ? 'In cart'
+                                                    : 'Add to cart',
+                                                style: const TextStyle(fontSize: 12),
+                                              ),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: _toolsInCart.contains(tool.id)
+                                                    ? Colors.grey
+                                                    : Colors.blue,
+                                                foregroundColor: Colors.white,
+                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius: BorderRadius.circular(8),
+                                                ),
+                                                disabledBackgroundColor: Colors.grey.shade400,
+                                                disabledForegroundColor: Colors.white,
+                                                elevation: 2,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                    ),
-                                ],
+                                    ],
+                                  );
+                                },
                               ),
                             ),
                           ],

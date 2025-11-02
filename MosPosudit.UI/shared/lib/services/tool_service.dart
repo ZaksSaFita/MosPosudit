@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../api/api_client.dart';
 import '../models/tool.dart';
 import '../models/category.dart';
+import '../models/tool_availability.dart';
 
 class ToolService {
   final ApiClient _api;
@@ -97,6 +98,37 @@ class ToolService {
       return data.map((e) => CategoryModel.fromJson(e)).toList();
     }
     throw Exception('Failed to fetch categories');
+  }
+
+  /// Get tool availability for a date range
+  Future<ToolAvailabilityModel?> getAvailability(
+    int toolId,
+    DateTime startDate,
+    DateTime endDate,
+  ) async {
+    try {
+      // Format dates as ISO strings for query parameters
+      final startDateStr = startDate.toIso8601String().split('T')[0]; // YYYY-MM-DD
+      final endDateStr = endDate.toIso8601String().split('T')[0]; // YYYY-MM-DD
+
+      final queryParams = {
+        'startDate': startDateStr,
+        'endDate': endDateStr,
+      };
+
+      final res = await _api.get('/Tool/$toolId/availability', query: queryParams, auth: false);
+
+      if (res.statusCode == 200) {
+        final decoded = jsonDecode(res.body);
+        return ToolAvailabilityModel.fromJson(decoded);
+      } else if (res.statusCode == 404) {
+        return null; // Tool not found
+      }
+      throw Exception('Failed to fetch availability: ${res.statusCode} - ${res.body}');
+    } catch (e) {
+      print('Error fetching availability: $e');
+      rethrow;
+    }
   }
 }
 
