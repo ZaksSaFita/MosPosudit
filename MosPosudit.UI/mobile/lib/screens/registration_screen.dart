@@ -76,9 +76,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         }),
       );
 
-      print('Registration response status: ${response.statusCode}');
-      print('Registration response body: ${response.body}');
-
       if (response.statusCode == 201) {
         // Registration successful, now login the user automatically
         try {
@@ -135,8 +132,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             }
           }
         } catch (e) {
-          // Registration successful but auto-login failed
-          print('Auto-login error: $e');
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
@@ -170,7 +165,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         }
       }
     } catch (e) {
-      print('Registration error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

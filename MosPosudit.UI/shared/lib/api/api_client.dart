@@ -16,7 +16,6 @@ class ApiClient {
       if (token != null && token.isNotEmpty) {
         headers['Authorization'] = 'Bearer $token';
       } else {
-        print('Warning: Token is null or empty but auth is required');
       }
     }
     return headers;

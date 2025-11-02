@@ -27,7 +27,6 @@ class OrderService {
       }
       throw Exception('Failed to fetch orders: ${res.statusCode} - ${res.body}');
     } catch (e) {
-      print('Error in fetchOrders: $e');
       rethrow;
     }
   }

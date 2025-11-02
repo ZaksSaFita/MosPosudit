@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:mosposudit_shared/services/auth_service.dart';
 import 'package:mosposudit_shared/services/tool_service.dart';
 import 'package:mosposudit_shared/services/utility_service.dart';
@@ -36,21 +37,15 @@ import 'package:mosposudit_shared/widgets/tool_availability_dialog.dart';
 import 'utils/snackbar_helper.dart';
 
 void main() {
-  // Add error handling
   FlutterError.onError = (FlutterErrorDetails details) {
     FlutterError.presentError(details);
-    print('Flutter Error: ${details.exception}');
-    print('Stack trace: ${details.stack}');
   };
 
-  // Handle errors from async operations
   PlatformDispatcher.instance.onError = (error, stack) {
-    print('Platform Error: $error');
-    print('Stack trace: $stack');
     return true;
   };
 
-  AppConfig.instance = AppConfig(apiBaseUrl: apiBaseUrl); // apiBaseUrl from constants.dart
+  AppConfig.instance = AppConfig(apiBaseUrl: apiBaseUrl);
   runApp(const MosPosuditMobileApp());
 }
 
@@ -60,7 +55,7 @@ class MosPosuditMobileApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'MosPosudit',
+      title: 'Mos posud',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
@@ -99,19 +94,72 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
   Future<void> _checkAuthStatus() async {
     try {
+      // In release builds, always require explicit login (no auto-login)
+      if (kReleaseMode) {
+        if (mounted) {
+          setState(() {
+            _isLoggedIn = false;
+            _isLoading = false;
+          });
+        }
+        return;
+      }
+
+      // In debug mode, check for existing token and validate it
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('token');
-      final user = prefs.getString('user');
       
-      if (mounted) {
-        setState(() {
-          _isLoggedIn = token != null && user != null;
-          _isLoading = false;
-        });
+      if (token == null || token.isEmpty) {
+        if (mounted) {
+          setState(() {
+            _isLoggedIn = false;
+            _isLoading = false;
+          });
+        }
+        return;
+      }
+
+      // Validate token with server by calling /User/me endpoint
+      try {
+        final response = await http.get(
+          Uri.parse('${AppConfig.instance.apiBaseUrl}/User/me'),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+        );
+
+        if (response.statusCode == 200) {
+          // Token is valid - update user data and keep logged in
+          await prefs.setString('user', response.body);
+          if (mounted) {
+            setState(() {
+              _isLoggedIn = true;
+              _isLoading = false;
+            });
+          }
+        } else {
+          // Token is invalid or expired - clear it and show login
+          await prefs.remove('token');
+          await prefs.remove('user');
+          if (mounted) {
+            setState(() {
+              _isLoggedIn = false;
+              _isLoading = false;
+            });
+          }
+        }
+      } catch (e) {
+        // Network error - in debug mode, still allow login if token exists
+        final user = prefs.getString('user');
+        if (mounted) {
+          setState(() {
+            _isLoggedIn = token != null && token.isNotEmpty && user != null;
+            _isLoading = false;
+          });
+        }
       }
     } catch (e, stackTrace) {
-      print('Error checking auth status: $e');
-      print('Stack trace: $stackTrace');
       if (mounted) {
         setState(() {
           _isLoggedIn = false;
@@ -137,8 +185,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
           ? ClientHomeScreen(key: ClientHomeScreen.navigatorKey) 
           : const LoginScreen();
     } catch (e, stackTrace) {
-      print('Error building AuthWrapper: $e');
-      print('Stack trace: $stackTrace');
       return Scaffold(
         backgroundColor: Colors.white,
         body: Center(
@@ -232,16 +278,9 @@ class _LoginScreenState extends State<LoginScreen> {
         }),
       );
 
-      print('Login response status: ${response.statusCode}');
-      print('Login response body: ${response.body}');
-      
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        print('Login data: $data');
-        
         final prefs = await SharedPreferences.getInstance();
-        
-        // Check if token exists in response
         if (data['token'] == null && data['Token'] == null) {
           throw Exception('Token not found in response');
         }
@@ -280,8 +319,9 @@ class _LoginScreenState extends State<LoginScreen> {
             message: 'Successfully logged in!',
             backgroundColor: Colors.green,
           );
+          // Navigate directly to home screen after successful login
           Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const AuthWrapper()),
+            MaterialPageRoute(builder: (context) => ClientHomeScreen(key: ClientHomeScreen.navigatorKey)),
           );
         }
       } else {
@@ -303,7 +343,6 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       }
     } catch (e) {
-      print('Login error: $e');
       if (mounted) {
         context.showTopSnackBar(
           message: 'Error: ${e.toString()}',
@@ -556,7 +595,7 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
         });
       }
     } catch (e) {
-      print('Error loading unread message count: $e');
+      // Silently fail - count will refresh on next load
     }
   }
 
@@ -569,7 +608,7 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
         });
       }
     } catch (e) {
-      print('Error loading cart count: $e');
+      // Silently fail - count will refresh on next load
     }
   }
 
@@ -813,30 +852,20 @@ class _ToolsPageState extends State<ToolsPage> {
       final toolsInCart = cartItems.map<int>((item) => item.toolId as int).toSet();
 
       final loadedTools = results[0] as List<ToolModel>;
-      // Debug: print quantities to verify backend data
-      print('=== Tools Quantity Debug ===');
-      for (var tool in loadedTools.take(5)) {
-        print('Tool: ${tool.name}, Quantity: ${tool.quantity}, IsAvailable: ${tool.isAvailable}');
-      }
-      print('==========================');
-
       // Load favorite status for all tools
       Set<int> favoriteToolIds = {};
       try {
         final favorites = await _favoriteService.getFavorites();
         favoriteToolIds = favorites.map((f) => f.toolId).toSet();
       } catch (e) {
-        print('Error loading favorites: $e');
         // Continue without favorites - not critical
       }
 
-      // Ratings are now loaded from backend in ToolResponse
-      // Extract ratings from tools
+      // Extract ratings from tools loaded from backend
       Map<int, double> toolRatings = {};
       for (var tool in loadedTools) {
         final toolId = tool.id ?? 0;
         if (toolId > 0) {
-          // Use rating from backend, or default to 5.0 if null (no reviews)
           toolRatings[toolId] = tool.averageRating ?? 5.0;
         }
       }
@@ -868,7 +897,7 @@ class _ToolsPageState extends State<ToolsPage> {
         });
       }
     } catch (e) {
-      print('Error refreshing cart status: $e');
+      // Silently fail - cart status will refresh on next load
     }
   }
 
@@ -887,11 +916,10 @@ class _ToolsPageState extends State<ToolsPage> {
   }
 
 
+  /// Builds tool image widget with fallback chain: base64 > asset > default icon
   Widget _buildToolImage(ToolModel tool, {double? width, double? height}) {
     final imgWidth = width ?? 120.0;
     final imgHeight = height ?? 120.0;
-    
-    // Priority: base64 > asset filename (generated from name) > default icon
     if (tool.imageBase64 != null && tool.imageBase64!.isNotEmpty) {
       try {
         final bytes = base64Decode(tool.imageBase64!);
@@ -903,21 +931,17 @@ class _ToolsPageState extends State<ToolsPage> {
             height: imgHeight,
             fit: BoxFit.cover,
             errorBuilder: (context, error, stackTrace) {
-              print('Error loading base64 image: $error');
               return _defaultIcon(width: imgWidth, height: imgHeight);
             },
           ),
         );
       } catch (e) {
-        print('Exception loading base64 image: $e');
         return _defaultIcon(width: imgWidth, height: imgHeight);
       }
     } else if (tool.name != null && tool.name!.isNotEmpty) {
       final fileName = UtilityService.generateImageFileName(tool.name);
-      print('ToolsPage: Tool name="${tool.name}", Generated fileName="$fileName"');
       if (fileName.isNotEmpty) {
         final assetPath = 'packages/mosposudit_shared/assets/images/tools/$fileName';
-        print('ToolsPage: Attempting to load asset: $assetPath for tool: ${tool.name}');
         return ClipRRect(
           borderRadius: BorderRadius.circular(12),
           child: Image.asset(
@@ -926,16 +950,12 @@ class _ToolsPageState extends State<ToolsPage> {
             height: imgHeight,
             fit: BoxFit.cover,
             errorBuilder: (context, error, stackTrace) {
-              print('ToolsPage: Error loading asset image: $assetPath, error: $error');
               return _defaultIcon(width: imgWidth, height: imgHeight);
             },
           ),
         );
-      } else {
-        print('ToolsPage: Generated fileName is empty for tool: ${tool.name}');
       }
     }
-    print('No image for tool: ${tool.name}, imageBase64: ${tool.imageBase64 != null ? "exists" : "null"}');
     return _defaultIcon(width: imgWidth, height: imgHeight);
   }
 
@@ -1097,8 +1117,7 @@ class _ToolsPageState extends State<ToolsPage> {
         }
       }
     } catch (e) {
-      print('Error showing cart recommendations: $e');
-      // Don't show error to user, just log it
+      // Silently fail - recommendations not critical
     }
   }
 
@@ -1587,14 +1606,38 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> pickImage() async {
-    final result = await FilePicker.platform.pickFiles(type: FileType.image);
-    
-    if (result != null && result.files.isNotEmpty) {
-      final filePath = result.files.single.path;
+    try {
+      // Show dialog to choose source
+      final source = await showDialog<ImageSource>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Select Image Source'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Gallery'),
+                onTap: () => Navigator.of(context).pop(ImageSource.gallery),
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('Camera'),
+                onTap: () => Navigator.of(context).pop(ImageSource.camera),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      if (source == null) return;
+
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(source: source);
       
-      if (filePath != null) {
+      if (pickedFile != null) {
         try {
-          final file = File(filePath);
+          final file = File(pickedFile.path);
           final bytes = await file.readAsBytes();
           
           setState(() {
@@ -1612,6 +1655,13 @@ class _ProfilePageState extends State<ProfilePage> {
             );
           }
         }
+      }
+    } catch (e) {
+      if (mounted) {
+        context.showTopSnackBar(
+          message: 'Error selecting image: $e',
+          backgroundColor: Colors.red,
+        );
       }
     }
   }

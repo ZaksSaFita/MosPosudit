@@ -13,7 +13,7 @@ class CategoryService {
       if (res.statusCode == 200) {
         try {
           final decoded = jsonDecode(res.body);
-          // Backend vraća PagedResult<T> sa items i totalCount
+          // Backend returns PagedResult<T> with items and totalCount
           final List<dynamic> data;
           if (decoded is Map && decoded.containsKey('items')) {
             data = decoded['items'] as List<dynamic>;
@@ -27,21 +27,15 @@ class CategoryService {
             try {
               return CategoryModel.fromJson(e);
             } catch (e) {
-              print('Error parsing single category: $e');
               rethrow;
             }
           }).toList();
         } catch (e, stackTrace) {
-          print('Error parsing categories JSON: $e');
-          print('Stack trace: $stackTrace');
-          print('Response body: ${res.body}');
           rethrow;
         }
       }
       throw Exception('Failed to fetch categories: ${res.statusCode} - ${res.body}');
     } catch (e, stackTrace) {
-      print('Error in fetchCategories: $e');
-      print('Stack trace: $stackTrace');
       rethrow;
     }
   }

@@ -12,22 +12,20 @@ class MessageService {
       
       if (res.statusCode == 200) {
         final decoded = jsonDecode(res.body);
-        // Backend vraća direktno listu za user endpoint
+        // Backend returns list directly for user endpoint
         final List<dynamic> data = decoded is List ? decoded : [];
         return data.map((e) => MessageModel.fromJson(e)).toList();
       }
       
       throw Exception('Failed to fetch messages: ${res.statusCode} - ${res.body}');
     } catch (e, stackTrace) {
-      print('Error in getUserMessages: $e');
-      print('Stack trace: $stackTrace');
       rethrow;
     }
   }
 
   Future<MessageModel> sendMessage(String content) async {
     try {
-      final res = await _api.post('/Message/send', body: {'content': content}); // Backend koristi camelCase
+      final res = await _api.post('/Message/send', body: {'content': content});
       
       if (res.statusCode == 200) {
         final decoded = jsonDecode(res.body);
@@ -36,8 +34,6 @@ class MessageService {
       
       throw Exception('Failed to send message: ${res.statusCode} - ${res.body}');
     } catch (e, stackTrace) {
-      print('Error in sendMessage: $e');
-      print('Stack trace: $stackTrace');
       rethrow;
     }
   }
@@ -45,7 +41,7 @@ class MessageService {
   Future<MessageModel> sendReply(String content, int conversationUserId) async {
     try {
       final res = await _api.post('/Message/reply?conversationUserId=$conversationUserId', 
-        body: {'content': content} // Backend koristi camelCase
+        body: {'content': content}
       );
       
       if (res.statusCode == 200) {
@@ -55,8 +51,6 @@ class MessageService {
       
       throw Exception('Failed to send reply: ${res.statusCode} - ${res.body}');
     } catch (e, stackTrace) {
-      print('Error in sendReply: $e');
-      print('Stack trace: $stackTrace');
       rethrow;
     }
   }
@@ -66,7 +60,6 @@ class MessageService {
       final res = await _api.put('/Message/$id/read');
       return res.statusCode == 200;
     } catch (e) {
-      print('Error in markAsRead: $e');
       return false;
     }
   }
@@ -78,15 +71,13 @@ class MessageService {
       
       if (res.statusCode == 200) {
         final decoded = jsonDecode(res.body);
-        // Backend vraća direktno listu za user endpoint
+        // Backend returns list directly for user endpoint
         final List<dynamic> data = decoded is List ? decoded : [];
         return data.map((e) => MessageModel.fromJson(e)).toList();
       }
       
       throw Exception('Failed to fetch pending messages: ${res.statusCode} - ${res.body}');
     } catch (e, stackTrace) {
-      print('Error in getPendingMessages: $e');
-      print('Stack trace: $stackTrace');
       rethrow;
     }
   }
@@ -96,7 +87,6 @@ class MessageService {
       final res = await _api.post('/Message/$messageId/start');
       return res.statusCode == 200;
     } catch (e) {
-      print('Error in startChat: $e');
       return false;
     }
   }
@@ -104,45 +94,30 @@ class MessageService {
   Future<bool> startChatWithUser(int userId) async {
     try {
       final res = await _api.post('/Message/start-with-user/$userId');
-      print('startChatWithUser response status: ${res.statusCode}');
-      print('startChatWithUser response body: ${res.body}');
       
       if (res.statusCode == 200) {
-        // Check if body is empty or try to parse if it exists
         if (res.body.trim().isEmpty) {
-          // Empty response is OK for success
           return true;
         }
-        // Try to parse JSON if body is not empty
         try {
-          final decoded = jsonDecode(res.body);
-          // If we have a message, log it but still return true for 200
-          if (decoded['message'] != null) {
-            print('Success message: ${decoded['message']}');
-          }
+          jsonDecode(res.body);
           return true;
         } catch (e) {
-          // If parsing fails but status is 200, still consider it success
-          print('Warning: Could not parse response body but status is 200: $e');
           return true;
         }
       } else {
         String errorMessage = 'Failed to start chat (${res.statusCode})';
-        // Only try to parse if body is not empty
         if (res.body.trim().isNotEmpty) {
           try {
             final decoded = jsonDecode(res.body);
             errorMessage = decoded['message'] ?? decoded['title'] ?? errorMessage;
           } catch (e) {
-            // If JSON parsing fails, use the raw body or default message
             errorMessage = res.body;
           }
         }
         throw Exception(errorMessage);
       }
     } catch (e, stackTrace) {
-      print('Error in startChatWithUser: $e');
-      print('Stack trace: $stackTrace');
       rethrow;
     }
   }
@@ -156,14 +131,12 @@ class MessageService {
       
       final userId = currentUser['id'];
       
-      // Count unread messages where current user is the receiver
       return messages.where((m) => 
         m.toUserId == userId && 
         !m.isRead && 
         m.fromUserId != userId
       ).length;
     } catch (e) {
-      print('Error getting unread message count: $e');
       return 0;
     }
   }

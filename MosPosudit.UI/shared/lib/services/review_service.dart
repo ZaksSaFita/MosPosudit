@@ -15,7 +15,7 @@ class ReviewService {
       
       if (res.statusCode == 200) {
         final decoded = jsonDecode(res.body);
-        // Backend vraća PagedResult<T> sa items i totalCount
+        // Backend returns PagedResult<T> with items and totalCount
         final List<dynamic> data;
         if (decoded is Map && decoded.containsKey('items')) {
           data = decoded['items'] as List<dynamic>;
@@ -28,10 +28,9 @@ class ReviewService {
       }
       
       throw Exception('Failed to fetch reviews: ${res.statusCode} - ${res.body}');
-    } catch (e) {
-      print('Error in getReviews: $e');
-      rethrow;
-    }
+      } catch (e) {
+        rethrow;
+      }
   }
 
   Future<ReviewModel?> getById(int id) async {
@@ -45,7 +44,6 @@ class ReviewService {
       
       return null;
     } catch (e) {
-      print('Error in getById: $e');
       return null;
     }
   }
@@ -56,7 +54,7 @@ class ReviewService {
       
       if (res.statusCode == 200) {
         final decoded = jsonDecode(res.body);
-        // Backend vraća direktno listu za tool/{toolId} endpoint
+        // Backend returns list directly for tool/{toolId} endpoint
         final List<dynamic> data = decoded is List 
             ? decoded 
             : [];
@@ -65,7 +63,6 @@ class ReviewService {
       
       throw Exception('Failed to fetch reviews by tool: ${res.statusCode} - ${res.body}');
     } catch (e) {
-      print('Error in getByToolId: $e');
       rethrow;
     }
   }
@@ -78,7 +75,7 @@ class ReviewService {
       }
 
       final body = request.toJson();
-      body['userId'] = userId; // Backend će override-ati sa authenticated user ID
+      body['userId'] = userId;
 
       final res = await _api.post('/Review', body: body);
       
@@ -87,9 +84,26 @@ class ReviewService {
         return ReviewModel.fromJson(decoded);
       }
       
-      throw Exception('Failed to create review: ${res.statusCode} - ${res.body}');
+      // Try to extract error message from response body
+      String errorMessage = 'Failed to create review';
+      try {
+        final decoded = jsonDecode(res.body);
+        if (decoded is Map && decoded.containsKey('message')) {
+          errorMessage = decoded['message'].toString();
+        } else if (decoded is Map && decoded.containsKey('error')) {
+          errorMessage = decoded['error'].toString();
+        } else if (decoded is String) {
+          errorMessage = decoded;
+        } else {
+          errorMessage = res.body.isNotEmpty ? res.body : errorMessage;
+        }
+      } catch (_) {
+        // If parsing fails, use body as is
+        errorMessage = res.body.isNotEmpty ? res.body : errorMessage;
+      }
+      
+      throw Exception(errorMessage);
     } catch (e) {
-      print('Error in createReview: $e');
       rethrow;
     }
   }
@@ -105,7 +119,6 @@ class ReviewService {
       
       throw Exception('Failed to update review: ${res.statusCode} - ${res.body}');
     } catch (e) {
-      print('Error in updateReview: $e');
       rethrow;
     }
   }
@@ -115,7 +128,6 @@ class ReviewService {
       final res = await _api.delete('/Review/$id');
       return res.statusCode == 200 || res.statusCode == 204;
     } catch (e) {
-      print('Error in deleteReview: $e');
       return false;
     }
   }

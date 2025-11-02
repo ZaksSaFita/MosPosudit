@@ -56,7 +56,6 @@ class _CartScreenState extends State<CartScreen> {
         _isLoading = false;
       });
     } catch (e) {
-      print('Error loading cart: $e');
       setState(() {
         _isLoading = false;
       });

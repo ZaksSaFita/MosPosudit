@@ -31,7 +31,6 @@ class PaymentService {
       }
       throw Exception('Failed to fetch payments: ${res.statusCode} - ${res.body}');
     } catch (e) {
-      print('Error in fetchPayments: $e');
       rethrow;
     }
   }
@@ -48,7 +47,6 @@ class PaymentService {
   // PayPal methods
   Future<PayPalOrderResponse> createPayPalOrder(OrderInsertRequest orderData) async {
     try {
-      // Check if user is logged in (has token)
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('token');
       
@@ -57,8 +55,6 @@ class PaymentService {
       }
       
       final request = PayPalCreateOrderRequest(orderData: orderData);
-      
-      // Explicitly use auth: true to ensure token is sent
       final res = await _api.post('/Payment/paypal/create', body: request.toJson(), auth: true);
       
       if (res.statusCode == 200) {
@@ -66,14 +62,11 @@ class PaymentService {
         return PayPalOrderResponse.fromJson(decoded);
       }
       
-      // Handle 401 Unauthorized - token missing or invalid
       if (res.statusCode == 401) {
-        // Clear invalid token
         await prefs.remove('token');
         throw Exception('Your session has expired. Please login again.');
       }
       
-      // Extract error message from response
       String errorMessage = 'Failed to create PayPal order: ${res.statusCode}';
       try {
         final decoded = jsonDecode(res.body);
@@ -88,7 +81,6 @@ class PaymentService {
       
       throw Exception(errorMessage);
     } catch (e) {
-      print('Error creating PayPal order: $e');
       rethrow;
     }
   }
@@ -101,7 +93,6 @@ class PaymentService {
       }
       return false;
     } catch (e) {
-      print('Error opening PayPal URL: $e');
       return false;
     }
   }
@@ -115,7 +106,6 @@ class PaymentService {
         return decoded as Map<String, dynamic>;
       }
       
-      // Extract error message from response body
       String errorMessage = 'Payment was not completed';
       try {
         final decoded = jsonDecode(res.body);
@@ -130,7 +120,6 @@ class PaymentService {
       
       throw Exception(errorMessage);
     } catch (e) {
-      print('Error handling PayPal return: $e');
       rethrow;
     }
   }

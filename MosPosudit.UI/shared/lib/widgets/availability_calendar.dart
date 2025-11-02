@@ -41,21 +41,26 @@ class _AvailabilityCalendarState extends State<AvailabilityCalendar> {
   @override
   void didUpdateWidget(AvailabilityCalendar oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Only update selected dates if widget dates changed externally (not from user selection)
-    // Don't reset focused day or selection state - keep user's current view
+    // Only update internal state if widget dates changed externally (not from user selection)
+    // Preserve user's selection - if user clicked on calendar, _selectedStartDate != oldWidget.startDate
     if (oldWidget.startDate != widget.startDate || oldWidget.endDate != widget.endDate) {
-      // Only update if user hasn't made a selection yet, or if dates changed from outside
-      // Preserve user's selection if they've already selected dates
-      if (_selectedStartDate == oldWidget.startDate && _selectedEndDate == oldWidget.endDate) {
-        // User hasn't made a custom selection, use widget dates
+      // Check if internal dates match old widget dates
+      // If they match, it means the dates came from outside (not from user selection)
+      // If they don't match, it means user made a selection, so preserve it
+      final internalMatchesOld = _selectedStartDate != null && 
+                                  _selectedEndDate != null &&
+                                  isSameDay(_selectedStartDate!, oldWidget.startDate) &&
+                                  isSameDay(_selectedEndDate!, oldWidget.endDate);
+      
+      if (internalMatchesOld) {
+        // Internal dates match old widget dates, so update from new widget dates
         setState(() {
           _selectedStartDate = widget.startDate;
           _selectedEndDate = widget.endDate;
-          // Don't reset _focusedDay - keep current calendar view
-          // Don't reset _isSelectingStart - preserve user's selection state
         });
       }
-      // If user has made a selection, don't override it with widget dates
+      // If internal dates don't match old widget dates, it means user made a selection
+      // Don't override user's selection - preserve _selectedStartDate and _selectedEndDate
     }
   }
 
@@ -131,42 +136,35 @@ class _AvailabilityCalendarState extends State<AvailabilityCalendar> {
     if (!widget.allowSelection) return;
 
     setState(() {
-      if (_isSelectingStart) {
-        // First click (or third, fifth, etc.) - set start date and automatically set end date to same day
-        // This allows 1-day rental with single click
+      if (_isSelectingStart || _selectedStartDate == null) {
+        // First click - set start date only
         _selectedStartDate = selectedDay;
-        _selectedEndDate = selectedDay; // Automatically set end date to same day (1-day rental by default)
-        _isSelectingStart = false; // Next click will be for end date (optional)
+        _selectedEndDate = null; // Clear end date - user needs to click again for end date
+        _isSelectingStart = false; // Next click will set end date
         
-        // Immediately notify callback with 1-day rental (start and end same day)
-        if (widget.onDateRangeSelected != null) {
-          widget.onDateRangeSelected!(_selectedStartDate!, _selectedEndDate!);
-        }
+        // Don't notify callback yet - wait for end date to be selected
       } else {
-        // Second click (or fourth, sixth, etc.) - optionally set end date for multi-day rental
-        // If user clicks same day again, keeps 1-day rental
-        // If user clicks different day, sets end date to that day for multi-day rental
+        // Second click - set end date
+        // If user clicks before start date, treat it as new start date
         if (selectedDay.isBefore(_selectedStartDate!)) {
-          // If selected date is before start, don't allow it - keep end same as start (1 day rental)
-          _selectedEndDate = _selectedStartDate!;
+          _selectedStartDate = selectedDay;
+          _selectedEndDate = null;
+          _isSelectingStart = false; // Next click will set end date
         } else {
           // Selected date is same as or after start - use selected day as end date
-          // If same day: stays 1-day rental
-          // If later day: becomes multi-day rental
           _selectedEndDate = selectedDay;
-        }
-        _isSelectingStart = true; // Next click will be for new start date (cycle repeats)
-        
-        // Notify callback after setting end date
-        if (widget.onDateRangeSelected != null && 
-            _selectedStartDate != null && 
-            _selectedEndDate != null) {
-          widget.onDateRangeSelected!(_selectedStartDate!, _selectedEndDate!);
+          _isSelectingStart = true; // Next click will start new selection
+          
+          // Now notify callback with both start and end dates
+          if (widget.onDateRangeSelected != null && 
+              _selectedStartDate != null && 
+              _selectedEndDate != null) {
+            widget.onDateRangeSelected!(_selectedStartDate!, _selectedEndDate!);
+          }
         }
       }
       
       // Don't change focused day - keep current calendar view
-      // Only update if focusedDay is in a different month
       final currentMonth = DateTime(_focusedDay.year, _focusedDay.month);
       final selectedMonth = DateTime(focusedDay.year, focusedDay.month);
       if (currentMonth != selectedMonth) {
@@ -310,7 +308,8 @@ class _AvailabilityCalendarState extends State<AvailabilityCalendar> {
                               date.isAfter(_selectedStartDate!) &&
                               date.isBefore(_selectedEndDate!);
 
-              // If date is in range, show yellow background
+              // If date is start, end, or in range, show yellow background
+              // isStart can be true even if end date is not set yet
               if (isStart || isEnd || isInRange) {
                 return Container(
                   margin: const EdgeInsets.all(4),

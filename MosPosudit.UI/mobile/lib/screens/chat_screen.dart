@@ -59,7 +59,7 @@ class _ChatScreenState extends State<ChatScreen> {
         });
       }
     } catch (e) {
-      print('Error loading user data: $e');
+      // Silently fail - user data not critical for chat
     }
   }
 
@@ -94,7 +94,7 @@ class _ChatScreenState extends State<ChatScreen> {
           try {
             await _messageService.markAsRead(msg.id);
           } catch (e) {
-            print('Error marking message as read: $e');
+            // Silently fail - message marking not critical
           }
         }
         
@@ -136,7 +136,6 @@ class _ChatScreenState extends State<ChatScreen> {
         });
       }
     } catch (e) {
-      print('Error loading messages: $e');
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -180,7 +179,6 @@ class _ChatScreenState extends State<ChatScreen> {
         });
       }
     } catch (e) {
-      print('Error sending message: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

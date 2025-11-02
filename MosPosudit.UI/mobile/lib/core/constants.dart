@@ -7,9 +7,7 @@ const String _apiUrlFromEnv = String.fromEnvironment('API_URL', defaultValue: _d
 
 // Get API base URL - uses dart-define or default
 String getApiBaseUrl() {
-  final url = _apiUrlFromEnv;
-  print('Using API URL: $url');
-  return url;
+  return _apiUrlFromEnv;
 }
 
 // Get API base URL (computed at runtime)

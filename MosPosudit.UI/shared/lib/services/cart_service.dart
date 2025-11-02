@@ -14,7 +14,7 @@ class CartService {
     return cartItemsJson.map((json) => CartItemModel.fromJson(jsonDecode(json))).toList();
   }
 
-  // Add item to cart (simplified - using toolId, quantity, dailyRate)
+  /// Adds item to cart with specified tool, quantity, and daily rate
   Future<bool> addToCart({
     required int toolId,
     required int quantity,
@@ -26,12 +26,9 @@ class CartService {
       final prefs = await SharedPreferences.getInstance();
       final cartItemsJson = prefs.getStringList(_cartItemsKey) ?? [];
       
-      // Check if item already exists - for now, we'll allow duplicates
-      // In a real scenario, you might want to update quantity
-      
       final newItem = CartItemModel(
-        id: DateTime.now().millisecondsSinceEpoch, // Temporary ID
-        cartId: 0, // Will be set when syncing with backend
+        id: DateTime.now().millisecondsSinceEpoch,
+        cartId: 0,
         toolId: toolId,
         quantity: quantity,
         startDate: startDate ?? DateTime.now(),
@@ -43,7 +40,6 @@ class CartService {
       await prefs.setStringList(_cartItemsKey, cartItemsJson);
       return true;
     } catch (e) {
-      print('Error adding to cart: $e');
       return false;
     }
   }
@@ -62,7 +58,6 @@ class CartService {
       await prefs.setStringList(_cartItemsKey, cartItemsJson);
       return true;
     } catch (e) {
-      print('Error removing from cart: $e');
       return false;
     }
   }
@@ -94,7 +89,6 @@ class CartService {
       await prefs.setStringList(_cartItemsKey, updatedItems);
       return true;
     } catch (e) {
-      print('Error updating cart item: $e');
       return false;
     }
   }
@@ -106,7 +100,6 @@ class CartService {
       await prefs.remove(_cartItemsKey);
       return true;
     } catch (e) {
-      print('Error clearing cart: $e');
       return false;
     }
   }
@@ -135,7 +128,7 @@ class CartService {
     num total = 0;
     for (var item in items) {
       var days = item.endDate.difference(item.startDate).inDays;
-      if (days <= 0) days = 1; // Minimum 1 day
+      if (days <= 0) days = 1;
       total += item.dailyRate * item.quantity * days;
     }
     return total;

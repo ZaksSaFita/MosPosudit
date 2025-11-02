@@ -28,7 +28,6 @@ class RecommendationService {
       
       throw Exception('Failed to fetch home recommendations: ${res.statusCode}');
     } catch (e) {
-      print('Error fetching home recommendations: $e');
       return [];
     }
   }
@@ -47,7 +46,6 @@ class RecommendationService {
       
       throw Exception('Failed to fetch cart recommendations: ${res.statusCode}');
     } catch (e) {
-      print('Error fetching cart recommendations: $e');
       return [];
     }
   }

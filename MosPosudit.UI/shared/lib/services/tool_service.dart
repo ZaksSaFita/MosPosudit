@@ -17,7 +17,7 @@ class ToolService {
       if (res.statusCode == 200) {
         try {
           final decoded = jsonDecode(res.body);
-          // Backend vraća PagedResult<T> sa items i totalCount
+          // Backend returns PagedResult<T> with items and totalCount
           final List<dynamic> data;
           if (decoded is Map && decoded.containsKey('items')) {
             data = decoded['items'] as List<dynamic>;
@@ -31,21 +31,15 @@ class ToolService {
             try {
               return ToolModel.fromJson(e);
             } catch (e) {
-              print('Error parsing single tool: $e');
               rethrow;
             }
           }).toList();
         } catch (e, stackTrace) {
-          print('Error parsing tools JSON: $e');
-          print('Stack trace: $stackTrace');
-          print('Response body: ${res.body}');
           rethrow;
         }
       }
       throw Exception('Failed to fetch tools: ${res.statusCode} - ${res.body}');
     } catch (e, stackTrace) {
-      print('Error in fetchTools: $e');
-      print('Stack trace: $stackTrace');
       rethrow;
     }
   }
@@ -107,9 +101,8 @@ class ToolService {
     DateTime endDate,
   ) async {
     try {
-      // Format dates as ISO strings for query parameters
-      final startDateStr = startDate.toIso8601String().split('T')[0]; // YYYY-MM-DD
-      final endDateStr = endDate.toIso8601String().split('T')[0]; // YYYY-MM-DD
+      final startDateStr = startDate.toIso8601String().split('T')[0];
+      final endDateStr = endDate.toIso8601String().split('T')[0];
 
       final queryParams = {
         'startDate': startDateStr,
@@ -122,11 +115,10 @@ class ToolService {
         final decoded = jsonDecode(res.body);
         return ToolAvailabilityModel.fromJson(decoded);
       } else if (res.statusCode == 404) {
-        return null; // Tool not found
+        return null;
       }
       throw Exception('Failed to fetch availability: ${res.statusCode} - ${res.body}');
     } catch (e) {
-      print('Error fetching availability: $e');
       rethrow;
     }
   }

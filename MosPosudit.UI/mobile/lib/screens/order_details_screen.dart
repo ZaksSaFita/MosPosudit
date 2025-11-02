@@ -34,7 +34,6 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
         _isLoading = false;
       });
     } catch (e) {
-      print('Error loading order details: $e');
       setState(() {
         _isLoading = false;
       });

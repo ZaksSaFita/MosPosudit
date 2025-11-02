@@ -7,7 +7,6 @@ import 'package:mosposudit_shared/services/tool_service.dart';
 import 'package:mosposudit_shared/models/cart.dart';
 import 'package:mosposudit_shared/models/tool.dart';
 import 'package:mosposudit_shared/models/tool_availability.dart';
-import 'package:mosposudit_shared/widgets/availability_calendar.dart';
 import 'package:mosposudit_shared/dtos/order/order_insert_request.dart';
 import 'paypal_payment_screen.dart';
 
@@ -32,9 +31,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   
   DateTime _selectedStartDate = DateTime.now();
   DateTime _selectedEndDate = DateTime.now().add(const Duration(days: 1));
-  ToolAvailabilityModel? _combinedAvailability;
-  bool _isLoadingAvailability = false;
-  bool _datesSelected = false; // Track if user has selected dates
+  bool _datesSelected = false;
+  bool _isValidatingAvailability = false;
   
   @override
   void initState() {
@@ -63,396 +61,291 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         _cartItems = items;
         _tools = toolsMap;
         if (items.isNotEmpty) {
-          // Set default dates from first item or use current date
           _selectedStartDate = items.first.startDate;
           _selectedEndDate = items.first.endDate;
+          _datesSelected = true;
         }
         _isLoading = false;
       });
-      
-      // Load combined availability for all tools in cart
-      await _loadCombinedAvailability();
     } catch (e) {
-      print('Error loading cart: $e');
       setState(() {
         _isLoading = false;
       });
     }
   }
   
-  Future<void> _loadCombinedAvailability() async {
-    if (_cartItems.isEmpty || _tools.isEmpty) return;
-    
+  /// Validates availability for all tools in cart for selected date range
+  Future<bool> _validateAvailabilityForSelectedPeriod() async {
+    if (_cartItems.isEmpty || _tools.isEmpty) {
+      return false;
+    }
+
     setState(() {
-      _isLoadingAvailability = true;
+      _isValidatingAvailability = true;
     });
-    
+
     try {
       final now = DateTime.now();
       final startDate = _selectedStartDate.isBefore(now) ? now : _selectedStartDate;
-      final endDate = _selectedEndDate.add(const Duration(days: 90)); // Load 90 days ahead
       
-      // Load availability for all tools
-      final availabilityList = <ToolAvailabilityModel>[];
+      final unavailableTools = <Map<String, dynamic>>[];
+      
       for (var cartItem in _cartItems) {
         final tool = _tools[cartItem.toolId];
-        if (tool != null) {
-          final availability = await _toolService.getAvailability(
-            tool.id,
-            startDate,
-            endDate,
-          );
-          if (availability != null) {
-            availabilityList.add(availability);
-          }
-        }
-      }
-      
-      if (availabilityList.isEmpty) {
-        setState(() {
-          _combinedAvailability = null;
-          _isLoadingAvailability = false;
-        });
-        return;
-      }
-      
-      // Combine availability - take minimum available quantity for each day
-      final firstAvailability = availabilityList.first;
-      final combinedDailyAvailability = <String, int>{};
-      
-      // Get all date keys from the first availability
-      for (var dateKey in firstAvailability.dailyAvailability.keys) {
-        int minAvailable = firstAvailability.getAvailableQuantityForDateString(dateKey) ?? 0;
-        
-        // Find minimum across all tools for this date
-        for (var availability in availabilityList) {
-          final available = availability.getAvailableQuantityForDateString(dateKey) ?? 0;
-          if (available < minAvailable) {
-            minAvailable = available;
-          }
-        }
-        
-        combinedDailyAvailability[dateKey] = minAvailable;
-      }
-      
-      // Total quantity is sum of all tool quantities
-      int totalQuantity = 0;
-      for (var cartItem in _cartItems) {
-        final tool = _tools[cartItem.toolId];
-        if (tool != null) {
-          totalQuantity += (tool.quantity ?? 0);
-        }
-      }
-      
-      setState(() {
-        _combinedAvailability = ToolAvailabilityModel(
-          toolId: 0, // Combined availability for multiple tools
-          totalQuantity: totalQuantity,
-          dailyAvailability: combinedDailyAvailability,
+        if (tool == null) continue;
+
+        final availability = await _toolService.getAvailability(
+          tool.id,
+          startDate,
+          _selectedEndDate,
         );
-        _isLoadingAvailability = false;
-      });
-    } catch (e) {
-      print('Error loading combined availability: $e');
-      setState(() {
-        _combinedAvailability = null;
-        _isLoadingAvailability = false;
-      });
-    }
-  }
-  
-  Future<void> _onDateRangeSelected(DateTime startDate, DateTime endDate) async {
-    setState(() {
-      _selectedStartDate = startDate;
-      _selectedEndDate = endDate;
-      _datesSelected = true; // Mark that user has selected dates
-    });
-    
-    // Reload availability for new date range
-    await _loadCombinedAvailability();
-    
-    // Validate availability after loading
-    await _validateAvailabilityForSelectedPeriod();
-  }
-  
-  Future<void> _validateAvailabilityForSelectedPeriod() async {
-    if (_cartItems.isEmpty || _tools.isEmpty || _combinedAvailability == null) {
-      return;
-    }
 
-    final now = DateTime.now();
-    final startDate = _selectedStartDate.isBefore(now) ? now : _selectedStartDate;
-    
-    // Check each cart item against availability
-    for (var cartItem in _cartItems) {
-      final tool = _tools[cartItem.toolId];
-      if (tool == null) continue;
+        if (availability == null) continue;
 
-      // Get availability for this specific tool
-      final availability = await _toolService.getAvailability(
-        tool.id,
-        startDate,
-        _selectedEndDate,
-      );
-
-      if (availability == null) continue;
-
-      // Check each day in the selected date range
-      var currentDate = startDate;
-      while (currentDate.isBefore(_selectedEndDate) || currentDate.isAtSameMomentAs(_selectedEndDate)) {
-        final dateKey = '${currentDate.year.toString().padLeft(4, '0')}-'
-            '${currentDate.month.toString().padLeft(2, '0')}-'
-            '${currentDate.day.toString().padLeft(2, '0')}';
-        
-        final available = availability.getAvailableQuantityForDateString(dateKey) ?? 0;
-        
-        if (available < cartItem.quantity) {
-          final dateStr = '${currentDate.day}.${currentDate.month}.${currentDate.year}';
+        var currentDate = startDate;
+        while (currentDate.isBefore(_selectedEndDate) || currentDate.isAtSameMomentAs(_selectedEndDate)) {
+          final dateKey = '${currentDate.year.toString().padLeft(4, '0')}-'
+              '${currentDate.month.toString().padLeft(2, '0')}-'
+              '${currentDate.day.toString().padLeft(2, '0')}';
           
-          // Show popup dialog with error message
-          if (mounted) {
-            showDialog(
-              context: context,
-              builder: (context) => AlertDialog(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+          final available = availability.getAvailableQuantityForDateString(dateKey) ?? 0;
+          
+          if (available < cartItem.quantity) {
+            unavailableTools.add({
+              'tool': tool,
+              'cartItem': cartItem,
+              'date': currentDate,
+              'available': available,
+              'totalQuantity': availability.totalQuantity,
+            });
+            break;
+          }
+
+          currentDate = currentDate.add(const Duration(days: 1));
+        }
+      }
+      
+      setState(() {
+        _isValidatingAvailability = false;
+      });
+
+      if (unavailableTools.isNotEmpty && mounted) {
+        _showUnavailableDevicesDialog(unavailableTools);
+        return false;
+      }
+      
+      return true;
+    } catch (e) {
+      setState(() {
+        _isValidatingAvailability = false;
+      });
+      return false;
+    }
+  }
+
+  /// Shows dialog with list of unavailable devices
+  void _showUnavailableDevicesDialog(List<Map<String, dynamic>> unavailableTools) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Row(
+          children: [
+            Icon(
+              Icons.warning_amber_rounded,
+              color: Colors.orange.shade700,
+              size: 28,
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Devices Not Available',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
                 ),
-                title: Row(
-                  children: [
-                    Icon(
-                      Icons.warning_amber_rounded,
-                      color: Colors.orange.shade700,
-                      size: 28,
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'The following devices cannot be rented for the selected period:',
+                style: TextStyle(
+                  fontSize: 15,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ...unavailableTools.map((item) {
+                final tool = item['tool'] as ToolModel;
+                final cartItem = item['cartItem'] as CartItemModel;
+                final date = item['date'] as DateTime;
+                final available = item['available'] as int;
+                final totalQuantity = item['totalQuantity'] as int;
+                final dateStr = '${date.day}.${date.month}.${date.year}';
+                
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: Colors.orange.shade200,
+                      width: 1,
                     ),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Text(
-                        'Insufficient Devices',
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        tool.name ?? 'Unknown tool',
                         style: TextStyle(
-                          fontSize: 20,
+                          fontSize: 14,
                           fontWeight: FontWeight.bold,
+                          color: Colors.orange.shade900,
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Not enough ${tool.name ?? 'devices'} available for the selected period.',
-                      style: const TextStyle(
-                        fontSize: 15,
-                        height: 1.4,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.orange.shade50,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: Colors.orange.shade200,
-                          width: 1,
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      const SizedBox(height: 8),
+                      Row(
                         children: [
-                          Row(
+                          Icon(
+                            Icons.calendar_today,
+                            size: 14,
+                            color: Colors.orange.shade700,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Date: $dateStr',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.orange.shade800,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Icon(
-                                Icons.calendar_today,
-                                size: 16,
-                                color: Colors.orange.shade700,
-                              ),
-                              const SizedBox(width: 8),
                               Text(
-                                'Date: $dateStr',
+                                'Requested',
                                 style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.orange.shade900,
+                                  fontSize: 11,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                              Text(
+                                '${cartItem.quantity}',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          Container(
+                            width: 1,
+                            height: 30,
+                            color: Colors.orange.shade200,
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Requested',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey.shade600,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '${cartItem.quantity}',
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
+                              Text(
+                                'Available',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey.shade600,
+                                ),
                               ),
-                              Container(
-                                width: 1,
-                                height: 40,
-                                color: Colors.orange.shade200,
-                              ),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Available',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey.shade600,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '$available/${availability.totalQuantity}',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.red.shade700,
-                                    ),
-                                  ),
-                                ],
+                              Text(
+                                '$available/$totalQuantity',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.red.shade700,
+                                ),
                               ),
                             ],
                           ),
                         ],
                       ),
-                    ),
-                  ],
-                ),
-                actions: [
-                  ElevatedButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange.shade700,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: const Text(
-                      'OK',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    ],
                   ),
-                ],
+                );
+              }).toList(),
+            ],
+          ),
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange.shade700,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24,
+                vertical: 12,
               ),
-            );
-          }
-          return;
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Future<void> _selectStartDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedStartDate,
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    
+    if (picked != null) {
+      setState(() {
+        _selectedStartDate = picked;
+        if (_selectedStartDate.isAfter(_selectedEndDate)) {
+          _selectedEndDate = _selectedStartDate.add(const Duration(days: 1));
         }
-
-        currentDate = currentDate.add(const Duration(days: 1));
-      }
+        _datesSelected = false;
+      });
     }
   }
   
-  Future<void> _updateCartItemQuantity(int itemId, int newQuantity, int toolId) async {
-    if (newQuantity <= 0) {
-      return; // Don't remove items from checkout, user should go back to cart
-    }
-
-    // Find the tool
-    final tool = _tools[toolId];
-    if (tool == null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Tool information not available'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-      }
-      return;
-    }
-
-    // Check against stock quantity (how many devices we have in total)
-    final maxQuantity = tool.quantity ?? 0;
-    if (maxQuantity <= 0) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Tool is out of stock'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-      return;
-    }
-
-    // Check if new quantity exceeds stock
-    if (newQuantity > maxQuantity) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Maximum quantity: $maxQuantity'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-      return;
-    }
-
-    // Quantity is valid, update it
-    try {
-      final success = await _cartService.updateCartItemQuantity(itemId, newQuantity);
-      if (success) {
-        // Update local state directly instead of full reload
-        setState(() {
-          final itemIndex = _cartItems.indexWhere((item) => item.id == itemId);
-          if (itemIndex != -1) {
-            final item = _cartItems[itemIndex];
-            _cartItems[itemIndex] = CartItemModel(
-              id: item.id,
-              cartId: item.cartId,
-              toolId: item.toolId,
-              quantity: newQuantity,
-              startDate: item.startDate,
-              endDate: item.endDate,
-              dailyRate: item.dailyRate,
-              notes: item.notes,
-            );
-          }
-        });
-        // Reload availability to reflect updated quantity
-        await _loadCombinedAvailability();
-      }
-    } catch (e) {
-      print('Error updating quantity: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error updating quantity: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+  Future<void> _selectEndDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedEndDate,
+      firstDate: _selectedStartDate,
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    
+    if (picked != null) {
+      setState(() {
+        _selectedEndDate = picked;
+        _datesSelected = true;
+      });
+      
+      await _validateAvailabilityForSelectedPeriod();
     }
   }
-
+  
   num get _totalAmount {
     num total = 0;
     final days = _selectedEndDate.difference(_selectedStartDate).inDays + 1;
@@ -488,7 +381,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 ),
                 const SizedBox(height: 12),
                 const Text(
-                  '2. Late Returns:',
+                  '2. Return Time:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'All tools must be returned by 12:00 PM (noon) on the return date. Returns after this time may be considered late and subject to additional charges.',
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  '3. Late Returns:',
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 4),
@@ -497,7 +399,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 ),
                 const SizedBox(height: 12),
                 const Text(
-                  '3. Tool Condition:',
+                  '4. Tool Condition:',
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 4),
@@ -506,7 +408,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 ),
                 const SizedBox(height: 12),
                 const Text(
-                  '4. Insurance:',
+                  '5. Insurance:',
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 4),
@@ -515,7 +417,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 ),
                 const SizedBox(height: 12),
                 const Text(
-                  '5. Payment:',
+                  '6. Payment:',
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 4),
@@ -573,17 +475,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         throw Exception('User not logged in');
       }
 
-      // Validate availability for all tools in cart before proceeding
       final now = DateTime.now();
       final startDate = _selectedStartDate.isBefore(now) ? now : _selectedStartDate;
+      
+      final unavailableTools = <Map<String, dynamic>>[];
       
       for (var cartItem in _cartItems) {
         final tool = _tools[cartItem.toolId];
         if (tool == null) {
-          throw Exception('Tool information not available for tool ID ${cartItem.toolId}');
+          continue;
         }
 
-        // Check availability for this tool
         final availability = await _toolService.getAvailability(
           tool.id,
           startDate,
@@ -591,10 +493,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         );
 
         if (availability == null) {
-          throw Exception('Unable to check availability for ${tool.name ?? 'tool'}');
+          continue;
         }
 
-        // Check each day in the selected date range
         var currentDate = startDate;
         while (currentDate.isBefore(_selectedEndDate) || currentDate.isAtSameMomentAs(_selectedEndDate)) {
           final dateKey = '${currentDate.year.toString().padLeft(4, '0')}-'
@@ -604,18 +505,31 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           final available = availability.getAvailableQuantityForDateString(dateKey) ?? 0;
           
           if (available < cartItem.quantity) {
-            final dateStr = '${currentDate.day}.${currentDate.month}.${currentDate.year}';
-            throw Exception(
-              'Not enough ${tool.name ?? 'tools'} available. '
-              'Requested: ${cartItem.quantity}, Available on $dateStr: $available/${availability.totalQuantity}'
-            );
+            unavailableTools.add({
+              'tool': tool,
+              'cartItem': cartItem,
+              'date': currentDate,
+              'available': available,
+              'totalQuantity': availability.totalQuantity,
+            });
+            break;
           }
 
           currentDate = currentDate.add(const Duration(days: 1));
         }
       }
+      
+      if (unavailableTools.isNotEmpty) {
+        setState(() {
+          _isProcessing = false;
+        });
+        
+        if (mounted) {
+          _showUnavailableDevicesDialog(unavailableTools);
+        }
+        return;
+      }
 
-      // Create order items from cart
       final orderItems = _cartItems.map((item) => 
         OrderItemInsertRequest(
           toolId: item.toolId,
@@ -623,7 +537,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         )
       ).toList();
 
-      // Prepare order data (but don't create in database yet)
       final orderRequest = OrderInsertRequest(
         userId: userId,
         startDate: _selectedStartDate,
@@ -632,13 +545,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         orderItems: orderItems,
       );
 
-      // Reset processing state before navigation to prevent loading loop
       if (mounted) {
         setState(() {
           _isProcessing = false;
         });
         
-        // Navigate to PayPal payment - Order will be created AFTER successful payment
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
             builder: (context) => PayPalPaymentScreen(orderData: orderRequest),
@@ -646,7 +557,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         );
       }
     } catch (e) {
-      print('Error during checkout: $e');
       if (mounted) {
         setState(() {
           _isProcessing = false;
@@ -682,7 +592,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Date selection
                           const Text(
                             'Select Rental Period',
                             style: TextStyle(
@@ -692,78 +601,40 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           ),
                           const SizedBox(height: 16),
                           
-                          // Calendar with availability
-                          if (_isLoadingAvailability)
-                            const Center(
-                              child: Padding(
-                                padding: EdgeInsets.all(32.0),
-                                child: CircularProgressIndicator(),
+                          Card(
+                            child: ListTile(
+                              leading: const Icon(Icons.calendar_today),
+                              title: const Text('Start Date'),
+                              subtitle: Text(
+                                '${_selectedStartDate.day}/${_selectedStartDate.month}/${_selectedStartDate.year}',
+                                style: const TextStyle(fontWeight: FontWeight.bold),
                               ),
-                            )
-                          else if (_combinedAvailability == null)
-                            const Center(
-                              child: Padding(
-                                padding: EdgeInsets.all(32.0),
-                                child: Text('Loading availability...'),
-                              ),
-                            )
-                          else
-                            AvailabilityCalendar(
-                              availability: _combinedAvailability!,
-                              startDate: _selectedStartDate,
-                              endDate: _selectedEndDate,
-                              onDateRangeSelected: _onDateRangeSelected,
-                              allowSelection: true,
+                              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                              onTap: _selectStartDate,
                             ),
+                          ),
+                          const SizedBox(height: 12),
+                          
+                          Card(
+                            child: ListTile(
+                              leading: const Icon(Icons.event),
+                              title: const Text('End Date'),
+                              subtitle: Text(
+                                '${_selectedEndDate.day}/${_selectedEndDate.month}/${_selectedEndDate.year}',
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              trailing: _isValidatingAvailability
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    )
+                                  : const Icon(Icons.arrow_forward_ios, size: 16),
+                              onTap: _selectEndDate,
+                            ),
+                          ),
                           const SizedBox(height: 24),
                           
-                          // Selected dates - only show when user has selected dates
-                          if (_datesSelected)
-                            Card(
-                              child: Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        const Text('Start Date:'),
-                                        Text(
-                                          '${_selectedStartDate.day}/${_selectedStartDate.month}/${_selectedStartDate.year}',
-                                          style: const TextStyle(fontWeight: FontWeight.bold),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        const Text('End Date:'),
-                                        Text(
-                                          '${_selectedEndDate.day}/${_selectedEndDate.month}/${_selectedEndDate.year}',
-                                          style: const TextStyle(fontWeight: FontWeight.bold),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        const Text('Days:'),
-                                        Text(
-                                          '${_selectedEndDate.difference(_selectedStartDate).inDays + 1}',
-                                          style: const TextStyle(fontWeight: FontWeight.bold),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          const SizedBox(height: 24),
-                          
-                          // Order items summary
                           const Text(
                             'Order Summary',
                             style: TextStyle(
@@ -807,50 +678,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                         ],
                                       ),
                                     ),
-                                    // Quantity controls
                                     Row(
                                       children: [
-                                        Container(
-                                          decoration: BoxDecoration(
-                                            border: Border.all(color: Colors.blue),
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                                     IconButton(
-                                                       icon: const Icon(Icons.remove, size: 18),
-                                                       padding: const EdgeInsets.all(4),
-                                                       constraints: const BoxConstraints(
-                                                         minWidth: 32,
-                                                         minHeight: 32,
-                                                       ),
-                                                       onPressed: item.quantity > 1
-                                                           ? () => _updateCartItemQuantity(item.id, item.quantity - 1, item.toolId)
-                                                           : null,
-                                                     ),
-                                                     Container(
-                                                       padding: const EdgeInsets.symmetric(horizontal: 12),
-                                                       child: Text(
-                                                         '${item.quantity}',
-                                                         style: const TextStyle(
-                                                           fontSize: 16,
-                                                           fontWeight: FontWeight.bold,
-                                                         ),
-                                                       ),
-                                                     ),
-                                                     IconButton(
-                                                       icon: const Icon(Icons.add, size: 18),
-                                                       padding: const EdgeInsets.all(4),
-                                                       constraints: const BoxConstraints(
-                                                         minWidth: 32,
-                                                         minHeight: 32,
-                                                       ),
-                                                       onPressed: (tool?.quantity != null && item.quantity >= tool!.quantity!)
-                                                           ? null // Disable if quantity reached maximum
-                                                           : () => _updateCartItemQuantity(item.id, item.quantity + 1, item.toolId),
-                                                     ),
-                                            ],
+                                        Text(
+                                          'Qty: ${item.quantity}',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.grey.shade600,
                                           ),
                                         ),
                                         const SizedBox(width: 12),
@@ -872,7 +706,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           }),
                           const SizedBox(height: 24),
                           
-                          // Total amount - only show when dates are selected
                           if (_datesSelected)
                             Card(
                               color: Colors.blue.shade50,
@@ -902,7 +735,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           ),
                           const SizedBox(height: 24),
                           
-                          // Terms and conditions
                           Card(
                             child: Column(
                               children: [
@@ -951,7 +783,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     ),
                   ),
                   
-                  // Checkout button
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(

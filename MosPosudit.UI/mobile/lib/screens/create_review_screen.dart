@@ -77,10 +77,77 @@ class _CreateReviewScreenState extends State<CreateReviewScreen> {
           _isSubmitting = false;
         });
 
-        context.showTopSnackBar(
-          message: 'Error submitting review: ${e.toString()}',
-          backgroundColor: Colors.red,
-        );
+        // Check if user already reviewed this tool
+        final errorMessage = e.toString().toLowerCase();
+        if (errorMessage.contains('already reviewed') || 
+            errorMessage.contains('have already reviewed')) {
+          // Show popup dialog instead of snackbar
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                title: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      color: Colors.orange.shade700,
+                      size: 28,
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Text(
+                        'Already Reviewed',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                content: const Text(
+                  'You already have reviewed this device.',
+                  style: TextStyle(
+                    fontSize: 16,
+                    height: 1.4,
+                  ),
+                ),
+                actions: [
+                  ElevatedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange.shade700,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: const Text(
+                      'OK',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          );
+        } else {
+          // Show snackbar for other errors
+          context.showTopSnackBar(
+            message: 'Error submitting review: ${e.toString()}',
+            backgroundColor: Colors.red,
+          );
+        }
       }
     }
   }

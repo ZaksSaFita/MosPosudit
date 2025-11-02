@@ -28,7 +28,7 @@ class UserService {
     final res = await _api.get('/User');
     if (res.statusCode == 200) {
       final decoded = jsonDecode(res.body);
-      // Backend vraća PagedResult<T> sa items i totalCount
+        // Backend returns PagedResult<T> with items and totalCount
       final List<dynamic> data;
       if (decoded is Map && decoded.containsKey('items')) {
         data = decoded['items'] as List<dynamic>;
@@ -46,7 +46,7 @@ class UserService {
     final res = await _api.get('/User/non-admins');
     if (res.statusCode == 200) {
       final decoded = jsonDecode(res.body);
-      // Backend vraća direktno listu za non-admins endpoint
+        // Backend returns list directly for non-admins endpoint
       final List<dynamic> data = decoded is List ? decoded : [];
       return data.map((e) => UserModel.fromJson(e)).toList();
     }
@@ -67,7 +67,7 @@ class UserService {
     if (username != null) body['username'] = username;
     if (email != null) body['email'] = email;
     if (phoneNumber != null) body['phoneNumber'] = phoneNumber;
-    if (picture != null) body['picture'] = picture; // Backend koristi camelCase
+      if (picture != null) body['picture'] = picture;
 
     final res = await _api.post('/User/update-profile', body: body);
     if (res.statusCode == 200) {
@@ -98,7 +98,6 @@ class UserService {
       final res = await _api.post('/User/$userId/change-password', body: body);
       return res.statusCode == 200;
     } catch (e) {
-      print('Error in changePassword: $e');
       return false;
     }
   }
@@ -111,7 +110,6 @@ class UserService {
       }
       return false;
     } catch (e) {
-      print('Error in checkUsernameExists: $e');
       return false;
     }
   }
@@ -124,7 +122,6 @@ class UserService {
       }
       return false;
     } catch (e) {
-      print('Error in checkEmailExists: $e');
       return false;
     }
   }
@@ -137,7 +134,6 @@ class UserService {
       }
       return null;
     } catch (e) {
-      print('Error in getUserDetails: $e');
       return null;
     }
   }

@@ -41,7 +41,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
         });
       }
     } catch (e) {
-      print('Error loading orders: $e');
       setState(() {
         _isLoading = false;
       });

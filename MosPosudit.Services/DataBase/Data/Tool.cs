@@ -18,15 +18,9 @@ namespace MosPosudit.Services.DataBase.Data
 
         public int Quantity { get; set; }
 
-        public DateTime CreatedAt { get; set; }
-
         public bool IsAvailable { get; set; }
 
         public decimal DepositAmount { get; set; }
-        
-        public DateTime? LastMaintenanceDate { get; set; }
-        
-        public DateTime? NextMaintenanceDate { get; set; }
 
         // Image stored as base64 (null for seeded data - Flutter will load from assets based on name)
         public string? ImageBase64 { get; set; }

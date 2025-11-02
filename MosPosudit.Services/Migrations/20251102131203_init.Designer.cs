@@ -12,8 +12,8 @@ using MosPosudit.Services.DataBase;
 namespace MosPosudit.Services.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251101122135_v1.1.1")]
-    partial class v111
+    [Migration("20251102131203_init")]
+    partial class init
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

@@ -35,20 +35,10 @@ class _PayPalPaymentScreenState extends State<PayPalPaymentScreen> {
     _initializePayPal();
   }
 
+  /// Initializes PayPal payment flow by creating order and loading WebView
   Future<void> _initializePayPal() async {
     try {
-      if (kDebugMode) {
-        print('Initializing PayPal payment...');
-        print('Order data: ${widget.orderData.toJson()}');
-      }
-
-      // Create PayPal order (without creating order in database yet)
       final paypalOrder = await _paymentService.createPayPalOrder(widget.orderData);
-      
-      if (kDebugMode) {
-        print('PayPal order created: ${paypalOrder.orderId}');
-        print('Approval URL: ${paypalOrder.approvalUrl}');
-      }
 
       if (paypalOrder.approvalUrl.isEmpty) {
         throw Exception('PayPal approval URL is empty');
@@ -62,12 +52,10 @@ class _PayPalPaymentScreenState extends State<PayPalPaymentScreen> {
       // Initialize webview with platform-specific configuration
       _controller = WebViewController()
         ..setJavaScriptMode(JavaScriptMode.unrestricted)
+        ..setUserAgent('Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36')
         ..setNavigationDelegate(
           NavigationDelegate(
             onPageStarted: (String url) {
-              if (kDebugMode) {
-                print('Page started loading: $url');
-              }
               if (mounted) {
                 setState(() {
                   _isLoading = true;
@@ -75,9 +63,6 @@ class _PayPalPaymentScreenState extends State<PayPalPaymentScreen> {
               }
             },
             onPageFinished: (String url) {
-              if (kDebugMode) {
-                print('Page finished loading: $url');
-              }
               if (mounted) {
                 setState(() {
                   _isLoading = false;
@@ -85,12 +70,6 @@ class _PayPalPaymentScreenState extends State<PayPalPaymentScreen> {
               }
             },
             onWebResourceError: (WebResourceError error) {
-              if (kDebugMode) {
-                print('WebView error: ${error.description}');
-                print('Error code: ${error.errorCode}');
-                print('Error type: ${error.errorType}');
-              }
-              // Handle WebView errors gracefully
               if (mounted) {
                 setState(() {
                   _isLoading = false;
@@ -107,36 +86,18 @@ class _PayPalPaymentScreenState extends State<PayPalPaymentScreen> {
             },
             onNavigationRequest: (NavigationRequest request) {
               final url = request.url;
-              if (kDebugMode) {
-                print('Navigation to: $url');
-              }
               
-              // Check if this is the return URL
               if (url.contains('/payment/paypal/return')) {
-                // Extract PayPal Order ID from URL
-                // PayPal returns Order ID as 'token' parameter, but sometimes as 'order_id'
-                try {
-                  final uri = Uri.parse(url);
-                  final token = uri.queryParameters['token'] ?? uri.queryParameters['order_id'];
-                  
-                  if (token != null && token.isNotEmpty) {
-                    _handlePayPalReturn(token);
-                  } else {
-                    if (kDebugMode) {
-                      print('Warning: No token or order_id found in PayPal return URL: $url');
-                    }
-                  }
-                } catch (e) {
-                  if (kDebugMode) {
-                    print('Error parsing return URL: $e');
-                  }
+                final uri = Uri.parse(url);
+                final token = uri.queryParameters['token'] ?? uri.queryParameters['order_id'];
+                
+                if (token != null && token.isNotEmpty) {
+                  _handlePayPalReturn(token);
                 }
                 
-                // Don't navigate to this URL in webview
                 return NavigationDecision.prevent;
               }
               
-              // Check if this is the cancel URL
               if (url.contains('/payment/paypal/cancel')) {
                 _handlePayPalCancel();
                 return NavigationDecision.prevent;
@@ -147,22 +108,16 @@ class _PayPalPaymentScreenState extends State<PayPalPaymentScreen> {
           ),
         );
 
-      // Platform-specific Android configuration to prevent crashes and enable keyboard input
+      // Configure Android WebView for keyboard input and proper functionality
       if (_controller!.platform is AndroidWebViewController) {
         final androidController = _controller!.platform as AndroidWebViewController;
         AndroidWebViewController.enableDebugging(kDebugMode);
         androidController.setMediaPlaybackRequiresUserGesture(false);
-        
-        // Enable keyboard input for WebView
-        // This ensures that input fields in the WebView can receive keyboard input
-        androidController.setOnShowFileSelector((params) async {
-          // This callback is required for proper WebView functionality on Android
-          // It enables keyboard input and other interactions
-          return [];
-        });
+        androidController.setOnShowFileSelector((params) async => []);
       }
-
-      // Load the PayPal approval URL
+      
+      _controller!.enableZoom(true);
+      _controller!.setBackgroundColor(Colors.white);
       await _controller!.loadRequest(Uri.parse(_approvalUrl!));
       
       if (mounted) {
@@ -171,8 +126,6 @@ class _PayPalPaymentScreenState extends State<PayPalPaymentScreen> {
         });
       }
     } catch (e, stackTrace) {
-      print('Error initializing PayPal: $e');
-      print('Stack trace: $stackTrace');
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -199,11 +152,10 @@ class _PayPalPaymentScreenState extends State<PayPalPaymentScreen> {
       final result = await _paymentService.handlePayPalReturn(token);
       
       if (result != null && result['success'] == true) {
-        // Clear cart after successful payment (order is now created in database)
         try {
           await _cartService.clearCart();
         } catch (e) {
-          print('Error clearing cart: $e');
+          // Silently fail - cart will be cleared by backend
         }
 
         setState(() {
@@ -219,14 +171,10 @@ class _PayPalPaymentScreenState extends State<PayPalPaymentScreen> {
             ),
           );
 
-          // Wait a bit before navigating to show success message
           await Future.delayed(const Duration(seconds: 2));
 
           if (mounted) {
-            // Pop all routes back to ClientHomeScreen
             Navigator.of(context).popUntil((route) => route.isFirst);
-            
-            // After popping, switch to Home tab (index 0) using the GlobalKey
             WidgetsBinding.instance.addPostFrameCallback((_) {
               final homeState = ClientHomeScreen.navigatorKey.currentState;
               if (homeState != null) {
@@ -239,13 +187,11 @@ class _PayPalPaymentScreenState extends State<PayPalPaymentScreen> {
         throw Exception(result?['message'] ?? 'Payment was not completed');
       }
     } catch (e) {
-      print('Error handling PayPal return: $e');
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
         
-        // Extract the actual error message from exception
         String errorMessage = 'Payment was not completed';
         if (e.toString().contains('Exception:')) {
           errorMessage = e.toString().replaceFirst('Exception: ', '');

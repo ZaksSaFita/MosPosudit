@@ -69,12 +69,10 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       }
     } catch (e) {
-      print('Error loading data: $e');
       if (mounted) {
         setState(() {
           _isLoading = false;
           _isLoadingRecommendations = false;
-          // Fallback to first 6 tools with quantity > 0 if recommendations fail or are empty
           if (_recommendedTools.isEmpty) {
             _recommendedTools = _tools.where((t) => (t.quantity ?? 0) > 0).take(6).toList();
           }
@@ -84,8 +82,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
 
+  /// Builds tool image widget with fallback chain: base64 > asset > default icon
   Widget _buildToolImage(ToolModel tool) {
-    // Priority: base64 > asset filename (generated from name) > default icon
     return Container(
       width: double.infinity,
       height: double.infinity,
@@ -118,12 +116,10 @@ class _HomeScreenState extends State<HomeScreen> {
       final fileName = UtilityService.generateImageFileName(tool.name);
       if (fileName.isNotEmpty) {
         final assetPath = 'packages/mosposudit_shared/assets/images/tools/$fileName';
-        print('HomeScreen: Attempting to load asset: $assetPath for tool: ${tool.name}');
         return Image.asset(
           assetPath,
           fit: BoxFit.contain,
           errorBuilder: (context, error, stackTrace) {
-            print('HomeScreen: Error loading tool image: $assetPath for tool: ${tool.name}, error: $error');
             return _defaultToolIcon();
           },
         );

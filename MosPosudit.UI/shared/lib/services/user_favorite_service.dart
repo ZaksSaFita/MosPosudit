@@ -15,12 +15,12 @@ class UserFavoriteService {
         throw Exception('User not authenticated');
       }
 
-      // Backend će automatski koristiti authenticated user ID
+      // Backend automatically uses authenticated user ID
       final res = await _api.get('/UserFavorite', query: query);
       
       if (res.statusCode == 200) {
         final decoded = jsonDecode(res.body);
-        // Backend vraća PagedResult<T> sa items i totalCount
+        // Backend returns PagedResult<T> with items and totalCount
         final List<dynamic> data;
         if (decoded is Map && decoded.containsKey('items')) {
           data = decoded['items'] as List<dynamic>;
@@ -34,7 +34,6 @@ class UserFavoriteService {
       
       throw Exception('Failed to fetch favorites: ${res.statusCode} - ${res.body}');
     } catch (e) {
-      print('Error in getFavorites: $e');
       rethrow;
     }
   }
@@ -50,7 +49,6 @@ class UserFavoriteService {
       
       return null;
     } catch (e) {
-      print('Error in getById: $e');
       return null;
     }
   }
@@ -66,7 +64,6 @@ class UserFavoriteService {
       
       return false;
     } catch (e) {
-      print('Error in isFavorite: $e');
       return false;
     }
   }
@@ -79,7 +76,7 @@ class UserFavoriteService {
       }
 
       final body = request.toJson();
-      body['userId'] = userId; // Backend će override-ati sa authenticated user ID
+      body['userId'] = userId;
 
       final res = await _api.post('/UserFavorite', body: body);
       
@@ -90,7 +87,6 @@ class UserFavoriteService {
       
       throw Exception('Failed to add favorite: ${res.statusCode} - ${res.body}');
     } catch (e) {
-      print('Error in addFavorite: $e');
       rethrow;
     }
   }
@@ -100,7 +96,6 @@ class UserFavoriteService {
       final res = await _api.delete('/UserFavorite/tool/$toolId');
       return res.statusCode == 200 || res.statusCode == 204;
     } catch (e) {
-      print('Error in removeFavorite: $e');
       return false;
     }
   }
