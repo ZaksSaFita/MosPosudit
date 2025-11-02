@@ -236,9 +236,10 @@ class _AvailabilityCalendarState extends State<AvailabilityCalendar> {
                     ),
                     if (available != null)
                       Text(
-                        '$available',
+                        '$available/${widget.availability.totalQuantity}',
                         style: TextStyle(
-                          fontSize: 10,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w500,
                           color: _getDayColor(date),
                         ),
                       ),
@@ -270,9 +271,10 @@ class _AvailabilityCalendarState extends State<AvailabilityCalendar> {
                       ),
                     ),
                     Text(
-                      '$available',
+                      '$available/${widget.availability.totalQuantity}',
                       style: TextStyle(
-                        fontSize: 10,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w500,
                         color: _getDayColor(date),
                       ),
                     ),

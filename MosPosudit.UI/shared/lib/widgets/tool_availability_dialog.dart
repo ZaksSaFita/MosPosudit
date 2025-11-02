@@ -121,13 +121,15 @@ class _ToolAvailabilityDialogState extends State<ToolAvailabilityDialog> {
       child: Container(
         padding: const EdgeInsets.all(16),
         constraints: const BoxConstraints(maxWidth: 600, maxHeight: 700),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             // Header
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Expanded(
                   child: Text(
@@ -136,6 +138,8 @@ class _ToolAvailabilityDialogState extends State<ToolAvailabilityDialog> {
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                     ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
                   ),
                 ),
                 IconButton(
@@ -181,98 +185,129 @@ class _ToolAvailabilityDialogState extends State<ToolAvailabilityDialog> {
                 ),
               )
             else
-              Expanded(
-                child: SingleChildScrollView(
-                  child: AvailabilityCalendar(
-                    availability: _availability!,
-                    startDate: _selectedStartDate ?? DateTime.now(),
-                    endDate: _selectedEndDate ?? DateTime.now().add(const Duration(days: 90)),
-                    onDateRangeSelected: _onDateRangeSelected,
-                    allowSelection: true,
-                  ),
-                ),
+              AvailabilityCalendar(
+                availability: _availability!,
+                startDate: _selectedStartDate ?? DateTime.now(),
+                endDate: _selectedEndDate ?? DateTime.now().add(const Duration(days: 90)),
+                onDateRangeSelected: _onDateRangeSelected,
+                allowSelection: true,
               ),
             
             // Selected dates info
-            if (_selectedStartDate != null && _selectedEndDate != null)
+            if (_selectedStartDate != null && _selectedEndDate != null && _availability != null)
               Container(
                 padding: const EdgeInsets.all(12),
                 margin: const EdgeInsets.only(top: 16),
                 decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
+                  color: Colors.grey.shade50,
                   borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey.shade300),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
+                    const Text(
+                      'Daily Breakdown:',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: _buildDailyBreakdown(),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+  
+  List<Widget> _buildDailyBreakdown() {
+    if (_selectedStartDate == null || _selectedEndDate == null || _availability == null) {
+      return [];
+    }
+    
+    final breakdown = <Widget>[];
+    var currentDate = _selectedStartDate!;
+    final monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    
+    while (currentDate.isBefore(_selectedEndDate!) || 
+           currentDate.isAtSameMomentAs(_selectedEndDate!)) {
+      final dateKey = '${currentDate.year.toString().padLeft(4, '0')}-'
+          '${currentDate.month.toString().padLeft(2, '0')}-'
+          '${currentDate.day.toString().padLeft(2, '0')}';
+      final available = _availability!.getAvailableQuantityForDateString(dateKey) ?? 0;
+      final total = _availability!.totalQuantity;
+      final rented = total - available;
+      
+      final isAvailable = available > 0;
+      
+      breakdown.add(
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '${currentDate.day}. ${monthNames[currentDate.month - 1]}',
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              Row(
+                children: [
+                  if (isAvailable)
+                    Row(
                       children: [
-                        const Text(
-                          'Selected Period:',
+                        const Icon(Icons.check_circle, size: 16, color: Colors.green),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Dostupno: $available/$total',
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.grey,
+                            color: Colors.green.shade700,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
+                      ],
+                    )
+                  else
+                    Row(
+                      children: [
+                        const Icon(Icons.cancel, size: 16, color: Colors.red),
+                        const SizedBox(width: 4),
                         Text(
-                          '${_selectedStartDate!.day}/${_selectedStartDate!.month}/${_selectedStartDate!.year} - '
-                          '${_selectedEndDate!.day}/${_selectedEndDate!.month}/${_selectedEndDate!.year}',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
+                          'Zauzeto: $rented/$total',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.red.shade700,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ],
                     ),
-                    if (_availability != null)
-                      Builder(
-                        builder: (context) {
-                          final days = _selectedEndDate!.difference(_selectedStartDate!).inDays + 1;
-                          // Get minimum available quantity across the selected period
-                          int minAvailable = _availability!.totalQuantity;
-                          var currentDate = _selectedStartDate!;
-                          while (currentDate.isBefore(_selectedEndDate!) || 
-                                 currentDate.isAtSameMomentAs(_selectedEndDate!)) {
-                            final dateKey = '${currentDate.year.toString().padLeft(4, '0')}-'
-                                '${currentDate.month.toString().padLeft(2, '0')}-'
-                                '${currentDate.day.toString().padLeft(2, '0')}';
-                            final available = _availability!.getAvailableQuantityForDateString(dateKey) ?? 0;
-                            if (available < minAvailable) {
-                              minAvailable = available;
-                            }
-                            currentDate = currentDate.add(const Duration(days: 1));
-                          }
-                          
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              const Text(
-                                'Available:',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                              Text(
-                                '$minAvailable units',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: minAvailable > 0 ? Colors.green.shade700 : Colors.red.shade700,
-                                ),
-                              ),
-                            ],
-                          );
-                        },
-                      ),
-                  ],
-                ),
+                ],
               ),
-          ],
+            ],
+          ),
         ),
-      ),
-    );
+      );
+      
+      currentDate = currentDate.add(const Duration(days: 1));
+    }
+    
+    return breakdown;
   }
 }
 

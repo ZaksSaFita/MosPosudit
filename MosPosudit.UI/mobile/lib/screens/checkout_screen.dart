@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:table_calendar/table_calendar.dart';
 import 'package:mosposudit_shared/services/cart_service.dart';
 import 'package:mosposudit_shared/services/order_service.dart';
 import 'package:mosposudit_shared/services/payment_service.dart';
@@ -7,6 +6,8 @@ import 'package:mosposudit_shared/services/auth_service.dart';
 import 'package:mosposudit_shared/services/tool_service.dart';
 import 'package:mosposudit_shared/models/cart.dart';
 import 'package:mosposudit_shared/models/tool.dart';
+import 'package:mosposudit_shared/models/tool_availability.dart';
+import 'package:mosposudit_shared/widgets/availability_calendar.dart';
 import 'package:mosposudit_shared/dtos/order/order_insert_request.dart';
 import 'paypal_payment_screen.dart';
 
@@ -29,10 +30,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   bool _isProcessing = false;
   bool _termsAccepted = false;
   
-  DateTime _focusedDay = DateTime.now();
   DateTime _selectedStartDate = DateTime.now();
   DateTime _selectedEndDate = DateTime.now().add(const Duration(days: 1));
-  CalendarFormat _calendarFormat = CalendarFormat.month;
+  ToolAvailabilityModel? _combinedAvailability;
+  bool _isLoadingAvailability = false;
   
   @override
   void initState() {
@@ -67,12 +68,105 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         }
         _isLoading = false;
       });
+      
+      // Load combined availability for all tools in cart
+      await _loadCombinedAvailability();
     } catch (e) {
       print('Error loading cart: $e');
       setState(() {
         _isLoading = false;
       });
     }
+  }
+  
+  Future<void> _loadCombinedAvailability() async {
+    if (_cartItems.isEmpty || _tools.isEmpty) return;
+    
+    setState(() {
+      _isLoadingAvailability = true;
+    });
+    
+    try {
+      final now = DateTime.now();
+      final startDate = _selectedStartDate.isBefore(now) ? now : _selectedStartDate;
+      final endDate = _selectedEndDate.add(const Duration(days: 90)); // Load 90 days ahead
+      
+      // Load availability for all tools
+      final availabilityList = <ToolAvailabilityModel>[];
+      for (var cartItem in _cartItems) {
+        final tool = _tools[cartItem.toolId];
+        if (tool != null) {
+          final availability = await _toolService.getAvailability(
+            tool.id,
+            startDate,
+            endDate,
+          );
+          if (availability != null) {
+            availabilityList.add(availability);
+          }
+        }
+      }
+      
+      if (availabilityList.isEmpty) {
+        setState(() {
+          _combinedAvailability = null;
+          _isLoadingAvailability = false;
+        });
+        return;
+      }
+      
+      // Combine availability - take minimum available quantity for each day
+      final firstAvailability = availabilityList.first;
+      final combinedDailyAvailability = <String, int>{};
+      
+      // Get all date keys from the first availability
+      for (var dateKey in firstAvailability.dailyAvailability.keys) {
+        int minAvailable = firstAvailability.getAvailableQuantityForDateString(dateKey) ?? 0;
+        
+        // Find minimum across all tools for this date
+        for (var availability in availabilityList) {
+          final available = availability.getAvailableQuantityForDateString(dateKey) ?? 0;
+          if (available < minAvailable) {
+            minAvailable = available;
+          }
+        }
+        
+        combinedDailyAvailability[dateKey] = minAvailable;
+      }
+      
+      // Total quantity is sum of all tool quantities
+      int totalQuantity = 0;
+      for (var cartItem in _cartItems) {
+        final tool = _tools[cartItem.toolId];
+        if (tool != null) {
+          totalQuantity += (tool.quantity ?? 0);
+        }
+      }
+      
+      setState(() {
+        _combinedAvailability = ToolAvailabilityModel(
+          toolId: 0, // Combined availability for multiple tools
+          totalQuantity: totalQuantity,
+          dailyAvailability: combinedDailyAvailability,
+        );
+        _isLoadingAvailability = false;
+      });
+    } catch (e) {
+      print('Error loading combined availability: $e');
+      setState(() {
+        _combinedAvailability = null;
+        _isLoadingAvailability = false;
+      });
+    }
+  }
+  
+  void _onDateRangeSelected(DateTime startDate, DateTime endDate) {
+    setState(() {
+      _selectedStartDate = startDate;
+      _selectedEndDate = endDate;
+    });
+    // Reload availability for new date range
+    _loadCombinedAvailability();
   }
 
   num get _totalAmount {
@@ -272,67 +366,29 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           ),
                           const SizedBox(height: 16),
                           
-                          // Calendar
-                          TableCalendar(
-                            firstDay: DateTime.now(),
-                            lastDay: DateTime.now().add(const Duration(days: 365)),
-                            focusedDay: _focusedDay,
-                            calendarFormat: _calendarFormat,
-                            selectedDayPredicate: (day) {
-                              return isSameDay(_selectedStartDate, day) ||
-                                     isSameDay(_selectedEndDate, day) ||
-                                     (day.isAfter(_selectedStartDate) && day.isBefore(_selectedEndDate));
-                            },
-                            rangeStartDay: _selectedStartDate,
-                            rangeEndDay: _selectedEndDate,
-                            rangeSelectionMode: RangeSelectionMode.enforced,
-                            onDaySelected: (selectedDay, focusedDay) {
-                              if (_selectedStartDate.isAfter(selectedDay)) {
-                                setState(() {
-                                  _selectedStartDate = selectedDay;
-                                  _selectedEndDate = selectedDay.add(const Duration(days: 1));
-                                  _focusedDay = focusedDay;
-                                });
-                              } else {
-                                setState(() {
-                                  _selectedEndDate = selectedDay;
-                                  _focusedDay = focusedDay;
-                                });
-                              }
-                            },
-                            onPageChanged: (focusedDay) {
-                              setState(() {
-                                _focusedDay = focusedDay;
-                              });
-                            },
-                            onFormatChanged: (format) {
-                              setState(() {
-                                _calendarFormat = format;
-                              });
-                            },
-                            calendarStyle: CalendarStyle(
-                              selectedDecoration: BoxDecoration(
-                                color: Colors.blue,
-                                shape: BoxShape.circle,
+                          // Calendar with availability
+                          if (_isLoadingAvailability)
+                            const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(32.0),
+                                child: CircularProgressIndicator(),
                               ),
-                              todayDecoration: BoxDecoration(
-                                color: Colors.blue.shade200,
-                                shape: BoxShape.circle,
+                            )
+                          else if (_combinedAvailability == null)
+                            const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(32.0),
+                                child: Text('Loading availability...'),
                               ),
-                              rangeStartDecoration: BoxDecoration(
-                                color: Colors.blue.shade100,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              rangeEndDecoration: BoxDecoration(
-                                color: Colors.blue.shade100,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              withinRangeDecoration: BoxDecoration(
-                                color: Colors.blue.shade50,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
+                            )
+                          else
+                            AvailabilityCalendar(
+                              availability: _combinedAvailability!,
+                              startDate: _selectedStartDate,
+                              endDate: _selectedEndDate,
+                              onDateRangeSelected: _onDateRangeSelected,
+                              allowSelection: true,
                             ),
-                          ),
                           const SizedBox(height: 24),
                           
                           // Selected dates

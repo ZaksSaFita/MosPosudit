@@ -920,40 +920,17 @@ class _ToolsPageState extends State<ToolsPage> {
     try {
       final toolId = tool.id ?? 0;
       
-      // Check if tool is available and has quantity
-      if (tool.isAvailable == false || (tool.quantity != null && tool.quantity! <= 0)) {
-        if (mounted) {
-          String message = '${tool.name ?? "This tool"} cannot be added to cart.';
-          if (tool.isAvailable == false) {
-            message = '${tool.name ?? "This tool"} is not available.';
-          } else if (tool.quantity != null && tool.quantity! <= 0) {
-            message = '${tool.name ?? "This tool"} is out of stock.';
-          }
-          context.showTopSnackBar(
-            message: message,
-            backgroundColor: Colors.orange,
-          );
-        }
-        return;
-      }
+      // Tool is always available to be added to cart
+      // Availability is checked through the availability calendar when selecting dates
       
       // Check if item already exists in cart
       final existingItem = await _cartService.findItemByToolId(toolId);
       
+      // Note: Availability is checked through the availability calendar when selecting dates
+      // Quantity is no longer used to block adding to cart
       if (existingItem != null) {
-        // Check if increasing quantity would exceed available stock
-        final newQuantity = existingItem.quantity + 1;
-        if (tool.quantity != null && newQuantity > tool.quantity!) {
-          if (mounted) {
-            context.showTopSnackBar(
-              message: 'Cannot increase quantity. Only ${tool.quantity} available in stock.',
-              backgroundColor: Colors.orange,
-            );
-          }
-          return;
-        }
-        
         // Item already exists, automatically increase quantity
+        final newQuantity = existingItem.quantity + 1;
         final success = await _cartService.updateCartItemQuantity(
           existingItem.id,
           newQuantity,
@@ -1345,9 +1322,7 @@ class _ToolsPageState extends State<ToolsPage> {
                                           // Add to cart button - bottom right
                                           Expanded(
                                             child: ElevatedButton.icon(
-                                              onPressed: (_toolsInCart.contains(tool.id) || 
-                                                         tool.isAvailable == false ||
-                                                         (tool.quantity != null && tool.quantity! <= 0))
+                                              onPressed: (_toolsInCart.contains(tool.id))
                                                   ? null
                                                   : () => _addToCart(tool),
                                               icon: Icon(
