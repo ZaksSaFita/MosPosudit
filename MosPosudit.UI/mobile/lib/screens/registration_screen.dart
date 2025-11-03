@@ -43,7 +43,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       return;
     }
 
-    // Check if passwords match
     if (_passwordController.text != _confirmPasswordController.text) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -77,7 +76,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       );
 
       if (response.statusCode == 201) {
-        // Registration successful, now login the user automatically
         try {
           final loginResponse = await http.post(
             Uri.parse('${AppConfig.instance.apiBaseUrl}/Auth/login'),
@@ -96,7 +94,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             
             await prefs.setString('token', loginData['token'] ?? loginData['Token']);
             
-            // Get complete user data including role from /User/me endpoint
             final userResponse = await http.get(
               Uri.parse('${AppConfig.instance.apiBaseUrl}/User/me'),
               headers: {
@@ -120,7 +117,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               );
             }
           } else {
-            // Registration successful but auto-login failed
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
@@ -152,7 +148,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             errorMessage = errorData;
           }
         } catch (e) {
-          // Use default error message if parsing fails
         }
         
         if (mounted) {
@@ -233,7 +228,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                           ),
                         ),
                         const SizedBox(height: 32),
-                        // First Name
                         TextFormField(
                           controller: _firstNameController,
                           decoration: const InputDecoration(
@@ -253,7 +247,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                           },
                         ),
                         const SizedBox(height: 16),
-                        // Last Name
                         TextFormField(
                           controller: _lastNameController,
                           decoration: const InputDecoration(
@@ -273,7 +266,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                           },
                         ),
                         const SizedBox(height: 16),
-                        // Email
                         TextFormField(
                           controller: _emailController,
                           decoration: const InputDecoration(
@@ -296,7 +288,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                           },
                         ),
                         const SizedBox(height: 16),
-                        // Phone Number
                         TextFormField(
                           controller: _phoneController,
                           decoration: const InputDecoration(
@@ -316,7 +307,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                           },
                         ),
                         const SizedBox(height: 16),
-                        // Username
                         TextFormField(
                           controller: _usernameController,
                           decoration: const InputDecoration(
@@ -335,7 +325,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                           },
                         ),
                         const SizedBox(height: 16),
-                        // Password
                         TextFormField(
                           controller: _passwordController,
                           obscureText: _obscurePassword,
@@ -370,7 +359,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                           },
                         ),
                         const SizedBox(height: 16),
-                        // Confirm Password
                         TextFormField(
                           controller: _confirmPasswordController,
                           obscureText: _obscureConfirmPassword,
@@ -402,7 +390,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                           },
                         ),
                         const SizedBox(height: 24),
-                        // Register Button
                         SizedBox(
                           width: double.infinity,
                           height: 50,
@@ -426,7 +413,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        // Back to Login
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [

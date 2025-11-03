@@ -240,9 +240,7 @@ namespace MosPosudit.Services.Services
             SeedRecommendationData(db);
         }
 
-        /// <summary>
-        /// Seeds recommendation settings - should be called AFTER migrations are applied
-        /// </summary>
+        // Seeds recommendation settings with default values if not present
         public void SeedRecommendationSettingsIfNeeded(ApplicationDbContext db)
         {
             try
@@ -252,6 +250,8 @@ namespace MosPosudit.Services.Services
                 {
                     var defaultSettings = new RecommendationSettings
                     {
+                        Engine = RecommendationEngine.MachineLearning,
+                        TrainingIntervalDays = 7,
                         HomePopularWeight = 40.0,
                         HomeContentBasedWeight = 30.0,
                         HomeTopRatedWeight = 30.0,
@@ -282,7 +282,7 @@ namespace MosPosudit.Services.Services
             if (userRole == null)
                 return; // Cannot seed if role doesn't exist
 
-            // Seed additional users
+            // Seed additional users - MORE USERS = MORE DIVERSITY for ML
             var additionalUsers = new[]
             {
                 new { FirstName = "John", LastName = "Smith", Username = "john", Email = "john.smith@example.com", PhoneNumber = "111222333" },
@@ -290,6 +290,11 @@ namespace MosPosudit.Services.Services
                 new { FirstName = "Mike", LastName = "Williams", Username = "mike", Email = "mike.williams@example.com", PhoneNumber = "333444555" },
                 new { FirstName = "Emily", LastName = "Brown", Username = "emily", Email = "emily.brown@example.com", PhoneNumber = "444555666" },
                 new { FirstName = "David", LastName = "Davis", Username = "david", Email = "david.davis@example.com", PhoneNumber = "555666777" },
+                new { FirstName = "Lisa", LastName = "Wilson", Username = "lisa", Email = "lisa.wilson@example.com", PhoneNumber = "666777888" },
+                new { FirstName = "Tom", LastName = "Taylor", Username = "tom", Email = "tom.taylor@example.com", PhoneNumber = "777888999" },
+                new { FirstName = "Anna", LastName = "Martinez", Username = "anna", Email = "anna.martinez@example.com", PhoneNumber = "888999000" },
+                new { FirstName = "Chris", LastName = "Anderson", Username = "chris", Email = "chris.anderson@example.com", PhoneNumber = "999000111" },
+                new { FirstName = "Maria", LastName = "Garcia", Username = "maria", Email = "maria.garcia@example.com", PhoneNumber = "000111222" },
             };
 
             var userIds = new List<int>();
@@ -338,31 +343,73 @@ namespace MosPosudit.Services.Services
             if (!tools.Any())
                 return; // Cannot seed orders/reviews without tools
 
-            // Seed orders (rentanije) - spread over last 60 days to make recommendations work
+            // Seed orders (rentanije) - spread over last 90 days to make recommendations work
             var random = new Random(42); // Fixed seed for consistency
             var orderCount = 0;
             
-            for (int day = 0; day < 60; day++)
+            // PHASE 1: Create diverse orders for ML training (more users, more tool variety)
+            for (int day = 0; day < 90; day++)
             {
                 var orderDate = now.AddDays(-day);
                 
-                // Create 1-3 orders per day (some days have no orders)
-                var ordersPerDay = random.Next(0, 4); // 0-3 orders
+                // Create 2-5 orders per day (increased for more diversity)
+                var ordersPerDay = random.Next(2, 6); // 2-5 orders
                 
                 for (int orderIndex = 0; orderIndex < ordersPerDay; orderIndex++)
                 {
+                    // Pick a user (weighted towards having variety - each user should rent many different tools)
                     var userId = userIds[random.Next(userIds.Count)];
                     var startDate = orderDate.AddDays(random.Next(-7, 0)); // Start date 0-7 days ago
                     var endDate = startDate.AddDays(random.Next(1, 8)); // Rental period 1-7 days
                     var toolIds = new List<int>();
                     
-                    // 1-3 tools per order
-                    var toolsPerOrder = random.Next(1, 4);
-                    for (int i = 0; i < toolsPerOrder && toolIds.Count < tools.Count; i++)
+                    // Create more multi-item orders (1-4 tools, with bias towards 2-3 items for cart recommendations)
+                    var toolsPerOrder = random.Next(100) < 70 ? random.Next(2, 4) : 1; // 70% multi-item, 30% single item
+                    
+                    // Create patterns that ML can learn:
+                    // - 40% of orders: Tools from same category (learn category preferences)
+                    // - 30% of orders: Complementary tools (e.g., drill + drill bits)
+                    // - 30% of orders: Random mix
+                    var orderPattern = random.Next(100);
+                    
+                    if (orderPattern < 40 && tools.Any())
                     {
-                        var tool = tools[random.Next(tools.Count)];
-                        if (!toolIds.Contains(tool.Id))
+                        // PATTERN 1: Same category (helps learn user category preferences)
+                        var firstTool = tools[random.Next(tools.Count)];
+                        var categoryTools = tools.Where(t => t.CategoryId == firstTool.CategoryId && t.Id != firstTool.Id).ToList();
+                        toolIds.Add(firstTool.Id);
+                        
+                        for (int i = 1; i < toolsPerOrder && categoryTools.Any(); i++)
+                        {
+                            var tool = categoryTools[random.Next(categoryTools.Count)];
+                            if (!toolIds.Contains(tool.Id))
+                            {
+                                toolIds.Add(tool.Id);
+                                categoryTools.Remove(tool);
+                            }
+                        }
+                    }
+                    else if (orderPattern < 70)
+                    {
+                        // PATTERN 2: Complementary tools (helps learn "frequently bought together")
+                        // Pick tools somewhat related (simulate real user behavior)
+                        var availableTools = tools.ToList();
+                        for (int i = 0; i < toolsPerOrder && availableTools.Any(); i++)
+                        {
+                            var tool = availableTools[random.Next(availableTools.Count)];
                             toolIds.Add(tool.Id);
+                            availableTools.Remove(tool);
+                        }
+                    }
+                    else
+                    {
+                        // PATTERN 3: Random selection (adds noise for robustness)
+                        for (int i = 0; i < toolsPerOrder && tools.Any(); i++)
+                        {
+                            var tool = tools[random.Next(tools.Count)];
+                            if (!toolIds.Contains(tool.Id))
+                                toolIds.Add(tool.Id);
+                        }
                     }
 
                     if (toolIds.Any())

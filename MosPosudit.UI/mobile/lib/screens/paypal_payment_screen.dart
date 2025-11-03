@@ -4,7 +4,6 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 import 'package:mosposudit_shared/services/payment_service.dart';
 import 'package:mosposudit_shared/services/order_service.dart';
-import 'package:mosposudit_shared/dtos/payment/paypal_order_response.dart';
 import 'package:mosposudit_shared/dtos/order/order_insert_request.dart';
 import 'package:mosposudit_shared/services/cart_service.dart';
 import 'dart:async';
@@ -21,7 +20,6 @@ class PayPalPaymentScreen extends StatefulWidget {
 
 class _PayPalPaymentScreenState extends State<PayPalPaymentScreen> {
   final _paymentService = PaymentService();
-  final _orderService = OrderService();
   final _cartService = CartService();
   WebViewController? _controller;
   bool _isLoading = true;
@@ -35,7 +33,6 @@ class _PayPalPaymentScreenState extends State<PayPalPaymentScreen> {
     _initializePayPal();
   }
 
-  /// Initializes PayPal payment flow by creating order and loading WebView
   Future<void> _initializePayPal() async {
     try {
       final paypalOrder = await _paymentService.createPayPalOrder(widget.orderData);
@@ -49,7 +46,6 @@ class _PayPalPaymentScreenState extends State<PayPalPaymentScreen> {
         _errorMessage = null;
       });
 
-      // Initialize webview with platform-specific configuration
       _controller = WebViewController()
         ..setJavaScriptMode(JavaScriptMode.unrestricted)
         ..setUserAgent('Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36')
@@ -67,7 +63,6 @@ class _PayPalPaymentScreenState extends State<PayPalPaymentScreen> {
                 setState(() {
                   _isLoading = false;
                 });
-                // Inject JavaScript to ensure keyboard appears on input focus
                 _enableKeyboardSupport();
               }
             },
@@ -110,17 +105,12 @@ class _PayPalPaymentScreenState extends State<PayPalPaymentScreen> {
           ),
         );
 
-      // Configure Android WebView for keyboard input and proper functionality
       if (_controller!.platform is AndroidWebViewController) {
         final androidController = _controller!.platform as AndroidWebViewController;
         AndroidWebViewController.enableDebugging(kDebugMode);
         androidController.setMediaPlaybackRequiresUserGesture(false);
         androidController.setOnShowFileSelector((params) async => []);
         
-        // Note: Permission requests for camera/microphone are handled automatically
-        // by Android based on permissions declared in AndroidManifest.xml
-        // The permissions (CAMERA, RECORD_AUDIO, MODIFY_AUDIO_SETTINGS) are already
-        // declared in AndroidManifest.xml, so Android will prompt the user if needed
       }
       
       _controller!.enableZoom(true);
@@ -155,14 +145,12 @@ class _PayPalPaymentScreenState extends State<PayPalPaymentScreen> {
         _isLoading = true;
       });
 
-      // Handle return - backend will capture the order
       final result = await _paymentService.handlePayPalReturn(token);
       
       if (result != null && result['success'] == true) {
         try {
           await _cartService.clearCart();
         } catch (e) {
-          // Silently fail - cart will be cleared by backend
         }
 
         setState(() {
@@ -229,7 +217,6 @@ class _PayPalPaymentScreenState extends State<PayPalPaymentScreen> {
     }
   }
 
-  /// Enables keyboard support and auto-fills email by injecting JavaScript
   Future<void> _enableKeyboardSupport() async {
     if (_controller == null) return;
     
@@ -240,9 +227,7 @@ class _PayPalPaymentScreenState extends State<PayPalPaymentScreen> {
         (function() {
           var emailToFill = '${email}';
           
-          // Function to auto-fill email field
           function autoFillEmail() {
-            // Try multiple selectors for email fields
             var emailSelectors = [
               'input[type="email"]',
               'input[name*="email" i]',
@@ -258,7 +243,6 @@ class _PayPalPaymentScreenState extends State<PayPalPaymentScreen> {
                 if (input.value === '' || input.value === null) {
                   input.value = emailToFill;
                   
-                  // Trigger input events so PayPal detects the value
                   var events = ['input', 'change', 'keyup', 'blur'];
                   events.forEach(function(eventType) {
                     var event = new Event(eventType, { bubbles: true });
@@ -269,16 +253,13 @@ class _PayPalPaymentScreenState extends State<PayPalPaymentScreen> {
             }
           }
           
-          // Function to ensure keyboard appears on input focus
           function ensureKeyboardShows(input) {
             if (!input.hasAttribute('data-keyboard-handler')) {
               input.setAttribute('data-keyboard-handler', 'true');
               
-              // Remove readonly and disabled attributes that might block input
               input.removeAttribute('readonly');
               input.removeAttribute('disabled');
               
-              // Ensure input is focusable
               if (input.tabIndex < 0) {
                 input.tabIndex = 0;
               }
@@ -299,7 +280,6 @@ class _PayPalPaymentScreenState extends State<PayPalPaymentScreen> {
               }, true);
               
               input.addEventListener('focus', function() {
-                // Ensure keyboard shows by forcing focus
                 setTimeout(function() {
                   input.click();
                   input.focus();
@@ -308,29 +288,22 @@ class _PayPalPaymentScreenState extends State<PayPalPaymentScreen> {
             }
           }
           
-          // Handle existing inputs
           function setupExistingInputs() {
-            // Auto-fill email first
             autoFillEmail();
             
-            // Setup keyboard handlers for all inputs
             var inputs = document.querySelectorAll('input, textarea, [contenteditable="true"]');
             inputs.forEach(ensureKeyboardShows);
           }
           
-          // Setup inputs when DOM is ready
           if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', setupExistingInputs);
           } else {
             setupExistingInputs();
           }
           
-          // Also handle dynamically added inputs (PayPal often loads forms dynamically)
           var observer = new MutationObserver(function(mutations) {
-            // Auto-fill email on new elements
             autoFillEmail();
             
-            // Setup keyboard handlers for new inputs
             var inputs = document.querySelectorAll('input, textarea, [contenteditable="true"]');
             inputs.forEach(ensureKeyboardShows);
           });
@@ -342,7 +315,6 @@ class _PayPalPaymentScreenState extends State<PayPalPaymentScreen> {
             });
           }
           
-          // Re-run auto-fill every second for the first 10 seconds (in case form loads slowly)
           var attempts = 0;
           var fillInterval = setInterval(function() {
             autoFillEmail();
@@ -354,7 +326,6 @@ class _PayPalPaymentScreenState extends State<PayPalPaymentScreen> {
         })();
       ''');
     } catch (e) {
-      // Silently fail - keyboard should still work with default behavior
       if (kDebugMode) {
         print('Failed to inject keyboard support JavaScript: $e');
       }

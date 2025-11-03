@@ -46,7 +46,6 @@ namespace MosPosudit.Worker.Services
                     NetworkRecoveryInterval = TimeSpan.FromSeconds(10)
                 };
 
-                // Retry logic for connecting to RabbitMQ
                 var maxRetries = 3;
                 var retryDelay = TimeSpan.FromSeconds(1);
                 IConnection? connection = null;

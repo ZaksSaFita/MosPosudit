@@ -1,5 +1,4 @@
 services:
-  # SQL Server Database
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
     env_file:
@@ -9,7 +8,7 @@ services:
       - SA_PASSWORD=${SQL_SERVER_PASSWORD}
       - MSSQL_PID=Express
     ports:
-      - "1433:1433"
+      - "1430:1433"
     volumes:
       - sqlserver_data:/var/opt/mssql
     networks:
@@ -21,7 +20,6 @@ services:
       retries: 30
       start_period: 30s
 
-  # RabbitMQ for inter-service communication
   rabbitmq:
     image: rabbitmq:3-management
     env_file:
@@ -43,7 +41,6 @@ services:
       retries: 10
       start_period: 20s
 
-  # Main API Service
   api:
     build:
       context: .
@@ -66,6 +63,8 @@ services:
       - PayPal__CancelUrl=${PAYPAL_CANCEL_URL}
     ports:
       - "${API_PORT}:5000"
+    volumes:
+      - ./MLModels:/app/MLModels  # ML model cache - persistent storage
     depends_on:
       sqlserver:
         condition: service_healthy
@@ -80,7 +79,6 @@ services:
     networks:
       - mosposudit-network
 
-  # Worker Service for notifications and background tasks
   worker:
     build:
       context: .
@@ -98,6 +96,8 @@ services:
       - SMTP__Username=${SMTP_USERNAME}
       - SMTP__Password=${SMTP_PASSWORD}
       - SMTP__EnableSsl=${SMTP_ENABLE_SSL}
+    volumes:
+      - ./MLModels:/app/MLModels
     depends_on:
       sqlserver:
         condition: service_healthy

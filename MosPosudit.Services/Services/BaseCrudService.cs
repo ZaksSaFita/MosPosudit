@@ -33,6 +33,7 @@ namespace MosPosudit.Services.Services
         protected virtual async Task BeforeInsert(TEntity entity, TInsert request)
         {
             // Override in derived classes if needed
+            await Task.CompletedTask;
         }
 
         protected virtual TEntity MapInsertToEntity(TEntity entity, TInsert request)
@@ -55,6 +56,7 @@ namespace MosPosudit.Services.Services
         protected virtual async Task BeforeUpdate(TEntity entity, TUpdate request)
         {
             // Override in derived classes if needed
+            await Task.CompletedTask;
         }
 
         protected virtual void MapUpdateToEntity(TEntity entity, TUpdate request)
@@ -77,6 +79,7 @@ namespace MosPosudit.Services.Services
         protected virtual async Task BeforeDelete(TEntity entity)
         {
             // Override in derived classes if needed
+            await Task.CompletedTask;
         }
     }
 }

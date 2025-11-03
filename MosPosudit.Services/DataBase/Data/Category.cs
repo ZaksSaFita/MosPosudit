@@ -12,10 +12,8 @@ namespace MosPosudit.Services.DataBase.Data
 
         public string? Description { get; set; }
 
-        // Image stored as base64 (null for seeded data - Flutter will load from assets based on name)
         public string? ImageBase64 { get; set; }
 
-        // Navigation properties
         public ICollection<Tool> Tools { get; set; } = new List<Tool>();
     }
 } 

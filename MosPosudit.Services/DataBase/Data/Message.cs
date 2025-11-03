@@ -24,10 +24,8 @@ namespace MosPosudit.Services.DataBase.Data
 
         public bool IsRead { get; set; }
 
-        // Indicates if admin has started the chat (responded to user)
         public bool IsActive { get; set; }
 
-        // Admin who started the chat (if applicable)
         [ForeignKey("StartedByAdmin")]
         public int? StartedByAdminId { get; set; }
         public User? StartedByAdmin { get; set; }

@@ -4,15 +4,14 @@ namespace MosPosudit.Services.Interfaces
 {
     public interface ISettingsService
     {
-        /// <summary>
-        /// Gets the current recommendation settings (creates default if none exist)
-        /// </summary>
+        // Gets the current recommendation settings (creates default if none exist)
         Task<RecommendationSettings> GetRecommendationSettingsAsync();
 
-        /// <summary>
-        /// Updates the recommendation settings
-        /// </summary>
+        // Updates the recommendation settings
         Task<RecommendationSettings> UpdateRecommendationSettingsAsync(RecommendationSettings settings);
+
+        // Triggers immediate ML training by resetting LastTrainingDate
+        Task TriggerMLTrainingAsync();
     }
 }
 

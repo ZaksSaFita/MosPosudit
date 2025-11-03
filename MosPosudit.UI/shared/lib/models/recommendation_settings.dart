@@ -1,5 +1,41 @@
+enum RecommendationEngine {
+  ruleBased(0),
+  machineLearning(1),
+  hybrid(2);
+
+  final int value;
+  const RecommendationEngine(this.value);
+
+  static RecommendationEngine fromInt(int value) {
+    switch (value) {
+      case 0:
+        return RecommendationEngine.ruleBased;
+      case 1:
+        return RecommendationEngine.machineLearning;
+      case 2:
+        return RecommendationEngine.hybrid;
+      default:
+        return RecommendationEngine.ruleBased;
+    }
+  }
+
+  String get displayName {
+    switch (this) {
+      case RecommendationEngine.ruleBased:
+        return 'Rule-Based';
+      case RecommendationEngine.machineLearning:
+        return 'Machine Learning';
+      case RecommendationEngine.hybrid:
+        return 'Hybrid (ML + Fallback)';
+    }
+  }
+}
+
 class RecommendationSettingsModel {
   final int id;
+  final RecommendationEngine engine;
+  final int trainingIntervalDays;
+  final DateTime? lastTrainingDate;
   final double homePopularWeight;
   final double homeContentBasedWeight;
   final double homeTopRatedWeight;
@@ -10,6 +46,9 @@ class RecommendationSettingsModel {
 
   RecommendationSettingsModel({
     required this.id,
+    required this.engine,
+    required this.trainingIntervalDays,
+    this.lastTrainingDate,
     required this.homePopularWeight,
     required this.homeContentBasedWeight,
     required this.homeTopRatedWeight,
@@ -23,6 +62,11 @@ class RecommendationSettingsModel {
     try {
       return RecommendationSettingsModel(
         id: json['id'] as int? ?? 0,
+        engine: RecommendationEngine.fromInt(json['engine'] ?? json['Engine'] ?? 0),
+        trainingIntervalDays: json['trainingIntervalDays'] ?? json['TrainingIntervalDays'] ?? 7,
+        lastTrainingDate: json['lastTrainingDate'] != null || json['LastTrainingDate'] != null
+            ? DateTime.parse((json['lastTrainingDate'] ?? json['LastTrainingDate']) as String)
+            : null,
         homePopularWeight: (json['homePopularWeight'] ?? json['HomePopularWeight'] ?? 40.0) is num
             ? ((json['homePopularWeight'] ?? json['HomePopularWeight']) as num).toDouble()
             : 40.0,
@@ -50,9 +94,11 @@ class RecommendationSettingsModel {
             : DateTime.now(),
       );
     } catch (e) {
-      // Return default settings if parsing fails
       return RecommendationSettingsModel(
         id: 0,
+        engine: RecommendationEngine.ruleBased,
+        trainingIntervalDays: 7,
+        lastTrainingDate: null,
         homePopularWeight: 40.0,
         homeContentBasedWeight: 30.0,
         homeTopRatedWeight: 30.0,
@@ -67,6 +113,8 @@ class RecommendationSettingsModel {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'engine': engine.value,
+      'trainingIntervalDays': trainingIntervalDays,
       'homePopularWeight': homePopularWeight,
       'homeContentBasedWeight': homeContentBasedWeight,
       'homeTopRatedWeight': homeTopRatedWeight,

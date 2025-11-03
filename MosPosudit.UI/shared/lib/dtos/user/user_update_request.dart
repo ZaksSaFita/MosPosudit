@@ -4,7 +4,7 @@ class UserUpdateRequestDto {
   final String? username;
   final String? email;
   final String? phoneNumber;
-  final String? picture; // Base64 string
+  final String? picture;
   final String? password;
   final int? roleId;
 

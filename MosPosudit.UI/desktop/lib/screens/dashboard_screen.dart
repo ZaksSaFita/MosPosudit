@@ -123,7 +123,6 @@ class _DashboardPageState extends State<DashboardPage> {
                         ],
                       ),
                       const SizedBox(height: 24),
-                      // Statistics Cards
                       Row(
                         children: [
                           Expanded(
@@ -155,11 +154,9 @@ class _DashboardPageState extends State<DashboardPage> {
                         ],
                       ),
                       const SizedBox(height: 24),
-                      // Charts and Recent Data Row
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Revenue Chart Card
                           Expanded(
                             flex: 2,
                             child: Card(
@@ -193,7 +190,6 @@ class _DashboardPageState extends State<DashboardPage> {
                             ),
                           ),
                           const SizedBox(width: 16),
-                          // Recent Orders Card
                           Expanded(
                             flex: 2,
                             child: Card(
@@ -248,7 +244,6 @@ class _DashboardPageState extends State<DashboardPage> {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      // Recent Payments Card - Full Width
                       SizedBox(
                         width: double.infinity,
                         child: Card(
@@ -423,7 +418,6 @@ class _RevenueChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Group payments by date (last 7 days)
     final now = DateTime.now();
     final dailyRevenue = <DateTime, num>{};
     

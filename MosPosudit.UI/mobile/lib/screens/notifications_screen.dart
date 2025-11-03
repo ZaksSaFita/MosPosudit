@@ -28,7 +28,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     try {
       final allNotifications = await _notificationService.fetchNotifications();
       
-      // Filter out "NewMessage" type notifications - only show rental-related notifications
       final rentalNotifications = allNotifications.where((n) {
         final type = n.type?.toLowerCase() ?? '';
         return type != 'newmessage' && type != 'new message';
@@ -50,7 +49,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Future<void> _handleNotificationTap(NotificationModel notification) async {
-    // Mark as read
     if (!notification.isRead) {
       await _notificationService.markAsRead(notification.id);
       setState(() {
@@ -69,7 +67,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       });
     }
 
-    // Rental notifications don't need navigation - they're informational
   }
 
   String _formatDate(DateTime date) {

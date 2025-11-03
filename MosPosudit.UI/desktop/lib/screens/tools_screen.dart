@@ -30,7 +30,6 @@ class _ToolsManagementPageState extends State<ToolsManagementPage> {
   String _searchQuery = '';
   ViewMode _viewMode = ViewMode.card;
   
-  // Pagination for table view
   int _currentPage = 1;
   int _itemsPerPage = 5;
 
@@ -68,7 +67,6 @@ class _ToolsManagementPageState extends State<ToolsManagementPage> {
   List<ToolModel> get _filteredTools {
     var filtered = _tools;
     
-    // Filter by search query
     if (_searchQuery.isNotEmpty) {
       filtered = filtered.where((tool) {
         final name = (tool.name ?? '').toLowerCase();
@@ -359,14 +357,13 @@ class _ToolsManagementPageState extends State<ToolsManagementPage> {
               ? null
               : descriptionController.text.trim(),
           'categoryId': selectedCategoryId!,
-          'conditionId': 1, // Default condition
+          'conditionId': 1,
           'dailyRate': double.tryParse(dailyRateController.text) ?? 0,
           'quantity': int.tryParse(quantityController.text) ?? 1,
           'depositAmount': double.tryParse(depositAmountController.text) ?? 0,
           'isAvailable': isAvailable,
         };
 
-        // Add image base64 if selected
         if (selectedImageBase64 != null) {
           data['imageBase64'] = selectedImageBase64;
         }
@@ -767,7 +764,6 @@ class _ToolsManagementPageState extends State<ToolsManagementPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -777,7 +773,6 @@ class _ToolsManagementPageState extends State<ToolsManagementPage> {
                 ),
                 Row(
                   children: [
-                    // View mode toggle
                     Container(
                       decoration: BoxDecoration(
                         border: Border.all(color: Colors.grey[300]!),
@@ -853,12 +848,11 @@ class _ToolsManagementPageState extends State<ToolsManagementPage> {
             ),
             const SizedBox(height: 24),
 
-            // Search
             TextField(
               onChanged: (value) {
                 setState(() {
                   _searchQuery = value;
-                  _currentPage = 1; // Reset pagination on search
+                  _currentPage = 1;
                 });
               },
               decoration: InputDecoration(
@@ -877,7 +871,6 @@ class _ToolsManagementPageState extends State<ToolsManagementPage> {
             ),
             const SizedBox(height: 24),
 
-            // Tools List
             Expanded(
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
@@ -979,10 +972,8 @@ class _ToolListCard extends StatelessWidget {
   });
 
   Widget _buildToolImage() {
-    // Priority: base64 > asset filename (generated from name) > default icon
     if (tool.imageBase64 != null && tool.imageBase64!.isNotEmpty) {
       try {
-        // Remove data URL prefix if present (e.g., "data:image/jpeg;base64,")
         String base64Data = tool.imageBase64!;
         if (base64Data.contains(',')) {
           base64Data = base64Data.split(',').last;
@@ -1017,7 +1008,6 @@ class _ToolListCard extends StatelessWidget {
     } else if (tool.name != null && tool.name!.isNotEmpty) {
       final fileName = UtilityService.generateImageFileName(tool.name);
       if (fileName.isNotEmpty) {
-        // Asset image from shared package
         final assetPath = 'packages/mosposudit_shared/assets/images/tools/$fileName';
         return Container(
           width: 120,
@@ -1077,7 +1067,6 @@ class _ToolListCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Sequential number
             Container(
               width: 40,
               alignment: Alignment.topCenter,
@@ -1091,15 +1080,12 @@ class _ToolListCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 16),
-            // Tool image
             _buildToolImage(),
             const SizedBox(width: 20),
-            // Tool info
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Tool name
                   Text(
                     tool.name ?? 'Unknown Tool',
                     style: const TextStyle(
@@ -1109,7 +1095,6 @@ class _ToolListCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  // Category badge
                   Row(
                     children: [
                       Container(
@@ -1136,7 +1121,6 @@ class _ToolListCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      // Daily rate
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
@@ -1156,7 +1140,6 @@ class _ToolListCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  // Description
                   Text(
                     tool.description ?? '',
                     style: TextStyle(
@@ -1168,10 +1151,8 @@ class _ToolListCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 8),
-                  // Quantity and Score
                   Row(
                     children: [
-                      // Quantity
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
@@ -1212,7 +1193,6 @@ class _ToolListCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      // Available status
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
@@ -1255,7 +1235,6 @@ class _ToolListCard extends StatelessWidget {
                 ],
               ),
             ),
-            // Action buttons
             SizedBox(
               width: 140,
               child: Column(
@@ -1580,7 +1559,6 @@ class _ToolsTableView extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        // Pagination controls
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -1601,7 +1579,6 @@ class _ToolsTableView extends StatelessWidget {
                   totalPages > 10 ? 10 : totalPages,
                   (index) {
                     if (totalPages > 10) {
-                      // Show first, last, and pages around current
                       int pageNum;
                       if (index < 3) {
                         pageNum = index + 1;
@@ -1665,7 +1642,6 @@ class _ToolsTableView extends StatelessWidget {
   Widget _buildToolImage(ToolModel tool) {
     if (tool.imageBase64 != null && tool.imageBase64!.isNotEmpty) {
       try {
-        // Remove data URL prefix if present (e.g., "data:image/jpeg;base64,")
         String base64Data = tool.imageBase64!;
         if (base64Data.contains(',')) {
           base64Data = base64Data.split(',').last;

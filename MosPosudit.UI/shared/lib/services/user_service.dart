@@ -28,7 +28,6 @@ class UserService {
     final res = await _api.get('/User');
     if (res.statusCode == 200) {
       final decoded = jsonDecode(res.body);
-        // Backend returns PagedResult<T> with items and totalCount
       final List<dynamic> data;
       if (decoded is Map && decoded.containsKey('items')) {
         data = decoded['items'] as List<dynamic>;
@@ -46,7 +45,6 @@ class UserService {
     final res = await _api.get('/User/non-admins');
     if (res.statusCode == 200) {
       final decoded = jsonDecode(res.body);
-        // Backend returns list directly for non-admins endpoint
       final List<dynamic> data = decoded is List ? decoded : [];
       return data.map((e) => UserModel.fromJson(e)).toList();
     }

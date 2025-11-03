@@ -24,16 +24,13 @@ namespace MosPosudit.Services.DataBase
         public DbSet<OrderItem> OrderItems { get; set; }
         public DbSet<Payment> Payments { get; set; }
         public DbSet<RecommendationSettings> RecommendationSettings { get; set; }
+        public DbSet<MLRecommendationModel> MLRecommendationModels { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
-            // Global configuration for decimal properties
             modelBuilder.ConfigureDecimalPrecision();
-
-
-            // Configure relationships with OnDelete behavior
 
             modelBuilder.Entity<Review>().HasOne(r => r.User)
                 .WithMany(u => u.Reviews)

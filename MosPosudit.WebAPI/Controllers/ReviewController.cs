@@ -37,11 +37,9 @@ namespace MosPosudit.WebAPI.Controllers
         [HttpPost]
         public override async Task<ReviewResponse> Create([FromBody] ReviewInsertRequest request)
         {
-            // Get user ID from authenticated user context
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
             if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
             {
-                // For testing without auth, allow userId in request body
                 if (request.UserId == 0)
                     throw new UnauthorizedAccessException("User ID is required");
                 userId = request.UserId;

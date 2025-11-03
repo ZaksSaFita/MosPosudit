@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mosposudit_shared/services/review_service.dart';
 import 'package:mosposudit_shared/dtos/review/review_insert_request.dart';
-import 'package:mosposudit_shared/models/tool.dart';
 import '../utils/snackbar_helper.dart';
 
 class CreateReviewScreen extends StatefulWidget {
@@ -23,7 +22,7 @@ class _CreateReviewScreenState extends State<CreateReviewScreen> {
   final _formKey = GlobalKey<FormState>();
   final _commentController = TextEditingController();
 
-  int _rating = 0; // 0 means not selected, 1-5 is valid
+  int _rating = 0;
   bool _isSubmitting = false;
 
   @override
@@ -68,7 +67,6 @@ class _CreateReviewScreenState extends State<CreateReviewScreen> {
           backgroundColor: Colors.green,
         );
 
-        // Return true to indicate success
         Navigator.of(context).pop(true);
       }
     } catch (e) {
@@ -77,11 +75,9 @@ class _CreateReviewScreenState extends State<CreateReviewScreen> {
           _isSubmitting = false;
         });
 
-        // Check if user already reviewed this tool
         final errorMessage = e.toString().toLowerCase();
         if (errorMessage.contains('already reviewed') || 
             errorMessage.contains('have already reviewed')) {
-          // Show popup dialog instead of snackbar
           showDialog(
             context: context,
             builder: (BuildContext context) {
@@ -142,7 +138,6 @@ class _CreateReviewScreenState extends State<CreateReviewScreen> {
             },
           );
         } else {
-          // Show snackbar for other errors
           context.showTopSnackBar(
             message: 'Error submitting review: ${e.toString()}',
             backgroundColor: Colors.red,
@@ -200,7 +195,6 @@ class _CreateReviewScreenState extends State<CreateReviewScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Tool info card
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(12),
@@ -235,7 +229,6 @@ class _CreateReviewScreenState extends State<CreateReviewScreen> {
               ),
               const SizedBox(height: 32),
 
-              // Rating section
               const Text(
                 'Score:',
                 style: TextStyle(
@@ -260,7 +253,6 @@ class _CreateReviewScreenState extends State<CreateReviewScreen> {
                 ),
               const SizedBox(height: 32),
 
-              // Comment section
               const Text(
                 'Review:',
                 style: TextStyle(
@@ -281,13 +273,11 @@ class _CreateReviewScreenState extends State<CreateReviewScreen> {
                   fillColor: Colors.grey.shade50,
                 ),
                 validator: (value) {
-                  // Comment is optional, no validation needed
                   return null;
                 },
               ),
               const SizedBox(height: 32),
 
-              // Submit button
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(

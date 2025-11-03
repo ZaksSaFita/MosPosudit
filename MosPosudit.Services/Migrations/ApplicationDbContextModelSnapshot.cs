@@ -44,6 +44,44 @@ namespace MosPosudit.Services.Migrations
                     b.ToTable("Categories");
                 });
 
+            modelBuilder.Entity("MosPosudit.Services.DataBase.Data.MLRecommendationModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ModelFilePath")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<long>("ModelFileSizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("ModelName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("TrainedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("TrainingDataSize")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TrainingMetrics")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("MLRecommendationModels");
+                });
+
             modelBuilder.Entity("MosPosudit.Services.DataBase.Data.Message", b =>
                 {
                     b.Property<int>("Id")
@@ -252,6 +290,9 @@ namespace MosPosudit.Services.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<int>("Engine")
+                        .HasColumnType("int");
+
                     b.Property<double>("HomeContentBasedWeight")
                         .HasColumnType("float");
 
@@ -260,6 +301,12 @@ namespace MosPosudit.Services.Migrations
 
                     b.Property<double>("HomeTopRatedWeight")
                         .HasColumnType("float");
+
+                    b.Property<DateTime?>("LastTrainingDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("TrainingIntervalDays")
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2");

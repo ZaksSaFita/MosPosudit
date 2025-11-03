@@ -26,7 +26,6 @@ class _CartRecommendationsDialogState extends State<CartRecommendationsDialog> {
   @override
   void initState() {
     super.initState();
-    // Auto-dismiss after 3 seconds
     _autoDismissTimer = Timer(const Duration(seconds: 3), () {
       if (mounted) {
         Navigator.of(context).pop();
@@ -128,7 +127,6 @@ class _CartRecommendationsDialogState extends State<CartRecommendationsDialog> {
       final cartService = CartService();
       final toolId = tool.id ?? 0;
       
-      // Check if already in cart
       final existingItem = await cartService.findItemByToolId(toolId);
       if (existingItem != null) {
         if (context.mounted) {
@@ -157,7 +155,6 @@ class _CartRecommendationsDialogState extends State<CartRecommendationsDialog> {
             duration: const Duration(seconds: 2),
           ),
         );
-        // Close dialog and navigate to cart screen
         _navigateToCart();
       }
     } catch (e) {

@@ -12,7 +12,6 @@ class MessageService {
       
       if (res.statusCode == 200) {
         final decoded = jsonDecode(res.body);
-        // Backend returns list directly for user endpoint
         final List<dynamic> data = decoded is List ? decoded : [];
         return data.map((e) => MessageModel.fromJson(e)).toList();
       }
@@ -64,14 +63,12 @@ class MessageService {
     }
   }
 
-  // Admin methods
   Future<List<MessageModel>> getPendingMessages() async {
     try {
       final res = await _api.get('/Message/pending');
       
       if (res.statusCode == 200) {
         final decoded = jsonDecode(res.body);
-        // Backend returns list directly for user endpoint
         final List<dynamic> data = decoded is List ? decoded : [];
         return data.map((e) => MessageModel.fromJson(e)).toList();
       }

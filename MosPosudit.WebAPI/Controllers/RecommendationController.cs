@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MosPosudit.Services.Interfaces;
+using System.Security.Claims;
 
 namespace MosPosudit.WebAPI.Controllers
 {
@@ -15,15 +16,18 @@ namespace MosPosudit.WebAPI.Controllers
             _recommendationService = recommendationService;
         }
 
-        /// <summary>
-        /// Gets personalized recommendations for home screen (4-6 tools)
-        /// </summary>
-        [HttpGet("home/{userId}")]
+        [HttpGet("home")]
         [Authorize]
-        public async Task<ActionResult> GetHomeRecommendations(int userId, [FromQuery] int count = 6)
+        public async Task<ActionResult> GetHomeRecommendations([FromQuery] int count = 6)
         {
             try
             {
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+                {
+                    return Unauthorized(new { message = "User ID is required" });
+                }
+
                 var recommendations = await _recommendationService.GetHomeRecommendationsAsync(userId, count);
                 return Ok(recommendations);
             }
@@ -33,9 +37,6 @@ namespace MosPosudit.WebAPI.Controllers
             }
         }
 
-        /// <summary>
-        /// Gets recommendations when user adds item to cart (2-3 tools)
-        /// </summary>
         [HttpGet("cart/{toolId}")]
         [Authorize]
         public async Task<ActionResult> GetCartRecommendations(int toolId, [FromQuery] int count = 3)

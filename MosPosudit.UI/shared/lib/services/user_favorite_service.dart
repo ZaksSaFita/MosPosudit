@@ -15,12 +15,10 @@ class UserFavoriteService {
         throw Exception('User not authenticated');
       }
 
-      // Backend automatically uses authenticated user ID
       final res = await _api.get('/UserFavorite', query: query);
       
       if (res.statusCode == 200) {
         final decoded = jsonDecode(res.body);
-        // Backend returns PagedResult<T> with items and totalCount
         final List<dynamic> data;
         if (decoded is Map && decoded.containsKey('items')) {
           data = decoded['items'] as List<dynamic>;

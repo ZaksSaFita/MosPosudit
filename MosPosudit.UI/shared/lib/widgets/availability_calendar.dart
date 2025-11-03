@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../models/tool_availability.dart';
 
-/// Color-coded calendar widget showing tool availability per day
 class AvailabilityCalendar extends StatefulWidget {
   final ToolAvailabilityModel availability;
   final DateTime startDate;
@@ -71,7 +70,7 @@ class _AvailabilityCalendarState extends State<AvailabilityCalendar> {
     final available = widget.availability.getAvailableQuantityForDateString(dateKey);
     
     if (available == null) {
-      return Colors.grey.shade300; // Date not in range
+      return Colors.grey.shade300;
     }
 
     final total = widget.availability.totalQuantity;
@@ -79,11 +78,11 @@ class _AvailabilityCalendarState extends State<AvailabilityCalendar> {
 
     // Three color scheme:
     if (available == total) {
-      return Colors.green.shade600; // No devices reserved
+      return Colors.green.shade600;
     } else if (available == 0) {
-      return Colors.red.shade800; // All devices reserved (dark red)
+      return Colors.red.shade800;
     } else {
-      return Colors.orange.shade600; // At least one reserved (but not all) - beautiful orange
+      return Colors.orange.shade600;
     }
   }
 
@@ -149,11 +148,11 @@ class _AvailabilityCalendarState extends State<AvailabilityCalendar> {
         if (selectedDay.isBefore(_selectedStartDate!)) {
           _selectedStartDate = selectedDay;
           _selectedEndDate = null;
-          _isSelectingStart = false; // Next click will set end date
+          _isSelectingStart = false;
         } else {
           // Selected date is same as or after start - use selected day as end date
           _selectedEndDate = selectedDay;
-          _isSelectingStart = true; // Next click will start new selection
+          _isSelectingStart = true;
           
           // Now notify callback with both start and end dates
           if (widget.onDateRangeSelected != null && 
@@ -198,7 +197,7 @@ class _AvailabilityCalendarState extends State<AvailabilityCalendar> {
           },
           // Remove onFormatChanged to prevent format changes
           headerStyle: HeaderStyle(
-            formatButtonVisible: false, // Hide format button (month/week)
+            formatButtonVisible: false,
             titleCentered: true,
             formatButtonShowsNext: false,
           ),
@@ -209,7 +208,7 @@ class _AvailabilityCalendarState extends State<AvailabilityCalendar> {
               borderRadius: BorderRadius.circular(8),
             ),
             todayDecoration: BoxDecoration(
-              color: Colors.transparent, // Let todayBuilder handle it
+              color: Colors.transparent,
               borderRadius: BorderRadius.circular(8),
             ),
             // Disable default range styling - we'll use custom builders

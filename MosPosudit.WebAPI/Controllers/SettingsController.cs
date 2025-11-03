@@ -18,9 +18,6 @@ namespace MosPosudit.WebAPI.Controllers
             _settingsService = settingsService;
         }
 
-        /// <summary>
-        /// Gets the current recommendation settings
-        /// </summary>
         [HttpGet("recommendations")]
         public async Task<ActionResult<RecommendationSettings>> GetRecommendationSettings()
         {
@@ -35,15 +32,11 @@ namespace MosPosudit.WebAPI.Controllers
             }
         }
 
-        /// <summary>
-        /// Updates the recommendation settings
-        /// </summary>
         [HttpPut("recommendations")]
         public async Task<ActionResult<RecommendationSettings>> UpdateRecommendationSettings([FromBody] RecommendationSettingsUpdateRequest request)
         {
             try
             {
-                // Validate weights sum to 100
                 var homeTotal = request.HomePopularWeight + request.HomeContentBasedWeight + request.HomeTopRatedWeight;
                 if (Math.Abs(homeTotal - 100.0) > 0.01)
                 {
@@ -56,9 +49,10 @@ namespace MosPosudit.WebAPI.Controllers
                     return BadRequest(new { message = $"Cart recommendation weights must sum to 100%. Current sum: {cartTotal}%" });
                 }
 
-                // Map request to entity
                 var settings = new RecommendationSettings
                 {
+                    Engine = (RecommendationEngine)request.Engine,
+                    TrainingIntervalDays = request.TrainingIntervalDays,
                     HomePopularWeight = request.HomePopularWeight,
                     HomeContentBasedWeight = request.HomeContentBasedWeight,
                     HomeTopRatedWeight = request.HomeTopRatedWeight,
@@ -76,6 +70,31 @@ namespace MosPosudit.WebAPI.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = "Error updating recommendation settings", error = ex.Message });
+            }
+        }
+
+        [HttpPost("recommendations/train")]
+        public async Task<ActionResult> TriggerMLTraining()
+        {
+            try
+            {
+                var settings = await _settingsService.GetRecommendationSettingsAsync();
+                
+                if (settings.Engine == RecommendationEngine.RuleBased)
+                {
+                    return BadRequest(new { message = "ML training is not enabled. Please set engine to MachineLearning or Hybrid first." });
+                }
+
+                await _settingsService.TriggerMLTrainingAsync();
+                
+                return Ok(new { 
+                    message = "ML training triggered successfully. Check worker logs for progress.",
+                    note = "Training will start within 1-5 minutes and take 2-5 minutes to complete."
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error triggering ML training", error = ex.Message });
             }
         }
     }

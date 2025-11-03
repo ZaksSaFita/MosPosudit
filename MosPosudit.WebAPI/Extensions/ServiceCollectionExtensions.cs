@@ -10,7 +10,6 @@ namespace MosPosudit.WebAPI.Extensions
     {
         public static IServiceCollection AddApplicationServices(this IServiceCollection services, IConfiguration configuration)
         {
-            // Configure DbContext
             services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"),
                     sqlServerOptionsAction: sqlOptions =>
@@ -21,7 +20,6 @@ namespace MosPosudit.WebAPI.Extensions
                             errorNumbersToAdd: null);
                     }));
 
-            // Register application services
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IAuthService, AuthService>();
             services.AddSingleton<IMessageService, MessageService>();
@@ -34,6 +32,7 @@ namespace MosPosudit.WebAPI.Extensions
             services.AddScoped<INotificationService, NotificationService>();
             services.AddScoped<IOrderService, OrderService>();
             services.AddScoped<IPaymentService, PaymentService>();
+            services.AddSingleton<MLPredictionService>();
             services.AddScoped<IRecommendationService, RecommendationService>();
             services.AddScoped<ISettingsService, SettingsService>();
 
@@ -44,7 +43,6 @@ namespace MosPosudit.WebAPI.Extensions
 
         public static IServiceCollection AddApplicationControllers(this IServiceCollection services)
         {
-            // Add CORS
             services.AddCors(options =>
             {
                 options.AddDefaultPolicy(policy =>

@@ -7,14 +7,12 @@ class CartService {
   static const String _cartItemsKey = 'cart_items';
   static const String _cartKey = 'cart';
 
-  // Get all cart items
   Future<List<CartItemModel>> getCartItems() async {
     final prefs = await SharedPreferences.getInstance();
     final cartItemsJson = prefs.getStringList(_cartItemsKey) ?? [];
     return cartItemsJson.map((json) => CartItemModel.fromJson(jsonDecode(json))).toList();
   }
 
-  /// Adds item to cart with specified tool, quantity, and daily rate
   Future<bool> addToCart({
     required int toolId,
     required int quantity,
@@ -44,7 +42,6 @@ class CartService {
     }
   }
 
-  // Remove item from cart
   Future<bool> removeFromCart(int itemId) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -62,7 +59,6 @@ class CartService {
     }
   }
 
-  // Update cart item quantity
   Future<bool> updateCartItemQuantity(int itemId, int quantity) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -93,7 +89,6 @@ class CartService {
     }
   }
 
-  // Clear cart
   Future<bool> clearCart() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -104,7 +99,6 @@ class CartService {
     }
   }
 
-  // Check if item exists in cart by toolId
   Future<CartItemModel?> findItemByToolId(int toolId) async {
     final items = await getCartItems();
     try {
@@ -116,13 +110,11 @@ class CartService {
     }
   }
 
-  // Get cart item count
   Future<int> getCartItemCount() async {
     final items = await getCartItems();
     return items.length;
   }
 
-  // Get total price
   Future<num> getTotalPrice() async {
     final items = await getCartItems();
     num total = 0;

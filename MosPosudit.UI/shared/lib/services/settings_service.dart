@@ -6,7 +6,6 @@ class SettingsService {
   final ApiClient _api;
   SettingsService({ApiClient? apiClient}) : _api = apiClient ?? ApiClient();
 
-  /// Gets the current recommendation settings
   Future<RecommendationSettingsModel> getRecommendationSettings() async {
     try {
       final res = await _api.get('/Settings/recommendations');
@@ -23,9 +22,9 @@ class SettingsService {
     }
   }
 
-  /// Updates the recommendation settings
-  /// Only sends the weight parameters, not the full model
   Future<RecommendationSettingsModel> updateRecommendationSettings({
+    required RecommendationEngine engine,
+    required int trainingIntervalDays,
     required double homePopularWeight,
     required double homeContentBasedWeight,
     required double homeTopRatedWeight,
@@ -34,6 +33,8 @@ class SettingsService {
   }) async {
     try {
       final body = {
+        'engine': engine.value,
+        'trainingIntervalDays': trainingIntervalDays,
         'homePopularWeight': homePopularWeight,
         'homeContentBasedWeight': homeContentBasedWeight,
         'homeTopRatedWeight': homeTopRatedWeight,
@@ -48,8 +49,32 @@ class SettingsService {
         return RecommendationSettingsModel.fromJson(decoded);
       }
       
-      // Try to parse error message
       String errorMessage = 'Failed to update recommendation settings: ${res.statusCode}';
+      try {
+        final error = jsonDecode(res.body);
+        if (error is Map && error.containsKey('message')) {
+          errorMessage = error['message'] as String;
+        }
+      } catch (_) {
+        errorMessage = '${errorMessage} - ${res.body}';
+      }
+      
+      throw Exception(errorMessage);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> triggerMLTraining() async {
+    try {
+      final res = await _api.post('/Settings/recommendations/train');
+      
+      if (res.statusCode == 200) {
+        final decoded = jsonDecode(res.body);
+        return decoded;
+      }
+      
+      String errorMessage = 'Failed to trigger ML training: ${res.statusCode}';
       try {
         final error = jsonDecode(res.body);
         if (error is Map && error.containsKey('message')) {

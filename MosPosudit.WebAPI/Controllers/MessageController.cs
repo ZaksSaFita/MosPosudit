@@ -19,7 +19,6 @@ namespace MosPosudit.WebAPI.Controllers
             _chatService = chatService ?? throw new ArgumentNullException(nameof(chatService));
         }
 
-        // Get all messages for current user (client)
         [HttpGet("user")]
         public async Task<IEnumerable<Model.Responses.Message.MessageResponse>> GetUserMessages()
         {
@@ -27,7 +26,6 @@ namespace MosPosudit.WebAPI.Controllers
             return await _chatService.GetUserMessages(userId);
         }
 
-        // Get all pending messages (for admin)
         [HttpGet("pending")]
         [Authorize(Roles = "Admin")]
         public async Task<IEnumerable<Model.Responses.Message.MessageResponse>> GetPendingMessages()
@@ -35,7 +33,6 @@ namespace MosPosudit.WebAPI.Controllers
             return await _chatService.GetPendingMessages();
         }
 
-        // Send message (user sends to admin)
         [HttpPost("send")]
         public async Task<Model.Responses.Message.MessageResponse> SendMessage([FromBody] MessageSendRequest request)
         {
@@ -43,7 +40,6 @@ namespace MosPosudit.WebAPI.Controllers
             return await _chatService.SendMessage(userId, request);
         }
 
-        // Start chat (admin responds to user's first message)
         [HttpPost("{messageId}/start")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> StartChat(int messageId)
@@ -53,7 +49,6 @@ namespace MosPosudit.WebAPI.Controllers
             return Ok(new { message = "Chat started successfully" });
         }
 
-        // Start chat with user directly (admin initiates chat)
         [HttpPost("start-with-user/{userId}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> StartChatWithUser(int userId)
@@ -70,7 +65,6 @@ namespace MosPosudit.WebAPI.Controllers
             }
         }
 
-        // Send reply (admin or user)
         [HttpPost("reply")]
         public async Task<Model.Responses.Message.MessageResponse> SendReply([FromBody] MessageSendRequest request, [FromQuery] int conversationUserId)
         {
@@ -78,7 +72,6 @@ namespace MosPosudit.WebAPI.Controllers
             return await _chatService.SendReply(currentUserId, conversationUserId, request);
         }
 
-        // Mark message as read
         [HttpPut("{id}/read")]
         public async Task<IActionResult> MarkAsRead(int id)
         {

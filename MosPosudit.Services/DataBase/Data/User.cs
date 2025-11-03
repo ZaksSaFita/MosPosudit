@@ -28,8 +28,6 @@ namespace MosPosudit.Services.DataBase.Data
 
         public byte[]? Picture { get; set; }
 
-
-        // information about the user
         public DateTime CreatedAt { get; set; }
 
         public DateTime UpdateDate { get; set; }
@@ -39,8 +37,6 @@ namespace MosPosudit.Services.DataBase.Data
         public bool IsActive { get; set; }
 
         public DateTime? DeactivationDate { get; set; }
-
-        // Navigation properties
 
         public virtual ICollection<Review> Reviews { get; set; } = new List<Review>();
         public virtual ICollection<UserFavorite> Favorites { get; set; } = new List<UserFavorite>();

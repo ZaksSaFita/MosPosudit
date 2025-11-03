@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
 import 'dart:ui';
 import 'dart:async';
 import 'dart:io';
@@ -7,17 +6,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mosposudit_shared/services/auth_service.dart';
 import 'package:mosposudit_shared/services/tool_service.dart';
 import 'package:mosposudit_shared/services/utility_service.dart';
 import 'package:mosposudit_shared/services/message_service.dart';
 import 'package:mosposudit_shared/services/cart_service.dart';
-import 'package:mosposudit_shared/services/notification_service.dart';
 import 'package:mosposudit_shared/services/recommendation_service.dart';
 import 'package:mosposudit_shared/services/user_favorite_service.dart';
-import 'package:mosposudit_shared/services/review_service.dart';
 import 'package:mosposudit_shared/dtos/user_favorite/user_favorite_insert_request.dart';
 import 'package:mosposudit_shared/models/tool.dart';
 import 'package:mosposudit_shared/models/category.dart';
@@ -94,7 +90,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
   Future<void> _checkAuthStatus() async {
     try {
-      // In release builds, always require explicit login (no auto-login)
       if (kReleaseMode) {
         if (mounted) {
           setState(() {
@@ -105,7 +100,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
         return;
       }
 
-      // In debug mode, check for existing token and validate it
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('token');
       
@@ -119,7 +113,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
         return;
       }
 
-      // Validate token with server by calling /User/me endpoint
       try {
         final response = await http.get(
           Uri.parse('${AppConfig.instance.apiBaseUrl}/User/me'),
@@ -130,7 +123,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
         );
 
         if (response.statusCode == 200) {
-          // Token is valid - update user data and keep logged in
           await prefs.setString('user', response.body);
           if (mounted) {
             setState(() {
@@ -139,7 +131,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
             });
           }
         } else {
-          // Token is invalid or expired - clear it and show login
           await prefs.remove('token');
           await prefs.remove('user');
           if (mounted) {
@@ -150,7 +141,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
           }
         }
       } catch (e) {
-        // Network error - in debug mode, still allow login if token exists
         final user = prefs.getString('user');
         if (mounted) {
           setState(() {
@@ -287,19 +277,16 @@ class _LoginScreenState extends State<LoginScreen> {
         
         await prefs.setString('token', data['token'] ?? data['Token']);
         
-        // Save credentials if remember me is checked
         if (_rememberMe) {
           await prefs.setString('saved_username', _usernameController.text);
           await prefs.setString('saved_password', _passwordController.text);
           await prefs.setBool('remember_me', true);
         } else {
-          // Clear saved credentials if remember me is unchecked
           await prefs.remove('saved_username');
           await prefs.remove('saved_password');
           await prefs.setBool('remember_me', false);
         }
         
-        // Get complete user data including role from /User/me endpoint
         final userResponse = await http.get(
           Uri.parse('${AppConfig.instance.apiBaseUrl}/User/me'),
           headers: {
@@ -310,7 +297,6 @@ class _LoginScreenState extends State<LoginScreen> {
         if (userResponse.statusCode == 200) {
           await prefs.setString('user', userResponse.body);
         } else {
-          // Fallback: remove user data if we can't fetch it
           await prefs.remove('user');
         }
         
@@ -319,7 +305,6 @@ class _LoginScreenState extends State<LoginScreen> {
             message: 'Successfully logged in!',
             backgroundColor: Colors.green,
           );
-          // Navigate directly to home screen after successful login
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(builder: (context) => ClientHomeScreen(key: ClientHomeScreen.navigatorKey)),
           );
@@ -332,7 +317,6 @@ class _LoginScreenState extends State<LoginScreen> {
             errorMessage = errorData['message'];
           }
         } catch (e) {
-          // Use default error message if parsing fails
         }
         
         if (mounted) {
@@ -489,7 +473,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        // Register link
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -546,7 +529,7 @@ class ClientHomeScreen extends StatefulWidget {
 }
 
 class _ClientHomeScreenState extends State<ClientHomeScreen> {
-  int _selectedIndex = 0; // Back to HomeScreen
+  int _selectedIndex = 0;
   int? _selectedCategoryId;
   int _unreadMessageCount = 0;
   int _cartItemCount = 0;
@@ -555,13 +538,13 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
   
   void switchToProfile() {
     setState(() {
-      _selectedIndex = 4; // Profile tab
+      _selectedIndex = 4;
     });
   }
 
   void switchToHome() {
     setState(() {
-      _selectedIndex = 0; // Home tab
+      _selectedIndex = 0;
     });
   }
 
@@ -570,7 +553,6 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
     super.initState();
     _loadUnreadMessageCount();
     _loadCartCount();
-    // Refresh message count every 5 seconds
     _messageCountTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       if (mounted) {
         _loadUnreadMessageCount();
@@ -595,7 +577,6 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
         });
       }
     } catch (e) {
-      // Silently fail - count will refresh on next load
     }
   }
 
@@ -608,21 +589,20 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
         });
       }
     } catch (e) {
-      // Silently fail - count will refresh on next load
     }
   }
 
   void _navigateToToolsWithCategory(int categoryId) {
     setState(() {
       _selectedCategoryId = categoryId;
-      _selectedIndex = 1; // Switch to ToolsPage
+      _selectedIndex = 1;
     });
   }
 
   void _navigateToToolsWithTool(int? toolId, int? categoryId) {
     setState(() {
       _selectedCategoryId = categoryId;
-      _selectedIndex = 1; // Switch to ToolsPage
+      _selectedIndex = 1;
     });
   }
 
@@ -644,7 +624,6 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Use same colors as desktop (Colors.blue)
     const primaryBlue = Colors.blue;
 
     return Scaffold(
@@ -666,17 +645,13 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
             setState(() {
               _selectedIndex = index;
             });
-            // Reload message count when navigating to chat
             if (index == 2) {
               _loadUnreadMessageCount();
             }
-            // Reload cart count when navigating to cart
             if (index == 3) {
               _loadCartCount();
             }
-            // Reload profile when navigating to profile
             if (index == 4) {
-              // Profile screen will reload itself if needed
             }
           },
           backgroundColor: Colors.transparent,
@@ -807,12 +782,11 @@ class _ToolsPageState extends State<ToolsPage> {
   final _toolService = ToolService();
   final _cartService = CartService();
   final _favoriteService = UserFavoriteService();
-  final _reviewService = ReviewService();
   List<ToolModel> _tools = [];
   List<CategoryModel> _categories = [];
-  Set<int> _toolsInCart = {}; // Track which tools are in cart
-  Set<int> _favoriteToolIds = {}; // Track which tools are favorites
-  Map<int, double> _toolRatings = {}; // Track average rating for each tool (toolId -> rating)
+  Set<int> _toolsInCart = {};
+  Set<int> _favoriteToolIds = {};
+  Map<int, double> _toolRatings = {};
   bool _isLoading = true;
   String? _error;
   int? _selectedCategoryId;
@@ -827,7 +801,6 @@ class _ToolsPageState extends State<ToolsPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Refresh cart status when page becomes visible (e.g., returning from cart)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _refreshCartStatus();
@@ -852,16 +825,13 @@ class _ToolsPageState extends State<ToolsPage> {
       final toolsInCart = cartItems.map<int>((item) => item.toolId as int).toSet();
 
       final loadedTools = results[0] as List<ToolModel>;
-      // Load favorite status for all tools
       Set<int> favoriteToolIds = {};
       try {
         final favorites = await _favoriteService.getFavorites();
         favoriteToolIds = favorites.map((f) => f.toolId).toSet();
       } catch (e) {
-        // Continue without favorites - not critical
       }
 
-      // Extract ratings from tools loaded from backend
       Map<int, double> toolRatings = {};
       for (var tool in loadedTools) {
         final toolId = tool.id ?? 0;
@@ -897,7 +867,6 @@ class _ToolsPageState extends State<ToolsPage> {
         });
       }
     } catch (e) {
-      // Silently fail - cart status will refresh on next load
     }
   }
 
@@ -916,7 +885,6 @@ class _ToolsPageState extends State<ToolsPage> {
   }
 
 
-  /// Builds tool image widget with fallback chain: base64 > asset > default icon
   Widget _buildToolImage(ToolModel tool, {double? width, double? height}) {
     final imgWidth = width ?? 120.0;
     final imgHeight = height ?? 120.0;
@@ -972,7 +940,6 @@ class _ToolsPageState extends State<ToolsPage> {
   }
 
   Widget _buildRatingStars(double rating) {
-    // Ensure rating is between 0 and 5
     final clampedRating = rating.clamp(0.0, 5.0);
     
     return Row(
@@ -980,13 +947,10 @@ class _ToolsPageState extends State<ToolsPage> {
       children: List.generate(5, (index) {
         final starValue = index + 1;
         if (clampedRating >= starValue) {
-          // Full star
           return const Icon(Icons.star, color: Colors.amber, size: 20);
         } else if (clampedRating > starValue - 1) {
-          // Half star
           return const Icon(Icons.star_half, color: Colors.amber, size: 20);
         } else {
-          // Empty star
           return const Icon(Icons.star_border, color: Colors.amber, size: 20);
         }
       }),
@@ -997,16 +961,9 @@ class _ToolsPageState extends State<ToolsPage> {
     try {
       final toolId = tool.id ?? 0;
       
-      // Tool is always available to be added to cart
-      // Availability is checked through the availability calendar when selecting dates
-      
-      // Check if item already exists in cart
       final existingItem = await _cartService.findItemByToolId(toolId);
       
-      // Note: Availability is checked through the availability calendar when selecting dates
-      // Quantity is no longer used to block adding to cart
       if (existingItem != null) {
-        // Item already exists, automatically increase quantity
         final newQuantity = existingItem.quantity + 1;
         final success = await _cartService.updateCartItemQuantity(
           existingItem.id,
@@ -1023,7 +980,6 @@ class _ToolsPageState extends State<ToolsPage> {
         return;
       }
 
-      // Item doesn't exist, add new item
       final success = await _cartService.addToCart(
         toolId: toolId,
         quantity: 1,
@@ -1037,7 +993,6 @@ class _ToolsPageState extends State<ToolsPage> {
           backgroundColor: Colors.green,
         );
         
-        // Show recommendations popup after successfully adding to cart
         _showCartRecommendations(context, toolId);
       } else if (mounted) {
         context.showTopSnackBar(
@@ -1061,7 +1016,6 @@ class _ToolsPageState extends State<ToolsPage> {
       final isFavorite = _favoriteToolIds.contains(toolId);
 
       if (isFavorite) {
-        // Remove from favorites
         final success = await _favoriteService.removeFavorite(toolId);
         if (success && mounted) {
           setState(() {
@@ -1073,7 +1027,6 @@ class _ToolsPageState extends State<ToolsPage> {
           );
         }
       } else {
-        // Add to favorites
         final request = UserFavoriteInsertRequestDto(toolId: toolId);
         await _favoriteService.addFavorite(request);
         if (mounted) {
@@ -1102,7 +1055,7 @@ class _ToolsPageState extends State<ToolsPage> {
       final recommendations = await recommendationService.getCartRecommendations(toolId, count: 3);
       
       if (recommendations.isNotEmpty && mounted) {
-        await Future.delayed(const Duration(milliseconds: 500)); // Small delay for smooth UX
+        await Future.delayed(const Duration(milliseconds: 500));
         
         if (mounted) {
           showDialog(
@@ -1115,9 +1068,9 @@ class _ToolsPageState extends State<ToolsPage> {
             ),
           );
         }
+      } else {
       }
     } catch (e) {
-      // Silently fail - recommendations not critical
     }
   }
 
@@ -1254,7 +1207,6 @@ class _ToolsPageState extends State<ToolsPage> {
         },
         child: CustomScrollView(
           slivers: [
-            // Show selected filter if any
             if (_selectedCategoryId != null)
               SliverToBoxAdapter(
                 child: Container(
@@ -1291,7 +1243,6 @@ class _ToolsPageState extends State<ToolsPage> {
                   ),
                 ),
               ),
-            // Show tool count if not loading
             if (!_isLoading && _filteredTools.isNotEmpty)
               SliverToBoxAdapter(
                 child: Padding(
@@ -1360,10 +1311,8 @@ class _ToolsPageState extends State<ToolsPage> {
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
-                                  // Left side - Image
                                   _buildToolImage(tool, width: 140, height: 140),
                                   const SizedBox(width: 12),
-                                  // Right side - Content
                                   Expanded(
                               child: LayoutBuilder(
                                 builder: (context, constraints) {

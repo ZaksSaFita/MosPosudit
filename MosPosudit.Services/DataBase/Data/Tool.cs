@@ -22,10 +22,8 @@ namespace MosPosudit.Services.DataBase.Data
 
         public decimal DepositAmount { get; set; }
 
-        // Image stored as base64 (null for seeded data - Flutter will load from assets based on name)
         public string? ImageBase64 { get; set; }
 
-        // Navigation properties
         [ForeignKey("CategoryId")]
         public Category Category { get; set; } = null!;
         

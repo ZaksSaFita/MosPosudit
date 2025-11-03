@@ -14,9 +14,13 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 // Add Email Service
 builder.Services.AddSingleton<EmailService>();
 
+// Add ML Training Service
+builder.Services.AddScoped<MLTrainingService>();
+
 // Add background services
 builder.Services.AddHostedService<NotificationWorker>();
 builder.Services.AddHostedService<EmailConsumer>();
+builder.Services.AddHostedService<MLTrainingWorker>();
 
 var host = builder.Build();
 host.Run();

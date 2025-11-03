@@ -29,14 +29,12 @@ class _ChatScreenState extends State<ChatScreen> {
     _loadUserData();
     _loadMessages();
     
-    // Poll for new messages every 3 seconds
     _refreshTimer = Timer.periodic(const Duration(seconds: 3), (_) {
       if (mounted) {
         _loadMessages();
       }
     });
     
-    // Scroll to bottom when screen is first displayed
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _scrollToBottom();
     });
@@ -59,7 +57,6 @@ class _ChatScreenState extends State<ChatScreen> {
         });
       }
     } catch (e) {
-      // Silently fail - user data not critical for chat
     }
   }
 
@@ -68,7 +65,6 @@ class _ChatScreenState extends State<ChatScreen> {
       final messages = await _messageService.getUserMessages();
       
       if (mounted) {
-        // Find if there's an active chat
         final activeMessage = messages.firstWhere(
           (m) => m.isActive && m.startedByAdminId != null,
           orElse: () => MessageModel(
@@ -83,7 +79,6 @@ class _ChatScreenState extends State<ChatScreen> {
         
         bool hasActiveChat = activeMessage.isActive && activeMessage.startedByAdminId != null;
         
-        // Mark unread messages as read when user is viewing the chat
         final unreadMessages = messages.where((m) => 
           !m.isRead && 
           m.toUserId == _currentUserId &&
@@ -94,18 +89,15 @@ class _ChatScreenState extends State<ChatScreen> {
           try {
             await _messageService.markAsRead(msg.id);
           } catch (e) {
-            // Silently fail - message marking not critical
           }
         }
         
-        // Add system message if there are pending messages but no active chat
         List<MessageModel> messagesToShow = List.from(messages);
         if (messages.isNotEmpty && !hasActiveChat) {
-          // Check if system message already exists
           bool hasSystemMessage = messagesToShow.any((m) => m.id == -1);
           if (!hasSystemMessage) {
             messagesToShow.add(MessageModel(
-              id: -1, // System message ID
+              id: -1,
               fromUserId: 0,
               fromUserName: 'System',
               content: 'Odgovorićemo vam što prije.',
@@ -130,7 +122,6 @@ class _ChatScreenState extends State<ChatScreen> {
           _isLoading = false;
         });
         
-        // Scroll to bottom after messages are loaded
         WidgetsBinding.instance.addPostFrameCallback((_) {
           _scrollToBottom();
         });
@@ -155,25 +146,20 @@ class _ChatScreenState extends State<ChatScreen> {
     });
 
     try {
-      // Check if there's an active chat
       bool hasActiveChat = _conversationUserId != null && _messages.any((m) => m.isActive && m.id != -1);
       
       if (hasActiveChat) {
-        // Send reply to active conversation
         await _messageService.sendReply(content, _conversationUserId!);
       } else {
-        // Send message to admin (can be first or subsequent before chat starts)
         await _messageService.sendMessage(content);
       }
       
-      // Reload messages to get the actual message from server
       await _loadMessages();
       
       if (mounted) {
         setState(() {
           _isSending = false;
         });
-        // Scroll to bottom after sending message
         WidgetsBinding.instance.addPostFrameCallback((_) {
           _scrollToBottom();
         });
@@ -315,7 +301,6 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _buildMessageBubble(MessageModel message, bool isUser) {
-    // Check if this is a system message (auto-response)
     final isSystem = message.id == -1 || message.fromUserId == 0;
     
     return Align(

@@ -29,7 +29,6 @@ class _ToolManagementPageState extends State<ToolManagementPage>
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Header with tabs
         Container(
           color: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -68,7 +67,6 @@ class _ToolManagementPageState extends State<ToolManagementPage>
           ),
         ),
         const Divider(height: 1),
-        // Tab content
         Expanded(
           child: TabBarView(
             controller: _tabController,

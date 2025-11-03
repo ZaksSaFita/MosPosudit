@@ -8,8 +8,7 @@ class RecommendationService {
   
   RecommendationService({ApiClient? apiClient}) : _api = apiClient ?? ApiClient();
 
-  /// Gets personalized recommendations for home screen (4-6 tools)
-  Future<List<ToolModel>> getHomeRecommendations({int count = 6}) async {
+  Future<List<ToolModel>> getHomeRecommendations({int count = 6}) async{
     try {
       final res = await _api.get('/Recommendation/home', query: {'count': count});
       
@@ -26,7 +25,6 @@ class RecommendationService {
     }
   }
 
-  /// Gets recommendations when user adds item to cart (2-3 tools)
   Future<List<ToolModel>> getCartRecommendations(int toolId, {int count = 3}) async {
     try {
       final res = await _api.get('/Recommendation/cart/$toolId', query: {'count': count});

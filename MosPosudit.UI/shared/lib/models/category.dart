@@ -2,7 +2,7 @@ class CategoryModel {
   final int id;
   final String? name;
   final String? description;
-  final String? imageBase64; // For uploaded data: base64 encoded image (null for seeded data - Flutter will load from assets based on name)
+  final String? imageBase64;
 
   CategoryModel({
     required this.id,

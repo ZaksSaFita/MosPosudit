@@ -24,7 +24,6 @@ namespace MosPosudit.WebAPI.Controllers
         [HttpGet]
         public override async Task<Model.Responses.PagedResult<UserFavoriteResponse>> Get([FromQuery] UserFavoriteSearchObject? search = null)
         {
-            // Get user ID from authenticated user context
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
             if (userIdClaim != null && int.TryParse(userIdClaim.Value, out int userId))
             {
@@ -37,7 +36,6 @@ namespace MosPosudit.WebAPI.Controllers
         [HttpPost]
         public override async Task<UserFavoriteResponse> Create([FromBody] UserFavoriteInsertRequest request)
         {
-            // Get user ID from authenticated user context
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
             if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
             {

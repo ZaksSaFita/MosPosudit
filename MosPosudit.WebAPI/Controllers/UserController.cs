@@ -55,7 +55,6 @@ namespace MosPosudit.WebAPI.Controllers
             return await base.Delete(id);
         }
 
-        // Public endpoints
         [HttpPost("register")]
         [AllowAnonymous]
         public async Task<ActionResult<UserResponse>> Register([FromBody] UserRegisterRequest request)

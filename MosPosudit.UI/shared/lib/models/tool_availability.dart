@@ -1,7 +1,7 @@
 class ToolAvailabilityModel {
   final int toolId;
   final int totalQuantity;
-  final Map<String, int> dailyAvailability; // Key: "YYYY-MM-DD", Value: available quantity
+  final Map<String, int> dailyAvailability;
 
   ToolAvailabilityModel({
     required this.toolId,
@@ -31,14 +31,11 @@ class ToolAvailabilityModel {
         'dailyAvailability': dailyAvailability,
       };
 
-  /// Get available quantity for a specific date
-  /// Returns null if date is not in the range
   int? getAvailableQuantityForDate(DateTime date) {
     final dateKey = _formatDate(date);
     return dailyAvailability[dateKey];
   }
 
-  /// Get available quantity for a date string (YYYY-MM-DD)
   int? getAvailableQuantityForDateString(String dateString) {
     return dailyAvailability[dateString];
   }

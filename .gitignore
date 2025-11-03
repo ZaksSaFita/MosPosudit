@@ -51,6 +51,7 @@ logs/
 .env.local
 .env.development
 .env.production
+!.env.zip
 
 # Docker
 .dockerignore
@@ -71,3 +72,8 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp
+
+# ML Models - KEEP THESE IN GIT!
+# MLModels/ folder contains pre-trained models for professor/demo
+!MLModels/*.zip
+!MosPosudit.UI/mobile/assets/icon/*.zip

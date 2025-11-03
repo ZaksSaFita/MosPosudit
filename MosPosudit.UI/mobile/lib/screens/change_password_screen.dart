@@ -19,7 +19,6 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
-  // Password visibility toggles
   bool _showCurrentPassword = false;
   bool _showNewPassword = false;
   bool _showConfirmPassword = false;
@@ -88,7 +87,6 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
         _confirmPasswordController.clear();
         Navigator.of(context).pop();
       } else {
-        // Parse backend error and show user-friendly message
         String userMessage = 'Error changing password.';
         try {
           final errorData = jsonDecode(response.body);
@@ -109,7 +107,6 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
             userMessage = errorData['message'].toString();
           }
         } catch (_) {
-          // If parsing fails, use default message
         }
         setState(() {
           _error = userMessage;

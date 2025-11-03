@@ -84,6 +84,7 @@ namespace MosPosudit.Services.Services
         protected override async Task BeforeUpdate(Review entity, ReviewUpdateRequest request)
         {
             entity.UpdatedAt = DateTime.UtcNow;
+            await Task.CompletedTask;
         }
 
         public async Task<IEnumerable<ReviewResponse>> GetByToolIdAsResponse(int toolId)

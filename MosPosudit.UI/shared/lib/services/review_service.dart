@@ -15,7 +15,6 @@ class ReviewService {
       
       if (res.statusCode == 200) {
         final decoded = jsonDecode(res.body);
-        // Backend returns PagedResult<T> with items and totalCount
         final List<dynamic> data;
         if (decoded is Map && decoded.containsKey('items')) {
           data = decoded['items'] as List<dynamic>;
@@ -54,7 +53,6 @@ class ReviewService {
       
       if (res.statusCode == 200) {
         final decoded = jsonDecode(res.body);
-        // Backend returns list directly for tool/{toolId} endpoint
         final List<dynamic> data = decoded is List 
             ? decoded 
             : [];
@@ -84,7 +82,6 @@ class ReviewService {
         return ReviewModel.fromJson(decoded);
       }
       
-      // Try to extract error message from response body
       String errorMessage = 'Failed to create review';
       try {
         final decoded = jsonDecode(res.body);
@@ -98,7 +95,6 @@ class ReviewService {
           errorMessage = res.body.isNotEmpty ? res.body : errorMessage;
         }
       } catch (_) {
-        // If parsing fails, use body as is
         errorMessage = res.body.isNotEmpty ? res.body : errorMessage;
       }
       

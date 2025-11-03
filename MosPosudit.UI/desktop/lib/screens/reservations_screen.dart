@@ -21,7 +21,6 @@ class _ReservationsManagementPageState extends State<ReservationsManagementPage>
   String _searchQuery = '';
   ViewMode _viewMode = ViewMode.card;
   
-  // Pagination for table view
   int _currentPage = 1;
   int _itemsPerPage = 5;
 
@@ -54,7 +53,6 @@ class _ReservationsManagementPageState extends State<ReservationsManagementPage>
   List<OrderModel> get _filteredOrders {
     var filtered = _orders;
     
-    // Filter by search query
     if (_searchQuery.isNotEmpty) {
       filtered = filtered.where((order) {
         final userName = (order.userFullName ?? '').toLowerCase();
@@ -238,7 +236,6 @@ class _ReservationsManagementPageState extends State<ReservationsManagementPage>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -248,7 +245,6 @@ class _ReservationsManagementPageState extends State<ReservationsManagementPage>
                 ),
                 Row(
                   children: [
-                    // View mode toggle
                     Container(
                       decoration: BoxDecoration(
                         border: Border.all(color: Colors.grey[300]!),
@@ -314,12 +310,11 @@ class _ReservationsManagementPageState extends State<ReservationsManagementPage>
             ),
             const SizedBox(height: 24),
 
-            // Search
             TextField(
               onChanged: (value) {
                 setState(() {
                   _searchQuery = value;
-                  _currentPage = 1; // Reset pagination on search
+                  _currentPage = 1;
                 });
               },
               decoration: InputDecoration(
@@ -338,7 +333,6 @@ class _ReservationsManagementPageState extends State<ReservationsManagementPage>
             ),
             const SizedBox(height: 24),
 
-            // Content
             Expanded(
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
@@ -462,7 +456,6 @@ class _ReservationListCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Sequential number
             Container(
               width: 40,
               alignment: Alignment.topCenter,
@@ -476,7 +469,6 @@ class _ReservationListCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 16),
-            // Icon
             Container(
               width: 60,
               height: 60,
@@ -491,12 +483,10 @@ class _ReservationListCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 20),
-            // Order info
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // User name
                   Row(
                     children: [
                       Icon(Icons.person_outline, size: 16, color: Colors.grey[600]),
@@ -515,7 +505,6 @@ class _ReservationListCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  // Tools
                   Row(
                     children: [
                       Icon(Icons.build_outlined, size: 16, color: Colors.grey[600]),
@@ -533,7 +522,6 @@ class _ReservationListCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  // Dates
                   Row(
                     children: [
                       Icon(Icons.calendar_today_outlined, size: 16, color: Colors.grey[600]),
@@ -565,7 +553,6 @@ class _ReservationListCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  // Total amount and status
                   Row(
                     children: [
                       Icon(Icons.attach_money_outlined, size: 16, color: Colors.grey[600]),
@@ -579,7 +566,6 @@ class _ReservationListCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 16),
-                      // Status badge
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
@@ -614,7 +600,6 @@ class _ReservationListCard extends StatelessWidget {
                 ],
               ),
             ),
-            // Action button
             SizedBox(
               width: 140,
               child: OutlinedButton.icon(
@@ -878,7 +863,6 @@ class _ReservationsTableView extends StatelessWidget {
             ),
           ),
         ),
-        // Pagination controls
         if (totalPages > 1)
           Container(
             padding: const EdgeInsets.all(16),

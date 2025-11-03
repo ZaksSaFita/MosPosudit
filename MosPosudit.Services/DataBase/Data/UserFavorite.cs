@@ -14,7 +14,6 @@ namespace MosPosudit.Services.DataBase.Data
 
         public DateTime CreatedAt { get; set; }
 
-        // Navigation properties
         [ForeignKey("UserId")]
         public User User { get; set; } = null!;
         

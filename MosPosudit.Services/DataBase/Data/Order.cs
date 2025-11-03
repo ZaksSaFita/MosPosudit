@@ -30,7 +30,6 @@ namespace MosPosudit.Services.DataBase.Data
 
         public DateTime? UpdatedAt { get; set; }
 
-        // Navigation properties
         public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
         public virtual ICollection<Payment> Payments { get; set; } = new List<Payment>();
     }

@@ -22,8 +22,6 @@ namespace MosPosudit.Model.Requests.Tool
         public decimal? DepositAmount { get; set; }
 
         public bool? IsAvailable { get; set; }
-
-        // Image as base64 string (for uploaded images)
         public string? ImageBase64 { get; set; }
     }
 }

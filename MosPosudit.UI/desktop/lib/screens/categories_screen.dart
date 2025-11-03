@@ -25,7 +25,6 @@ class _CategoriesManagementPageState extends State<CategoriesManagementPage> {
   String _searchQuery = '';
   ViewMode _viewMode = ViewMode.card;
   
-  // Pagination for table view
   int _currentPage = 1;
   int _itemsPerPage = 5;
 
@@ -58,7 +57,6 @@ class _CategoriesManagementPageState extends State<CategoriesManagementPage> {
   List<CategoryModel> get _filteredCategories {
     var filtered = _categories;
     
-    // Filter by search query
     if (_searchQuery.isNotEmpty) {
       filtered = filtered.where((category) {
         final name = (category.name ?? '').toLowerCase();
@@ -237,7 +235,6 @@ class _CategoriesManagementPageState extends State<CategoriesManagementPage> {
               : descriptionController.text.trim(),
         };
 
-        // Add image base64 if selected
         if (selectedImageBase64 != null) {
           data['imageBase64'] = selectedImageBase64;
         }
@@ -377,7 +374,6 @@ class _CategoriesManagementPageState extends State<CategoriesManagementPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -387,7 +383,6 @@ class _CategoriesManagementPageState extends State<CategoriesManagementPage> {
                 ),
                 Row(
                   children: [
-                    // View mode toggle
                     Container(
                       decoration: BoxDecoration(
                         border: Border.all(color: Colors.grey[300]!),
@@ -463,12 +458,11 @@ class _CategoriesManagementPageState extends State<CategoriesManagementPage> {
             ),
             const SizedBox(height: 24),
             
-            // Search
             TextField(
               onChanged: (value) {
                 setState(() {
                   _searchQuery = value;
-                  _currentPage = 1; // Reset pagination on search
+                  _currentPage = 1;
                 });
               },
               decoration: InputDecoration(
@@ -487,7 +481,6 @@ class _CategoriesManagementPageState extends State<CategoriesManagementPage> {
             ),
             const SizedBox(height: 24),
 
-            // Content
             Expanded(
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
@@ -585,10 +578,8 @@ class _CategoryListCard extends StatelessWidget {
   });
 
   Widget _buildCategoryImage() {
-    // Priority: base64 > asset filename (generated from name) > default icon
     if (category.imageBase64 != null && category.imageBase64!.isNotEmpty) {
       try {
-        // Remove data URL prefix if present (e.g., "data:image/jpeg;base64,")
         String base64Data = category.imageBase64!;
         if (base64Data.contains(',')) {
           base64Data = base64Data.split(',').last;
@@ -623,7 +614,6 @@ class _CategoryListCard extends StatelessWidget {
     } else if (category.name != null && category.name!.isNotEmpty) {
       final fileName = UtilityService.generateImageFileName(category.name);
       if (fileName.isNotEmpty) {
-        // Asset image from shared package
         final assetPath = 'packages/mosposudit_shared/assets/images/categories/$fileName';
         return Container(
           width: 80,
@@ -677,7 +667,6 @@ class _CategoryListCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Sequential number
             Container(
               width: 40,
               alignment: Alignment.topCenter,
@@ -691,15 +680,12 @@ class _CategoryListCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 16),
-            // Category image/icon
             _buildCategoryImage(),
             const SizedBox(width: 20),
-            // Category info
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Category name
                   Text(
                     category.name ?? 'Unknown Category',
                     style: const TextStyle(
@@ -709,7 +695,6 @@ class _CategoryListCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  // Description
                   if (category.description != null && category.description!.isNotEmpty)
                     Text(
                       category.description!,
@@ -732,7 +717,6 @@ class _CategoryListCard extends StatelessWidget {
                 ],
               ),
             ),
-            // Action buttons
             SizedBox(
               width: 140,
               child: Column(
@@ -798,10 +782,8 @@ class _CategoriesTableView extends StatelessWidget {
   });
 
   Widget _buildCategoryImage(CategoryModel category) {
-    // Priority: base64 > asset filename (generated from name) > default icon
     if (category.imageBase64 != null && category.imageBase64!.isNotEmpty) {
       try {
-        // Remove data URL prefix if present (e.g., "data:image/jpeg;base64,")
         String base64Data = category.imageBase64!;
         if (base64Data.contains(',')) {
           base64Data = base64Data.split(',').last;
@@ -1008,7 +990,6 @@ class _CategoriesTableView extends StatelessWidget {
             ),
           ),
         ),
-        // Pagination controls
         if (totalPages > 1)
           Container(
             padding: const EdgeInsets.all(16),

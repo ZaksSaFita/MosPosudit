@@ -12,18 +12,22 @@ class RecommendationsSettingsPage extends StatefulWidget {
 
 class _RecommendationsSettingsPageState extends State<RecommendationsSettingsPage> {
   final SettingsService _settingsService = SettingsService();
+  final TextEditingController _trainingIntervalController = TextEditingController(text: '7');
   
-  // Home recommendations weights
+  RecommendationEngine _selectedEngine = RecommendationEngine.ruleBased;
+  int _trainingIntervalDays = 7;
+  DateTime? _lastTrainingDate;
+
   double _homePopularWeight = 40.0;
   double _homeContentBasedWeight = 30.0;
   double _homeTopRatedWeight = 30.0;
 
-  // Cart recommendations weights
   double _cartFrequentlyBoughtWeight = 60.0;
   double _cartSimilarToolsWeight = 40.0;
 
   bool _isLoading = false;
   bool _hasChanges = false;
+  bool _isTraining = false;
   RecommendationSettingsModel? _currentSettings;
 
   @override
@@ -41,6 +45,10 @@ class _RecommendationsSettingsPageState extends State<RecommendationsSettingsPag
       final settings = await _settingsService.getRecommendationSettings();
       
       setState(() {
+        _selectedEngine = settings.engine;
+        _trainingIntervalDays = settings.trainingIntervalDays;
+        _trainingIntervalController.text = settings.trainingIntervalDays.toString();
+        _lastTrainingDate = settings.lastTrainingDate;
         _homePopularWeight = settings.homePopularWeight;
         _homeContentBasedWeight = settings.homeContentBasedWeight;
         _homeTopRatedWeight = settings.homeTopRatedWeight;
@@ -59,18 +67,21 @@ class _RecommendationsSettingsPageState extends State<RecommendationsSettingsPag
   }
 
   Future<void> _saveSettings() async {
-    // Validate that home weights sum to 100
     final homeTotal = _homePopularWeight + _homeContentBasedWeight + _homeTopRatedWeight;
     if ((homeTotal - 100.0).abs() > 0.1) {
       SnackbarHelper.showError(context, 'Home recommendation weights must sum to 100%');
       return;
     }
 
-    // Validate that cart weights sum to 100
     final cartTotal = _cartFrequentlyBoughtWeight + _cartSimilarToolsWeight;
     if ((cartTotal - 100.0).abs() > 0.1) {
       SnackbarHelper.showError(context, 'Cart recommendation weights must sum to 100%');
       return;
+    }
+
+    if (_selectedEngine != RecommendationEngine.ruleBased && _trainingIntervalDays <= 0) {
+      _trainingIntervalDays = 7;
+      _trainingIntervalController.text = '7';
     }
 
     setState(() {
@@ -79,6 +90,8 @@ class _RecommendationsSettingsPageState extends State<RecommendationsSettingsPag
 
     try {
       final updatedSettings = await _settingsService.updateRecommendationSettings(
+        engine: _selectedEngine,
+        trainingIntervalDays: _trainingIntervalDays <= 0 ? 7 : _trainingIntervalDays,
         homePopularWeight: _homePopularWeight,
         homeContentBasedWeight: _homeContentBasedWeight,
         homeTopRatedWeight: _homeTopRatedWeight,
@@ -101,6 +114,52 @@ class _RecommendationsSettingsPageState extends State<RecommendationsSettingsPag
     }
   }
 
+  Future<void> _triggerTraining() async {
+    setState(() {
+      _isTraining = true;
+    });
+
+    try {
+      final result = await _settingsService.triggerMLTraining();
+      
+      setState(() {
+        _isTraining = false;
+      });
+
+      SnackbarHelper.showSuccess(
+        context, 
+        result['message'] ?? 'ML training triggered successfully!'
+      );
+      
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.info_outline, color: Colors.blue),
+              SizedBox(width: 8),
+              Text('Training Started'),
+            ],
+          ),
+          content: Text(
+            result['note'] ?? 'Training will start within 1-5 minutes and take 2-5 minutes to complete. Check worker logs for progress.'
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      setState(() {
+        _isTraining = false;
+      });
+      SnackbarHelper.showError(context, 'Error triggering training: ${e.toString()}');
+    }
+  }
+
   void _updateHomeWeight(String type, double value) {
     setState(() {
       _hasChanges = true;
@@ -115,7 +174,6 @@ class _RecommendationsSettingsPageState extends State<RecommendationsSettingsPag
           _homeTopRatedWeight = value;
           break;
       }
-      // Auto-adjust others to maintain 100% total
       _normalizeHomeWeights();
     });
   }
@@ -123,7 +181,6 @@ class _RecommendationsSettingsPageState extends State<RecommendationsSettingsPag
   void _normalizeHomeWeights() {
     final total = _homePopularWeight + _homeContentBasedWeight + _homeTopRatedWeight;
     if ((total - 100.0).abs() > 0.1) {
-      // Distribute difference proportionally
       final diff = 100.0 - total;
       final sum = _homePopularWeight + _homeContentBasedWeight + _homeTopRatedWeight;
       if (sum > 0) {
@@ -145,7 +202,6 @@ class _RecommendationsSettingsPageState extends State<RecommendationsSettingsPag
           _cartSimilarToolsWeight = value;
           break;
       }
-      // Auto-adjust other to maintain 100% total
       _normalizeCartWeights();
     });
   }
@@ -166,6 +222,42 @@ class _RecommendationsSettingsPageState extends State<RecommendationsSettingsPag
     return _cartFrequentlyBoughtWeight + _cartSimilarToolsWeight;
   }
 
+  Widget _engineInfo(String title, String description, IconData icon) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: Colors.grey[700]),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                description,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  @override
+  void dispose() {
+    _trainingIntervalController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -175,7 +267,6 @@ class _RecommendationsSettingsPageState extends State<RecommendationsSettingsPag
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -241,7 +332,199 @@ class _RecommendationsSettingsPageState extends State<RecommendationsSettingsPag
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Home Recommendations Section
+                      Card(
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(24.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.purple.shade50,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Icon(
+                                      Icons.psychology_outlined,
+                                      size: 28,
+                                      color: Colors.purple.shade700,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  const Text(
+                                    'Recommendation Engine',
+                                    style: TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Choose between rule-based, machine learning, or hybrid recommendations',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+                              
+                              DropdownButtonFormField<RecommendationEngine>(
+                                value: _selectedEngine,
+                                decoration: InputDecoration(
+                                  labelText: 'Engine Type',
+                                  prefixIcon: const Icon(Icons.settings_suggest),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                items: RecommendationEngine.values.map((engine) {
+                                  return DropdownMenuItem(
+                                    value: engine,
+                                    child: Text(engine.displayName),
+                                  );
+                                }).toList(),
+                                onChanged: (value) {
+                                  if (value != null) {
+                                    setState(() {
+                                      _selectedEngine = value;
+                                      _hasChanges = true;
+                                      
+                                      if (value != RecommendationEngine.ruleBased) {
+                                        if (_trainingIntervalDays <= 0) {
+                                          _trainingIntervalDays = 7;
+                                          _trainingIntervalController.text = '7';
+                                        }
+                                      }
+                                    });
+                                  }
+                                },
+                              ),
+                              
+                              const SizedBox(height: 16),
+                              
+                              if (_selectedEngine != RecommendationEngine.ruleBased)
+                                Column(
+                                  children: [
+                                    TextFormField(
+                                      controller: _trainingIntervalController,
+                                      decoration: InputDecoration(
+                                        labelText: 'Training Interval (days)',
+                                        prefixIcon: const Icon(Icons.schedule),
+                                        suffix: const Text('days'),
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        helperText: 'ML model will retrain every N days (default: 7)',
+                                      ),
+                                      keyboardType: TextInputType.number,
+                                      onChanged: (value) {
+                                        final days = int.tryParse(value);
+                                        if (days != null && days >= 1 && days <= 365) {
+                                          setState(() {
+                                            _trainingIntervalDays = days;
+                                            _hasChanges = true;
+                                          });
+                                        } else if (value.isEmpty) {
+                                          setState(() {
+                                            _trainingIntervalDays = 7;
+                                            _hasChanges = true;
+                                          });
+                                        }
+                                      },
+                                    ),
+                                    const SizedBox(height: 16),
+                                    
+                                    Row(
+                                      children: [
+                                        if (_lastTrainingDate != null)
+                                          Expanded(
+                                            child: Container(
+                                              padding: const EdgeInsets.all(12),
+                                              decoration: BoxDecoration(
+                                                color: Colors.green.shade50,
+                                                borderRadius: BorderRadius.circular(8),
+                                                border: Border.all(color: Colors.green.shade200),
+                                              ),
+                                              child: Row(
+                                                children: [
+                                                  Icon(Icons.check_circle_outline, 
+                                                      color: Colors.green.shade700, size: 20),
+                                                  const SizedBox(width: 8),
+                                                  Text(
+                                                    'Last trained: ${_lastTrainingDate!.toString().substring(0, 16)}',
+                                                    style: TextStyle(
+                                                      fontSize: 14,
+                                                      color: Colors.green.shade700,
+                                                      fontWeight: FontWeight.w600,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        if (_lastTrainingDate != null) const SizedBox(width: 12),
+                                        ElevatedButton.icon(
+                                          onPressed: _isTraining ? null : _triggerTraining,
+                                          icon: _isTraining 
+                                              ? const SizedBox(
+                                                  width: 16,
+                                                  height: 16,
+                                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                                )
+                                              : const Icon(Icons.play_arrow),
+                                          label: Text(_isTraining ? 'Starting...' : 'Train Now'),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.purple,
+                                            foregroundColor: Colors.white,
+                                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              
+                              const SizedBox(height: 16),
+                              
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade50,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.grey.shade200),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _engineInfo('Rule-Based', 
+                                        'Uses predefined rules and weights. Fast, predictable, no training needed.',
+                                        Icons.rule),
+                                    const Divider(height: 24),
+                                    _engineInfo('Machine Learning', 
+                                        'Uses Matrix Factorization to learn user preferences. Requires training data.',
+                                        Icons.psychology),
+                                    const Divider(height: 24),
+                                    _engineInfo('Hybrid', 
+                                        'Tries ML first, falls back to rules if needed. Best of both worlds!',
+                                        Icons.sync_alt),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 24),
+
                       Card(
                         elevation: 2,
                         shape: RoundedRectangleBorder(
@@ -286,7 +569,6 @@ class _RecommendationsSettingsPageState extends State<RecommendationsSettingsPag
                               ),
                               const SizedBox(height: 24),
                               
-                              // Popular Weight
                               _WeightSlider(
                                 label: 'Popular / Trending',
                                 description: 'Tools that are frequently rented',
@@ -297,7 +579,6 @@ class _RecommendationsSettingsPageState extends State<RecommendationsSettingsPag
                               ),
                               const SizedBox(height: 24),
 
-                              // Content-Based Weight
                               _WeightSlider(
                                 label: 'Content-Based',
                                 description: 'Based on user\'s favorite categories',
@@ -308,7 +589,6 @@ class _RecommendationsSettingsPageState extends State<RecommendationsSettingsPag
                               ),
                               const SizedBox(height: 24),
 
-                              // Top Rated Weight
                               _WeightSlider(
                                 label: 'Top Rated',
                                 description: 'Highest rated tools',
@@ -322,7 +602,6 @@ class _RecommendationsSettingsPageState extends State<RecommendationsSettingsPag
                               const Divider(),
                               const SizedBox(height: 16),
                               
-                              // Total indicator
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
@@ -366,7 +645,6 @@ class _RecommendationsSettingsPageState extends State<RecommendationsSettingsPag
                       
                       const SizedBox(height: 24),
 
-                      // Cart Recommendations Section
                       Card(
                         elevation: 2,
                         shape: RoundedRectangleBorder(
@@ -411,7 +689,6 @@ class _RecommendationsSettingsPageState extends State<RecommendationsSettingsPag
                               ),
                               const SizedBox(height: 24),
                               
-                              // Frequently Bought Together Weight
                               _WeightSlider(
                                 label: 'Frequently Bought Together',
                                 description: 'Tools often purchased with the selected tool',
@@ -422,7 +699,6 @@ class _RecommendationsSettingsPageState extends State<RecommendationsSettingsPag
                               ),
                               const SizedBox(height: 24),
 
-                              // Similar Tools Weight
                               _WeightSlider(
                                 label: 'Similar Tools',
                                 description: 'Tools from the same category with similar ratings',
@@ -436,7 +712,6 @@ class _RecommendationsSettingsPageState extends State<RecommendationsSettingsPag
                               const Divider(),
                               const SizedBox(height: 16),
                               
-                              // Total indicator
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
@@ -480,7 +755,6 @@ class _RecommendationsSettingsPageState extends State<RecommendationsSettingsPag
 
                       const SizedBox(height: 24),
 
-                      // Info Card
                       Card(
                         elevation: 1,
                         color: Colors.blue.shade50,

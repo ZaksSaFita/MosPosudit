@@ -143,6 +143,8 @@ namespace MosPosudit.Services.Services
                 // Don't change tool quantities - availability is calculated based on orders
                 // When order is marked as returned, it's automatically excluded from availability calculations
             }
+            
+            await Task.CompletedTask;
         }
     }
 }

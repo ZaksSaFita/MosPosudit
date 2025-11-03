@@ -1,0 +1,5 @@
+# ML Model Storage
+# This folder stores trained ML recommendation models (.zip files)
+# Models are created by the Worker service during training
+# Models are loaded by the API service for fast predictions
+

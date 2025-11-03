@@ -121,6 +121,7 @@ namespace MosPosudit.Services.Services
         protected override async Task BeforeInsert(Tool entity, ToolInsertRequest request)
         {
             entity.IsAvailable = request.IsAvailable;
+            await Task.CompletedTask;
         }
 
         public async Task<ToolAvailabilityResponse?> GetAvailabilityAsync(int toolId, DateTime startDate, DateTime endDate)

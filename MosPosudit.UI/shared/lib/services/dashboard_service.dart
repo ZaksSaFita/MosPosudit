@@ -9,7 +9,6 @@ class DashboardService {
     final response = await _api.get('/Tool');
     if (response.statusCode == 200) {
       final decoded = jsonDecode(response.body);
-      // Handle PagedResult or direct list
       if (decoded is Map && decoded.containsKey('items')) {
         return (decoded['items'] as List).length;
       } else if (decoded is Map && decoded.containsKey('totalCount')) {
@@ -26,7 +25,6 @@ class DashboardService {
     final response = await _api.get('/User');
     if (response.statusCode == 200) {
       final decoded = jsonDecode(response.body);
-      // Handle PagedResult or direct list
       if (decoded is Map && decoded.containsKey('items')) {
         return (decoded['items'] as List).length;
       } else if (decoded is Map && decoded.containsKey('totalCount')) {
@@ -43,7 +41,6 @@ class DashboardService {
     final response = await _api.get('/Order', query: {'isReturned': 'false'});
     if (response.statusCode == 200) {
       final decoded = jsonDecode(response.body);
-      // Handle PagedResult or direct list
       if (decoded is Map && decoded.containsKey('items')) {
         return (decoded['items'] as List).length;
       } else if (decoded is Map && decoded.containsKey('totalCount')) {
@@ -68,7 +65,6 @@ class DashboardService {
       } else {
         return [];
       }
-      // Sort by creation date descending and take first 'limit' items
       return orders
           .cast<Map<String, dynamic>>()
           .take(limit)
@@ -89,7 +85,6 @@ class DashboardService {
       } else {
         return [];
       }
-      // Sort by payment date descending and take first 'limit' items
       return payments
           .cast<Map<String, dynamic>>()
           .take(limit)

@@ -48,7 +48,6 @@ class _HomeScreenState extends State<HomeScreen> {
       final tools = await _toolService.fetchTools();
       final categories = await _categoryService.fetchCategories();
       
-      // Load recommendations in parallel
       final recommendations = await _recommendationService.getHomeRecommendations(count: 6);
 
       if (mounted) {
@@ -56,11 +55,9 @@ class _HomeScreenState extends State<HomeScreen> {
           _tools = tools;
           _categories = categories;
           _recommendedTools = recommendations;
-          // If recommendations are empty, fallback to tools with quantity > 0
           if (_recommendedTools.isEmpty) {
             _recommendedTools = tools.where((t) => (t.quantity ?? 0) > 0).take(6).toList();
           }
-          // Reset carousel index ako je veći od broja kategorija
           if (_currentCarouselIndex >= categories.length) {
             _currentCarouselIndex = 0;
           }
@@ -82,7 +79,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
 
-  /// Builds tool image widget with fallback chain: base64 > asset > default icon
   Widget _buildToolImage(ToolModel tool) {
     return Container(
       width: double.infinity,
@@ -148,7 +144,6 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final toolId = tool.id ?? 0;
       
-      // Check if tool is available and has quantity
       if (tool.isAvailable == false || (tool.quantity != null && tool.quantity! <= 0)) {
         if (mounted) {
           String message = '${tool.name ?? "This tool"} cannot be added to cart.';
@@ -165,11 +160,9 @@ class _HomeScreenState extends State<HomeScreen> {
         return;
       }
       
-      // Check if item already exists in cart
       final existingItem = await _cartService.findItemByToolId(toolId);
       
       if (existingItem != null) {
-        // Check if increasing quantity would exceed available stock
         final newQuantity = existingItem.quantity + 1;
         if (tool.quantity != null && newQuantity > tool.quantity!) {
           if (mounted) {
@@ -184,7 +177,6 @@ class _HomeScreenState extends State<HomeScreen> {
           return;
         }
         
-        // Item already exists, automatically increase quantity
         final success = await _cartService.updateCartItemQuantity(
           existingItem.id,
           newQuantity,
@@ -199,7 +191,6 @@ class _HomeScreenState extends State<HomeScreen> {
         return;
       }
 
-      // Item doesn't exist, add new item
       final success = await _cartService.addToCart(
         toolId: toolId,
         quantity: 1,
@@ -249,7 +240,6 @@ class _HomeScreenState extends State<HomeScreen> {
         onRefresh: _loadData,
         child: CustomScrollView(
           slivers: [
-            // Slideshow carousel for "Iznajmi alat" - using category images
             if (_categories.isNotEmpty)
               SliverToBoxAdapter(
                 child: Container(
@@ -322,7 +312,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                         );
                                       },
                                     ),
-                                  // Gradient overlay at the bottom
                                   Positioned(
                                     bottom: 0,
                                     left: 0,
@@ -375,7 +364,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ),
-            // Carousel indicators
             if (_categories.isNotEmpty)
               SliverToBoxAdapter(
                 child: Row(
@@ -398,7 +386,6 @@ class _HomeScreenState extends State<HomeScreen> {
             const SliverToBoxAdapter(
               child: SizedBox(height: 16),
             ),
-            // Recommended for you section
             const SliverToBoxAdapter(
               child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -493,7 +480,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                         ],
                                       ),
                                     ),
-                                    // Add to cart icon button - show if available and quantity > 0
                                     if (tool.isAvailable == true && tool.quantity != null && tool.quantity! > 0)
                                       GestureDetector(
                                         onTap: () {

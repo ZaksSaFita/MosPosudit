@@ -12,7 +12,7 @@ namespace MosPosudit.Services.DataBase.Data
 
         public int ToolId { get; set; }
 
-        public int Rating { get; set; } // 1-5 stars
+        public int Rating { get; set; }
 
         public string? Comment { get; set; }
 
@@ -20,7 +20,6 @@ namespace MosPosudit.Services.DataBase.Data
 
         public DateTime? UpdatedAt { get; set; }
 
-        // Navigation properties
         [ForeignKey("UserId")]
         public User User { get; set; } = null!;
         

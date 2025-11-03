@@ -106,9 +106,7 @@ namespace MosPosudit.Services.Services
 
         // ==================== PayPal Methods ====================
 
-        /// <summary>
-        /// Creates PayPal order and returns approval URL for user to complete payment
-        /// </summary>
+        // Creates PayPal order and returns approval URL for user to complete payment
         public async Task<PayPalOrderResponse> CreatePayPalOrderAsync(PayPalCreateOrderRequest request)
         {
             try
@@ -235,9 +233,7 @@ namespace MosPosudit.Services.Services
             }
         }
 
-        /// <summary>
-        /// Verifies PayPal payment status - only checks PayPal API, does NOT save to database
-        /// </summary>
+        // Verifies PayPal payment status by checking PayPal API
         private async Task<(bool IsSuccess, decimal Amount, string TransactionId, OrderInsertRequest OrderData)> VerifyPayPalPaymentAsync(string paypalOrderId)
         {
             var paypalClient = GetPayPalClient();
@@ -286,9 +282,7 @@ namespace MosPosudit.Services.Services
             return (true, amount, transactionId, orderData);
         }
 
-        /// <summary>
-        /// Saves Order and Payment to database - called AFTER successful PayPal verification
-        /// </summary>
+        // Saves Order and Payment to database after successful PayPal verification
         private async Task<(int OrderId, int PaymentId)> SavePaymentToDatabaseAsync(OrderInsertRequest orderData, decimal amount, string transactionId)
         {
             // Validate tools exist and check availability for selected date range
@@ -431,11 +425,7 @@ namespace MosPosudit.Services.Services
             return (orderWithItems.Id, payment.Id);
         }
 
-        /// <summary>
-        /// Completes PayPal payment - verifies payment and saves to database
-        /// Step 1: Verify PayPal payment status
-        /// Step 2: If successful, save Order and Payment to database
-        /// </summary>
+        // Completes PayPal payment by verifying payment status and saving to database
         public async Task<PayPalCaptureResponse> CompletePayPalPaymentAsync(string paypalOrderId)
         {
             try

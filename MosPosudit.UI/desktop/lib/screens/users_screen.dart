@@ -24,7 +24,6 @@ class _UsersManagementPageState extends State<UsersManagementPage> {
   String _searchQuery = '';
   ViewMode _viewMode = ViewMode.card;
   
-  // Pagination for table view
   int _currentPage = 1;
   int _itemsPerPage = 5;
 
@@ -57,7 +56,6 @@ class _UsersManagementPageState extends State<UsersManagementPage> {
   List<UserModel> get _filteredUsers {
     var filtered = _users;
     
-    // Filter by search query
     if (_searchQuery.isNotEmpty) {
       filtered = filtered.where((user) {
         final firstName = (user.firstName ?? '').toLowerCase();
@@ -101,7 +99,7 @@ class _UsersManagementPageState extends State<UsersManagementPage> {
     final phoneController = TextEditingController(text: user?.phoneNumber);
     final passwordController = TextEditingController();
     
-    int selectedRoleId = user?.roleId ?? 2; // Default to User role (2), Admin is typically 1
+    int selectedRoleId = user?.roleId ?? 2;
     String? selectedImageBase64;
 
     final result = await showDialog<bool>(
@@ -373,12 +371,10 @@ class _UsersManagementPageState extends State<UsersManagementPage> {
           'roleId': selectedRoleId,
         };
 
-        // Add password if provided
         if (passwordController.text.trim().isNotEmpty) {
           data['password'] = passwordController.text.trim();
         }
 
-        // Add image base64 if selected (backend expects base64 string, not byte[])
         if (selectedImageBase64 != null) {
           data['picture'] = selectedImageBase64;
         }
@@ -520,7 +516,6 @@ class _UsersManagementPageState extends State<UsersManagementPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -530,7 +525,6 @@ class _UsersManagementPageState extends State<UsersManagementPage> {
                 ),
                 Row(
                   children: [
-                    // View mode toggle
                     Container(
                       decoration: BoxDecoration(
                         border: Border.all(color: Colors.grey[300]!),
@@ -606,12 +600,11 @@ class _UsersManagementPageState extends State<UsersManagementPage> {
             ),
             const SizedBox(height: 24),
 
-            // Search
             TextField(
               onChanged: (value) {
                 setState(() {
                   _searchQuery = value;
-                  _currentPage = 1; // Reset pagination on search
+                  _currentPage = 1;
                 });
               },
               decoration: InputDecoration(
@@ -630,7 +623,6 @@ class _UsersManagementPageState extends State<UsersManagementPage> {
             ),
             const SizedBox(height: 24),
 
-            // Content
             Expanded(
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
@@ -730,7 +722,6 @@ class _UserListCard extends StatelessWidget {
   Widget _buildUserImage() {
     if (user.pictureBase64 != null && user.pictureBase64!.isNotEmpty) {
       try {
-        // Remove data URL prefix if present
         String base64Data = user.pictureBase64!;
         if (base64Data.contains(',')) {
           base64Data = base64Data.split(',').last;
@@ -799,7 +790,6 @@ class _UserListCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Sequential number
             Container(
               width: 40,
               alignment: Alignment.topCenter,
@@ -813,15 +803,12 @@ class _UserListCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 16),
-            // User image
             _buildUserImage(),
             const SizedBox(width: 20),
-            // User info
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // User name
                   Text(
                     '${user.firstName ?? ''} ${user.lastName ?? ''}'.trim().isEmpty
                         ? user.username ?? 'Unknown User'
@@ -833,7 +820,6 @@ class _UserListCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  // Username
                   Row(
                     children: [
                       Icon(Icons.person_outline, size: 16, color: Colors.grey[600]),
@@ -848,7 +834,6 @@ class _UserListCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 4),
-                  // Email
                   Row(
                     children: [
                       Icon(Icons.email_outlined, size: 16, color: Colors.grey[600]),
@@ -866,7 +851,6 @@ class _UserListCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 4),
-                  // Status badge
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
@@ -899,7 +883,6 @@ class _UserListCard extends StatelessWidget {
                 ],
               ),
             ),
-            // Action buttons
             SizedBox(
               width: 140,
               child: Column(
@@ -1224,7 +1207,6 @@ class _UsersTableView extends StatelessWidget {
             ),
           ),
         ),
-        // Pagination controls
         if (totalPages > 1)
           Container(
             padding: const EdgeInsets.all(16),

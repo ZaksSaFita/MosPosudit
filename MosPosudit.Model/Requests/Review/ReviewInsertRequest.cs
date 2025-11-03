@@ -13,8 +13,6 @@ namespace MosPosudit.Model.Requests.Review
 
         [StringLength(1000, ErrorMessage = "Comment cannot be longer than 1000 characters")]
         public string? Comment { get; set; }
-
-        // UserId will be set from authenticated user context
         public int UserId { get; set; }
     }
 }

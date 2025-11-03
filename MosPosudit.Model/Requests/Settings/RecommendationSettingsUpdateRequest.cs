@@ -5,6 +5,13 @@ namespace MosPosudit.Model.Requests.Settings
     public class RecommendationSettingsUpdateRequest
     {
         [Required]
+        public int Engine { get; set; }
+
+        [Required]
+        [Range(1, 365)]
+        public int TrainingIntervalDays { get; set; }
+
+        [Required]
         [Range(0, 100)]
         public double HomePopularWeight { get; set; }
 

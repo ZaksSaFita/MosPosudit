@@ -66,11 +66,9 @@ class _SidebarState extends State<Sidebar> {
       final isAdmin = userRole.toString().toLowerCase() == 'admin';
       
       if (isAdmin) {
-        // For admin, count unread messages where admin is the receiver
         final messages = await _messageService.getPendingMessages();
         final allMessages = await _messageService.getUserMessages();
         
-        // Count: pending messages + unread messages in active chats where admin is receiver
         int pendingCount = messages.length;
         int unreadActiveCount = allMessages.where((m) => 
           m.isActive && 
@@ -85,10 +83,8 @@ class _SidebarState extends State<Sidebar> {
           });
         }
       } else {
-        // For regular users, count unread messages where user is the receiver
         final allMessages = await _messageService.getUserMessages();
         
-        // Count unread messages where current user is receiver
         int unreadCount = allMessages.where((m) => 
           m.toUserId == userId && 
           !m.isRead && 
@@ -102,7 +98,6 @@ class _SidebarState extends State<Sidebar> {
         }
       }
     } catch (e) {
-      // Error loading unread message count - silently fail
     }
   }
 
@@ -156,7 +151,6 @@ class _SidebarState extends State<Sidebar> {
             ),
           ),
           const SizedBox(height: 8),
-          // User Profile
           Stack(
             alignment: Alignment.center,
             children: [
@@ -164,7 +158,7 @@ class _SidebarState extends State<Sidebar> {
                 radius: 50,
                 backgroundImage: pictureBytes != null
                     ? MemoryImage(pictureBytes!)
-                    : const NetworkImage('https://randomuser.me/api/portraits/women/65.jpg'),
+                    : const NetworkImage('https://randomuser.me/api/portraits/women/65.jpg') as ImageProvider,
               ),
             ],
           ),
@@ -185,7 +179,6 @@ class _SidebarState extends State<Sidebar> {
             ),
           ),
           const SizedBox(height: 32),
-          // Navigation Menu
           Expanded(
             child: ListView(
               padding: EdgeInsets.zero,
@@ -241,7 +234,7 @@ class _SidebarState extends State<Sidebar> {
                   selected: widget.selectedIndex == 7,
                   onTap: () {
                     widget.onItemSelected(7);
-                    _loadUnreadMessageCount(); // Refresh count when navigating to chat
+                    _loadUnreadMessageCount();
                   },
                   badgeCount: _unreadMessageCount > 0 ? _unreadMessageCount : null,
                 ),
@@ -254,7 +247,6 @@ class _SidebarState extends State<Sidebar> {
               ],
             ),
           ),
-          // Logout
           Padding(
             padding: const EdgeInsets.only(bottom: 24.0),
             child: _SidebarItem(

@@ -12,8 +12,8 @@ class ToolModel {
   final num? depositAmount;
   final DateTime? lastMaintenanceDate;
   final DateTime? nextMaintenanceDate;
-  final String? imageBase64; // For uploaded data: base64 encoded image (null for seeded data - Flutter will load from assets based on name)
-  final double? averageRating; // Average rating from reviews, null if no reviews (defaults to 5.0 on frontend)
+  final String? imageBase64;
+  final double? averageRating;
 
   ToolModel({
     required this.id,

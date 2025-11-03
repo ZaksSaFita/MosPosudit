@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 class SnackbarHelper {
-  /// Shows a small, subtle SnackBar in the upper right corner
   static void showTopRightSnackbar(
     BuildContext context,
     String message, {
@@ -11,7 +10,6 @@ class SnackbarHelper {
   }) {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     
-    // Hide any existing snackbar first
     scaffoldMessenger.hideCurrentSnackBar();
     
     final mediaQuery = MediaQuery.of(context);
@@ -52,8 +50,8 @@ class SnackbarHelper {
         margin: EdgeInsets.only(
           top: topMargin,
           right: rightMargin,
-          bottom: screenHeight - 80, // Push to top area
-          left: screenWidth - snackbarWidth - rightMargin, // Position from right
+          bottom: screenHeight - 80,
+          left: screenWidth - snackbarWidth - rightMargin,
         ),
         padding: const EdgeInsets.symmetric(
           horizontal: 12,
@@ -67,7 +65,6 @@ class SnackbarHelper {
     );
   }
 
-  /// Shows a success SnackBar in the upper right corner
   static void showSuccess(
     BuildContext context,
     String message, {
@@ -82,7 +79,6 @@ class SnackbarHelper {
     );
   }
 
-  /// Shows an error SnackBar in the upper right corner
   static void showError(
     BuildContext context,
     String message, {
@@ -97,7 +93,6 @@ class SnackbarHelper {
     );
   }
 
-  /// Shows an info SnackBar in the upper right corner
   static void showInfo(
     BuildContext context,
     String message, {
@@ -112,7 +107,6 @@ class SnackbarHelper {
     );
   }
 
-  /// Shows a warning SnackBar in the upper right corner
   static void showWarning(
     BuildContext context,
     String message, {

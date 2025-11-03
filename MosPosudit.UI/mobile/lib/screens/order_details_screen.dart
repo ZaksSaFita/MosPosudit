@@ -57,7 +57,6 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Order status
                       Card(
                         color: _order!.isReturned
                             ? Colors.green.shade50
@@ -98,7 +97,6 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                       ),
                       const SizedBox(height: 16),
                       
-                      // Rental period
                       Card(
                         child: Padding(
                           padding: const EdgeInsets.all(16),
@@ -164,7 +162,6 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                       ),
                       const SizedBox(height: 16),
                       
-                      // Order items
                       const Text(
                         'Order Items',
                         style: TextStyle(
@@ -191,7 +188,6 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                       }),
                       const SizedBox(height: 16),
                       
-                      // Payment info
                       if (_order!.payments.isNotEmpty) ...[
                         const Text(
                           'Payment',
@@ -228,7 +224,6 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                         const SizedBox(height: 16),
                       ],
                       
-                      // Total amount
                       Card(
                         color: Colors.blue.shade50,
                         child: Padding(
@@ -257,7 +252,6 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                       ),
                       const SizedBox(height: 16),
                       
-                      // Order info
                       Card(
                         child: Padding(
                           padding: const EdgeInsets.all(16),

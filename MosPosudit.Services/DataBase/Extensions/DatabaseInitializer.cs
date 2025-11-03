@@ -29,19 +29,11 @@ namespace MosPosudit.Services.DataBase.Extensions
 
                 var (dbName, masterConnectionString) = ExtractDatabaseInfo(connectionString);
 
-                // Step 1: Wait for SQL Server
                 await WaitForSqlServerAsync(masterConnectionString, logger);
-
-                // Step 2: Ensure database exists
                 await EnsureDatabaseExistsAsync(dbName, masterConnectionString, logger);
-
-                // Step 3: Wait for database connection
                 await WaitForConnectionAsync(db, logger);
-
-                // Step 4: Apply migrations (creates all tables in correct order)
                 await ApplyMigrationsAsync(db, logger);
 
-                // Step 5: Seed data in correct order
                 var seeder = scope.ServiceProvider.GetRequiredService<ISeedService>();
                 seeder.SeedIfEmpty(db, contentRootPath);
                 seeder.SeedRecommendationSettingsIfNeeded(db);

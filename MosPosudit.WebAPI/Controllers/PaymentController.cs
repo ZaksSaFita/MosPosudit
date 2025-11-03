@@ -54,7 +54,6 @@ namespace MosPosudit.WebAPI.Controllers
             return await base.Delete(id);
         }
 
-        // PayPal endpoints
         [HttpPost("paypal/create")]
         [Authorize]
         public async Task<ActionResult<PayPalOrderResponse>> CreatePayPalOrder([FromBody] PayPalCreateOrderRequest request)
@@ -76,7 +75,6 @@ namespace MosPosudit.WebAPI.Controllers
         {
             try
             {
-                // PayPal returns Order ID as 'token' parameter in return URL
                 if (string.IsNullOrEmpty(token))
                 {
                     var orderId = Request.Query["order_id"].FirstOrDefault();
@@ -87,7 +85,6 @@ namespace MosPosudit.WebAPI.Controllers
                     token = orderId;
                 }
 
-                // Complete payment - captures order and creates Order + Payment in database
                 var result = await _paymentService.CompletePayPalPaymentAsync(token);
                 
                 return Ok(new { 

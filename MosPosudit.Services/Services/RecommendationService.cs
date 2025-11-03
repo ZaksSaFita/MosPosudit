@@ -13,22 +13,101 @@ namespace MosPosudit.Services.Services
         private readonly ApplicationDbContext _context;
         private readonly IMapper _mapper;
         private readonly ISettingsService _settingsService;
+        private readonly MLPredictionService _mlPredictionService;
 
-        public RecommendationService(ApplicationDbContext context, IMapper mapper, ISettingsService settingsService)
+        public RecommendationService(
+            ApplicationDbContext context, 
+            IMapper mapper, 
+            ISettingsService settingsService,
+            MLPredictionService mlPredictionService)
         {
             _context = context;
             _mapper = mapper;
             _settingsService = settingsService;
+            _mlPredictionService = mlPredictionService;
         }
 
-        /// <summary>
-        /// Gets personalized recommendations for home screen (4-6 tools)
-        /// Combination: 40% Popular, 30% Content-based, 30% Top Rated
-        /// </summary>
+        // Gets personalized recommendations for home screen using selected engine (Rule-Based, ML, or Hybrid)
         public async Task<List<ToolResponse>> GetHomeRecommendationsAsync(int userId, int count = 6)
         {
+            // Get settings from database
+            var settings = await _settingsService.GetRecommendationSettingsAsync();
+
+            // Route to appropriate recommendation engine
+            switch (settings.Engine)
+            {
+                case RecommendationEngine.MachineLearning:
+                    return await GetHomeRecommendationsMLAsync(userId, count);
+
+                case RecommendationEngine.Hybrid:
+                    return await GetHomeRecommendationsHybridAsync(userId, count);
+
+                case RecommendationEngine.RuleBased:
+                default:
+                    return await GetHomeRecommendationsRuleBasedAsync(userId, count);
+            }
+        }
+
+        // Gets home recommendations using pure Machine Learning predictions
+        private async Task<List<ToolResponse>> GetHomeRecommendationsMLAsync(int userId, int count = 6)
+        {
+            try
+            {
+                var toolIds = await _mlPredictionService.GetMLRecommendationsAsync(userId, count);
+                
+                if (!toolIds.Any())
+                    return new List<ToolResponse>();
+
+                var tools = await _context.Set<Tool>()
+                    .Include(t => t.Category)
+                    .Where(t => toolIds.Contains(t.Id))
+                    .ToListAsync();
+
+                // Order by the ML prediction order
+                var orderedTools = toolIds
+                    .Select(id => tools.FirstOrDefault(t => t.Id == id))
+                    .Where(t => t != null)
+                    .Take(count)
+                    .ToList();
+
+                return orderedTools.Select(t => _mapper.Map<ToolResponse>(t!)).ToList();
+            }
+            catch (Exception)
+            {
+                // If ML fails, return empty list
+                return new List<ToolResponse>();
+            }
+        }
+
+        // Gets home recommendations using Hybrid approach (ML first, falls back to Rule-Based if needed)
+        private async Task<List<ToolResponse>> GetHomeRecommendationsHybridAsync(int userId, int count = 6)
+        {
+            // Try ML first
+            var mlRecommendations = await GetHomeRecommendationsMLAsync(userId, count);
+
+            // If ML returned enough recommendations, use them
+            if (mlRecommendations.Count >= count / 2)
+            {
+                // If ML gave us some but not enough, fill the rest with rule-based
+                if (mlRecommendations.Count < count)
+                {
+                    var addedToolIds = new HashSet<int>(mlRecommendations.Select(r => r.Id));
+                    var remaining = count - mlRecommendations.Count;
+                    var ruleBasedRecommendations = await GetHomeRecommendationsRuleBasedAsync(userId, remaining, addedToolIds);
+                    mlRecommendations.AddRange(ruleBasedRecommendations.Take(remaining));
+                }
+                return mlRecommendations;
+            }
+
+            // ML didn't work or returned too few results, fall back to rule-based
+            return await GetHomeRecommendationsRuleBasedAsync(userId, count);
+        }
+
+        // Gets home recommendations using Rule-Based approach with weighted algorithms
+        private async Task<List<ToolResponse>> GetHomeRecommendationsRuleBasedAsync(int userId, int count = 6, HashSet<int>? excludeToolIds = null)
+        {
             var recommendations = new List<ToolResponse>();
-            var addedToolIds = new HashSet<int>();
+            var addedToolIds = excludeToolIds ?? new HashSet<int>();
 
             // Get settings from database
             var settings = await _settingsService.GetRecommendationSettingsAsync();
@@ -96,14 +175,86 @@ namespace MosPosudit.Services.Services
             return recommendations.Count > 0 ? recommendations.Take(count).ToList() : new List<ToolResponse>();
         }
 
-        /// <summary>
-        /// Gets recommendations when user adds item to cart (2-3 tools)
-        /// Combination: Frequently Bought Together + Similar Tools
-        /// </summary>
+        // Gets cart recommendations when user adds item to cart using selected engine
         public async Task<List<ToolResponse>> GetCartRecommendationsAsync(int toolId, int count = 3)
         {
+            // Get settings from database
+            var settings = await _settingsService.GetRecommendationSettingsAsync();
+
+            // Route to appropriate recommendation engine
+            switch (settings.Engine)
+            {
+                case RecommendationEngine.MachineLearning:
+                    return await GetCartRecommendationsMLAsync(toolId, count);
+
+                case RecommendationEngine.Hybrid:
+                    return await GetCartRecommendationsHybridAsync(toolId, count);
+
+                case RecommendationEngine.RuleBased:
+                default:
+                    return await GetCartRecommendationsRuleBasedAsync(toolId, count);
+            }
+        }
+
+        // Gets cart recommendations using pure Machine Learning predictions
+        private async Task<List<ToolResponse>> GetCartRecommendationsMLAsync(int toolId, int count = 3)
+        {
+            try
+            {
+                var recommendedToolIds = await _mlPredictionService.GetMLCartRecommendationsAsync(toolId, count);
+                
+                if (!recommendedToolIds.Any())
+                    return new List<ToolResponse>();
+
+                var tools = await _context.Set<Tool>()
+                    .Include(t => t.Category)
+                    .Where(t => recommendedToolIds.Contains(t.Id))
+                    .ToListAsync();
+
+                // Order by the ML prediction order
+                var orderedTools = recommendedToolIds
+                    .Select(id => tools.FirstOrDefault(t => t.Id == id))
+                    .Where(t => t != null)
+                    .Take(count)
+                    .ToList();
+
+                return orderedTools.Select(t => _mapper.Map<ToolResponse>(t!)).ToList();
+            }
+            catch (Exception)
+            {
+                return new List<ToolResponse>();
+            }
+        }
+
+        // Gets cart recommendations using Hybrid approach (ML first, falls back to Rule-Based if needed)
+        private async Task<List<ToolResponse>> GetCartRecommendationsHybridAsync(int toolId, int count = 3)
+        {
+            // Try ML first
+            var mlRecommendations = await GetCartRecommendationsMLAsync(toolId, count);
+
+            // If ML returned some recommendations, use them
+            if (mlRecommendations.Count >= 1)
+            {
+                // If ML gave us some but not enough, fill the rest with rule-based
+                if (mlRecommendations.Count < count)
+                {
+                    var addedToolIds = new HashSet<int>(mlRecommendations.Select(r => r.Id)) { toolId };
+                    var remaining = count - mlRecommendations.Count;
+                    var ruleBasedRecommendations = await GetCartRecommendationsRuleBasedAsync(toolId, remaining, addedToolIds);
+                    mlRecommendations.AddRange(ruleBasedRecommendations.Take(remaining));
+                }
+                return mlRecommendations;
+            }
+
+            // ML didn't work, fall back to rule-based
+            return await GetCartRecommendationsRuleBasedAsync(toolId, count);
+        }
+
+        // Gets cart recommendations using Rule-Based approach with frequently bought together logic
+        private async Task<List<ToolResponse>> GetCartRecommendationsRuleBasedAsync(int toolId, int count = 3, HashSet<int>? excludeToolIds = null)
+        {
             var recommendations = new List<ToolResponse>();
-            var addedToolIds = new HashSet<int> { toolId };
+            var addedToolIds = excludeToolIds ?? new HashSet<int> { toolId };
 
             // Get settings from database
             var settings = await _settingsService.GetRecommendationSettingsAsync();
@@ -142,11 +293,9 @@ namespace MosPosudit.Services.Services
             return recommendations.Take(count).ToList();
         }
 
-        // ==================== Private Helper Methods ====================
-
+        // Gets user's favorite categories based on order history
         private async Task<List<int>> GetUserFavoriteCategoriesAsync(int userId)
         {
-            // Get categories from user's completed orders (last 90 days)
             var thirtyDaysAgo = DateTime.UtcNow.AddDays(-90);
 
             var categories = await _context.Set<Order>()
@@ -423,9 +572,7 @@ namespace MosPosudit.Services.Services
             return tools.Select(t => _mapper.Map<ToolResponse>(t)).ToList();
         }
 
-        /// <summary>
-        /// Gets default recommendations when user has no history (popular and top rated tools)
-        /// </summary>
+        // Gets default recommendations when user has no history
         private async Task<List<ToolResponse>> GetDefaultRecommendationsAsync(int count)
         {
             var recommendations = new List<ToolResponse>();

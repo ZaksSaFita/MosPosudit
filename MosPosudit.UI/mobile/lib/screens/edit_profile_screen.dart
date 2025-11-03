@@ -3,11 +3,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:io';
-import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:http/http.dart' as http;
 import 'package:mosposudit_shared/services/user_service.dart';
-import '../core/constants.dart';
 
 class EditProfileScreen extends StatefulWidget {
   final VoidCallback? onProfileUpdated;
@@ -25,10 +22,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
-  
+
   Uint8List? _pictureBytes;
-  Uint8List? _originalPictureBytes;
-  File? _selectedFile;
   bool isLoading = false;
   String? error;
 
@@ -51,10 +46,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         _phoneController.text = user['phoneNumber'] ?? '';
         if (user['picture'] != null) {
           _pictureBytes = base64Decode(user['picture']);
-          _originalPictureBytes = _pictureBytes;
         } else {
           _pictureBytes = null;
-          _originalPictureBytes = null;
         }
       });
     }
@@ -62,7 +55,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   Future<void> pickImage() async {
     try {
-      // Show dialog to choose source
       final source = await showDialog<ImageSource>(
         context: context,
         builder: (context) => AlertDialog(
@@ -97,7 +89,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           
           setState(() {
             _pictureBytes = bytes;
-            _selectedFile = file;
           });
           
           ScaffoldMessenger.of(context).showSnackBar(
@@ -189,7 +180,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Profile Picture Section
               Center(
                 child: Stack(
                   children: [
@@ -226,7 +216,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
               const SizedBox(height: 24),
               
-              // Form Fields
               TextFormField(
                 controller: _firstNameController,
                 decoration: const InputDecoration(
@@ -306,7 +295,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
               const SizedBox(height: 32),
               
-              // Error Message
               if (error != null)
                 Container(
                   width: double.infinity,
@@ -324,7 +312,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               
               if (error != null) const SizedBox(height: 16),
               
-              // Save Button
               SizedBox(
                 width: double.infinity,
                 height: 50,

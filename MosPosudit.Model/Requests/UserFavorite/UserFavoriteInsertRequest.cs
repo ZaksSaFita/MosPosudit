@@ -6,8 +6,6 @@ namespace MosPosudit.Model.Requests.UserFavorite
     {
         [Required(ErrorMessage = "Tool ID is required")]
         public int ToolId { get; set; }
-
-        // UserId will be set from authenticated user context
         public int UserId { get; set; }
     }
 }

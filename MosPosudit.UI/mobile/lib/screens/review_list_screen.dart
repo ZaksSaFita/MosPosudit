@@ -84,7 +84,6 @@ class _ReviewListScreenState extends State<ReviewListScreen> {
       ),
     );
 
-    // Reload reviews if a new review was created
     if (result == true) {
       await _loadData();
     }
@@ -121,7 +120,6 @@ class _ReviewListScreenState extends State<ReviewListScreen> {
                 )
               : Column(
                   children: [
-                    // Reviews list
                     Expanded(
                       child: _reviews.isEmpty
                           ? Center(
@@ -166,7 +164,6 @@ class _ReviewListScreenState extends State<ReviewListScreen> {
                                       children: [
                                         Row(
                                           children: [
-                                            // User avatar
                                             CircleAvatar(
                                               radius: 20,
                                               backgroundColor: Colors.blue.shade100,
@@ -225,7 +222,6 @@ class _ReviewListScreenState extends State<ReviewListScreen> {
                             ),
                     ),
 
-                    // Create review button
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(

@@ -13,7 +13,6 @@ class NotificationService {
       if (res.statusCode == 200) {
         final decoded = jsonDecode(res.body);
         
-        // Backend returns PagedResult<T> with items and totalCount
         final List<dynamic> data;
         if (decoded is Map && decoded.containsKey('items')) {
           data = decoded['items'] as List<dynamic>;

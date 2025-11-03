@@ -21,7 +21,6 @@ class _ReviewsManagementPageState extends State<ReviewsManagementPage> {
   String _searchQuery = '';
   ViewMode _viewMode = ViewMode.card;
   
-  // Pagination for table view
   int _currentPage = 1;
   int _itemsPerPage = 5;
 
@@ -54,7 +53,6 @@ class _ReviewsManagementPageState extends State<ReviewsManagementPage> {
   List<ReviewModel> get _filteredReviews {
     var filtered = _reviews;
     
-    // Filter by search query
     if (_searchQuery.isNotEmpty) {
       filtered = filtered.where((review) {
         final userName = (review.userName ?? '').toLowerCase();
@@ -229,7 +227,6 @@ class _ReviewsManagementPageState extends State<ReviewsManagementPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -239,7 +236,6 @@ class _ReviewsManagementPageState extends State<ReviewsManagementPage> {
                 ),
                 Row(
                   children: [
-                    // View mode toggle
                     Container(
                       decoration: BoxDecoration(
                         border: Border.all(color: Colors.grey[300]!),
@@ -305,12 +301,11 @@ class _ReviewsManagementPageState extends State<ReviewsManagementPage> {
             ),
             const SizedBox(height: 24),
 
-            // Search
             TextField(
               onChanged: (value) {
                 setState(() {
                   _searchQuery = value;
-                  _currentPage = 1; // Reset pagination on search
+                  _currentPage = 1;
                 });
               },
               decoration: InputDecoration(
@@ -329,7 +324,6 @@ class _ReviewsManagementPageState extends State<ReviewsManagementPage> {
             ),
             const SizedBox(height: 24),
 
-            // Content
             Expanded(
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
@@ -448,7 +442,6 @@ class _ReviewListCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Sequential number
             Container(
               width: 40,
               alignment: Alignment.topCenter,
@@ -462,7 +455,6 @@ class _ReviewListCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 16),
-            // Star icon
             Container(
               width: 60,
               height: 60,
@@ -477,12 +469,10 @@ class _ReviewListCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 20),
-            // Review info
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Tool name
                   Row(
                     children: [
                       Icon(Icons.build_outlined, size: 16, color: Colors.grey[600]),
@@ -501,7 +491,6 @@ class _ReviewListCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  // User name
                   Row(
                     children: [
                       Icon(Icons.person_outline, size: 16, color: Colors.grey[600]),
@@ -516,10 +505,8 @@ class _ReviewListCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  // Rating
                   _buildStarRating(review.rating),
                   const SizedBox(height: 8),
-                  // Comment
                   if (review.comment != null && review.comment!.isNotEmpty)
                     Text(
                       review.comment!,
@@ -540,7 +527,6 @@ class _ReviewListCard extends StatelessWidget {
                       ),
                     ),
                   const SizedBox(height: 8),
-                  // Date
                   Row(
                     children: [
                       Icon(Icons.calendar_today_outlined, size: 14, color: Colors.grey[500]),
@@ -557,7 +543,6 @@ class _ReviewListCard extends StatelessWidget {
                 ],
               ),
             ),
-            // Action button
             SizedBox(
               width: 140,
               child: OutlinedButton.icon(
@@ -775,7 +760,6 @@ class _ReviewsTableView extends StatelessWidget {
             ),
           ),
         ),
-        // Pagination controls
         if (totalPages > 1)
           Container(
             padding: const EdgeInsets.all(16),

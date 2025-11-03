@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:mosposudit_shared/services/cart_service.dart';
 import 'package:mosposudit_shared/services/order_service.dart';
-import 'package:mosposudit_shared/services/payment_service.dart';
 import 'package:mosposudit_shared/services/auth_service.dart';
 import 'package:mosposudit_shared/services/tool_service.dart';
 import 'package:mosposudit_shared/models/cart.dart';
 import 'package:mosposudit_shared/models/tool.dart';
-import 'package:mosposudit_shared/models/tool_availability.dart';
 import 'package:mosposudit_shared/dtos/order/order_insert_request.dart';
 import 'paypal_payment_screen.dart';
 
@@ -19,7 +17,6 @@ class CheckoutScreen extends StatefulWidget {
 
 class _CheckoutScreenState extends State<CheckoutScreen> {
   final _cartService = CartService();
-  final _orderService = OrderService();
   final _toolService = ToolService();
   final _formKey = GlobalKey<FormState>();
   
@@ -74,7 +71,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
   }
   
-  /// Validates availability for all tools in cart for selected date range
   Future<bool> _validateAvailabilityForSelectedPeriod() async {
     if (_cartItems.isEmpty || _tools.isEmpty) {
       return false;
@@ -143,7 +139,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
   }
 
-  /// Shows dialog with list of unavailable devices
   void _showUnavailableDevicesDialog(List<Map<String, dynamic>> unavailableTools) {
     showDialog(
       context: context,

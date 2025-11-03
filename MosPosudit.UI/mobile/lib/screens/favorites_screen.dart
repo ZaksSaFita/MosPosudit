@@ -43,7 +43,6 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       final favorites = await _favoriteService.getFavorites();
       final toolIds = favorites.map((f) => f.toolId).toList();
       
-      // Load tool details for favorites
       final tools = await _toolService.fetchTools();
       final toolsMap = <int, ToolModel>{};
       for (var tool in tools) {
@@ -52,7 +51,6 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         }
       }
 
-      // Load cart status
       final cartItems = await _cartService.getCartItems();
       final toolsInCart = cartItems.map<int>((item) => item.toolId).toSet();
 
@@ -98,11 +96,9 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     try {
       final toolId = tool.id ?? 0;
       
-      // Check if item already exists in cart
       final existingItem = await _cartService.findItemByToolId(toolId);
       
       if (existingItem != null) {
-        // Item already exists, automatically increase quantity
         final newQuantity = existingItem.quantity + 1;
         final success = await _cartService.updateCartItemQuantity(
           existingItem.id,
@@ -119,7 +115,6 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         return;
       }
 
-      // Item doesn't exist, add new item
       final success = await _cartService.addToCart(
         toolId: toolId,
         quantity: 1,
@@ -280,16 +275,13 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                                   child: Row(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      // Left side - Image
                                       _buildToolImage(tool, width: 120, height: 120),
                                       const SizedBox(width: 12),
-                                      // Right side - Content
                                       Expanded(
                                         child: Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            // Tool name
                                             Text(
                                               tool.name ?? 'Unknown tool',
                                               style: const TextStyle(
@@ -298,7 +290,6 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                                               ),
                                             ),
                                             const SizedBox(height: 8),
-                                            // Price
                                             Text(
                                               '€${tool.dailyRate?.toStringAsFixed(2) ?? '0.00'} / day',
                                               style: const TextStyle(
@@ -308,10 +299,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                                               ),
                                             ),
                                             const SizedBox(height: 8),
-                                            // Action buttons row
                                             Row(
                                               children: [
-                                                // Check Availability button
                                                 Expanded(
                                                   child: ElevatedButton.icon(
                                                     onPressed: () {
@@ -337,7 +326,6 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                                                   ),
                                                 ),
                                                 const SizedBox(width: 8),
-                                                // Add to cart button
                                                 Expanded(
                                                   child: ElevatedButton.icon(
                                                     onPressed: (_toolsInCart.contains(tool.id))
@@ -378,7 +366,6 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                                     ],
                                   ),
                                 ),
-                                // Favorite icon - top right
                                 Positioned(
                                   top: 8,
                                   right: 8,

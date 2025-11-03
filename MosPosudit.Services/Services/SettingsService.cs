@@ -5,6 +5,7 @@ using MosPosudit.Services.Interfaces;
 
 namespace MosPosudit.Services.Services
 {
+    // Service for managing application settings including recommendation configuration
     public class SettingsService : ISettingsService
     {
         private readonly ApplicationDbContext _context;
@@ -25,6 +26,8 @@ namespace MosPosudit.Services.Services
                 {
                     settings = new RecommendationSettings
                     {
+                        Engine = RecommendationEngine.MachineLearning,
+                        TrainingIntervalDays = 7,
                         HomePopularWeight = 40.0,
                         HomeContentBasedWeight = 30.0,
                         HomeTopRatedWeight = 30.0,
@@ -74,6 +77,8 @@ namespace MosPosudit.Services.Services
             }
             else
             {
+                existing.Engine = settings.Engine;
+                existing.TrainingIntervalDays = settings.TrainingIntervalDays;
                 existing.HomePopularWeight = settings.HomePopularWeight;
                 existing.HomeContentBasedWeight = settings.HomeContentBasedWeight;
                 existing.HomeTopRatedWeight = settings.HomeTopRatedWeight;
@@ -85,6 +90,19 @@ namespace MosPosudit.Services.Services
             await _context.SaveChangesAsync();
 
             return existing ?? settings;
+        }
+
+        public async Task TriggerMLTrainingAsync()
+        {
+            var settings = await _context.RecommendationSettings.FirstOrDefaultAsync();
+            
+            if (settings != null)
+            {
+                // Reset LastTrainingDate to null to force immediate training
+                settings.LastTrainingDate = null;
+                settings.UpdatedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
+            }
         }
     }
 }

@@ -26,12 +26,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> with TickerProvid
   final _phoneController = TextEditingController();
 
   
-  // Password change controllers
   final _currentPasswordController = TextEditingController();
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   
-  // Password reset controllers
   final _resetEmailController = TextEditingController();
   
   Uint8List? _pictureBytes;
@@ -41,15 +39,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> with TickerProvid
   String? error;
   int? userId;
   
-  // Tab controller for different sections
   late TabController _tabController;
   
-  // Password visibility toggles
   bool _showCurrentPassword = false;
   bool _showNewPassword = false;
   bool _showConfirmPassword = false;
   
-  // Email verification state
   bool _isEmailVerifying = false;
   String? _emailVerificationCode;
   final _emailVerificationController = TextEditingController();
@@ -238,7 +233,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> with TickerProvid
         _newPasswordController.clear();
         _confirmPasswordController.clear();
       } else {
-        // Parse backend error and show user-friendly message
         String userMessage = 'Greška pri promjeni lozinke.';
         try {
           final errorData = jsonDecode(response.body);
@@ -350,7 +344,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> with TickerProvid
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Profile Picture Section
             Center(
               child: Stack(
                 alignment: Alignment.center,
@@ -359,7 +352,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> with TickerProvid
                     radius: 60,
                     backgroundImage: _pictureBytes != null
                         ? MemoryImage(_pictureBytes!)
-                        : const NetworkImage('https://randomuser.me/api/portraits/lego/1.jpg') as ImageProvider,
+                        : const NetworkImage('https://randomuser.me/api/portraits/lego/1.jpg'),
                   ),
                   Positioned(
                     bottom: 0,
@@ -378,7 +371,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> with TickerProvid
             ),
             const SizedBox(height: 32),
             
-            // Form Fields
             Row(
               children: [
                 Expanded(

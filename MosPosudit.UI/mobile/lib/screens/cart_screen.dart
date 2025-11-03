@@ -38,7 +38,6 @@ class _CartScreenState extends State<CartScreen> {
       final items = await _cartService.getCartItems();
       final total = await _cartService.getTotalPrice();
       
-      // Load tool details for each cart item
       final toolIds = items.map((item) => item.toolId).toSet();
       final tools = await _toolService.fetchTools();
       
@@ -76,15 +75,12 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   Future<void> _updateQuantity(int itemId, int quantity, int? toolId) async {
-    // Don't allow quantity less than 1 - items can only be removed via delete button
     if (quantity < 1) {
       return;
     }
 
-    // Update quantity without full reload to avoid loading screen
     final success = await _cartService.updateCartItemQuantity(itemId, quantity);
     if (success) {
-      // Update local state directly instead of full reload
       setState(() {
         final itemIndex = _cartItems.indexWhere((item) => item.id == itemId);
         if (itemIndex != -1) {
@@ -100,7 +96,6 @@ class _CartScreenState extends State<CartScreen> {
             notes: item.notes,
           );
         }
-        // Recalculate total price
         num total = 0;
         for (var item in _cartItems) {
           var days = item.endDate.difference(item.startDate).inDays;
@@ -123,7 +118,6 @@ class _CartScreenState extends State<CartScreen> {
       return;
     }
 
-    // Check against stock quantity (how many devices we have in total)
     final maxQuantity = tool.quantity ?? 0;
     if (maxQuantity <= 0) {
       if (mounted) {
@@ -135,7 +129,6 @@ class _CartScreenState extends State<CartScreen> {
       return;
     }
 
-    // Check if we can add one more item
     final newQuantity = item.quantity + 1;
     if (newQuantity > maxQuantity) {
       if (mounted) {
@@ -147,13 +140,10 @@ class _CartScreenState extends State<CartScreen> {
       return;
     }
 
-    // Quantity is valid, update it
     await _updateQuantity(item.id, newQuantity, item.toolId);
   }
 
   Future<void> _decreaseQuantity(CartItemModel item, ToolModel? tool) async {
-    // Only decrease if quantity is greater than 1
-    // Items can only be removed via delete button, not by reducing quantity to 0
     if (item.quantity > 1) {
       await _updateQuantity(item.id, item.quantity - 1, item.toolId);
     }
@@ -341,7 +331,6 @@ class _CartScreenState extends State<CartScreen> {
                                           ],
                                         ),
                                         const SizedBox(height: 8),
-                                        // Quantity controls
                                         Row(
                                           children: [
                                             const Text(
@@ -368,7 +357,7 @@ class _CartScreenState extends State<CartScreen> {
                                                     ),
                                                     onPressed: item.quantity > 1
                                                         ? () => _decreaseQuantity(item, tool)
-                                                        : null, // Disable if quantity is already 1
+                                                        : null,
                                                   ),
                                                   Container(
                                                     padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -388,7 +377,7 @@ class _CartScreenState extends State<CartScreen> {
                                                       minHeight: 32,
                                                     ),
                                                     onPressed: (tool?.quantity != null && item.quantity >= tool!.quantity!)
-                                                        ? null // Disable if quantity reached maximum
+                                                        ? null
                                                         : () => _increaseQuantity(item, tool),
                                                   ),
                                                 ],
@@ -415,7 +404,6 @@ class _CartScreenState extends State<CartScreen> {
                         },
                       ),
                     ),
-                    // Total and checkout button
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(

@@ -4,7 +4,6 @@ import '../models/tool_availability.dart';
 import '../services/tool_service.dart';
 import 'availability_calendar.dart';
 
-/// Dialog showing tool availability with color-coded calendar
 class ToolAvailabilityDialog extends StatefulWidget {
   final ToolModel tool;
   final DateTime startDate;
@@ -20,7 +19,6 @@ class ToolAvailabilityDialog extends StatefulWidget {
   @override
   State<ToolAvailabilityDialog> createState() => _ToolAvailabilityDialogState();
 
-  /// Show the availability dialog
   static Future<void> show(
     BuildContext context,
     ToolModel tool, {
@@ -28,7 +26,6 @@ class ToolAvailabilityDialog extends StatefulWidget {
     DateTime? endDate,
   }) async {
     final now = DateTime.now();
-    // Default: today as start, tomorrow as end (minimum 1 day)
     return showDialog(
       context: context,
       builder: (context) => ToolAvailabilityDialog(
@@ -52,11 +49,9 @@ class _ToolAvailabilityDialogState extends State<ToolAvailabilityDialog> {
   @override
   void initState() {
     super.initState();
-    // Initialize with today as start and tomorrow as end (minimum 1 day)
     final now = DateTime.now();
     _selectedStartDate = widget.startDate;
     _selectedEndDate = widget.endDate;
-    // Load availability for next 3 months by default
     _loadAvailability();
   }
   
@@ -68,11 +63,8 @@ class _ToolAvailabilityDialogState extends State<ToolAvailabilityDialog> {
     });
 
     try {
-      // Always load availability from today to 90 days ahead, regardless of selected dates
-      // This ensures all dates in the calendar view have availability data
       final now = DateTime.now();
-      final startDate = now; // Always start from today
-      // Load 90 days ahead to ensure calendar has full availability data
+      final startDate = now;
       final endDate = now.add(const Duration(days: 90));
       
       final availability = await _toolService.getAvailability(
@@ -98,7 +90,6 @@ class _ToolAvailabilityDialogState extends State<ToolAvailabilityDialog> {
   }
 
   void _onDateRangeSelected(DateTime startDate, DateTime endDate) {
-    // Ensure minimum 1 day difference
     final daysDifference = endDate.difference(startDate).inDays;
     final validEndDate = daysDifference < 1 
         ? startDate.add(const Duration(days: 1)) 
@@ -108,9 +99,6 @@ class _ToolAvailabilityDialogState extends State<ToolAvailabilityDialog> {
       _selectedStartDate = startDate;
       _selectedEndDate = validEndDate;
     });
-
-    // Don't reload availability - we already have data from today to 90 days ahead
-    // Availability data is sufficient for all dates in the calendar view
   }
 
   @override
@@ -124,7 +112,6 @@ class _ToolAvailabilityDialogState extends State<ToolAvailabilityDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-            // Header
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.center,
@@ -148,7 +135,6 @@ class _ToolAvailabilityDialogState extends State<ToolAvailabilityDialog> {
             ),
             const SizedBox(height: 16),
             
-            // Content
             if (_isLoading)
               const Center(
                 child: Padding(
@@ -187,8 +173,8 @@ class _ToolAvailabilityDialogState extends State<ToolAvailabilityDialog> {
                 availability: _availability!,
                 startDate: _selectedStartDate ?? DateTime.now(),
                 endDate: _selectedEndDate ?? DateTime.now().add(const Duration(days: 90)),
-                onDateRangeSelected: null, // No date selection in availability dialog
-                allowSelection: false, // Disable date selection - only viewing availability
+                onDateRangeSelected: null,
+                allowSelection: false,
               ),
             ],
           ),

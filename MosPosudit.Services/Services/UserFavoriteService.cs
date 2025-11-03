@@ -70,6 +70,7 @@ namespace MosPosudit.Services.Services
         public override async Task<UserFavoriteResponse?> UpdateAsync(int id, UserFavoriteUpdateRequest request)
         {
             // UserFavorite doesn't support update operations
+            await Task.CompletedTask;
             throw new ValidationException("Update operation is not supported for UserFavorite");
         }
 

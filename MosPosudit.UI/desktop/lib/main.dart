@@ -445,15 +445,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
   final MessageService _messageService = MessageService();
 
   final List<Widget> _pages = [
-    const DashboardPage(), // Dashboard (index 0)
-    const ToolsManagementPage(), // Tool Management (index 1)
-    const CategoriesManagementPage(), // Category Management (index 2)
-    const PlaceholderPage(), // Not used in sidebar (index 3)
-    const UsersManagementPage(), // Users (index 4)
-    const ReviewsManagementPage(), // Reviews (index 5)
-    const ReservationsManagementPage(), // Reservations (index 6)
-    const ChatScreen(), // Chat (index 7)
-    const RecommendationsSettingsPage(), // Recommendations Settings (index 8)
+    const DashboardPage(),
+    const ToolsManagementPage(),
+    const CategoriesManagementPage(),
+    const PlaceholderPage(),
+    const UsersManagementPage(),
+    const ReviewsManagementPage(),
+    const ReservationsManagementPage(),
+    const ChatScreen(),
+    const RecommendationsSettingsPage(),
   ];
 
   @override

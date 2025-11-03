@@ -15,14 +15,12 @@ class ApiClient {
       final token = prefs.getString('token');
       if (token != null && token.isNotEmpty) {
         headers['Authorization'] = 'Bearer $token';
-      } else {
       }
     }
     return headers;
   }
 
   Uri _uri(String path, [Map<String, dynamic>? query]) {
-    // Ensure path starts with / if it doesn't already
     final normalizedPath = path.startsWith('/') ? path : '/$path';
     return Uri.parse('$baseUrl$normalizedPath').replace(queryParameters: query?.map((k, v) => MapEntry(k, '$v')));
   }

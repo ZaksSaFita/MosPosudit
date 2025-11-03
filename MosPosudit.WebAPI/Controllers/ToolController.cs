@@ -71,7 +71,6 @@ namespace MosPosudit.WebAPI.Controllers
                 return BadRequest("Start date cannot be in the past");
             }
 
-            // Minimum 1 day rental period (same day is allowed for 1-day rental)
             var daysDifference = (endDate.Date - startDate.Date).Days;
             if (daysDifference < 0)
             {

@@ -17,7 +17,6 @@ class ToolService {
       if (res.statusCode == 200) {
         try {
           final decoded = jsonDecode(res.body);
-          // Backend returns PagedResult<T> with items and totalCount
           final List<dynamic> data;
           if (decoded is Map && decoded.containsKey('items')) {
             data = decoded['items'] as List<dynamic>;
@@ -80,7 +79,6 @@ class ToolService {
     final res = await _api.get('/Category', auth: false);
     if (res.statusCode == 200) {
       final decoded = jsonDecode(res.body);
-      // Backend vraća PagedResult<T> sa items i totalCount
       final List<dynamic> data;
       if (decoded is Map && decoded.containsKey('items')) {
         data = decoded['items'] as List<dynamic>;
@@ -94,7 +92,6 @@ class ToolService {
     throw Exception('Failed to fetch categories');
   }
 
-  /// Get tool availability for a date range
   Future<ToolAvailabilityModel?> getAvailability(
     int toolId,
     DateTime startDate,

@@ -6,14 +6,12 @@ namespace MosPosudit.WebAPI.Extensions
     {
         public static WebApplication UseApplicationMiddleware(this WebApplication app)
         {
-            // Configure the HTTP request pipeline
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
 
-            // Add CORS
             app.UseCors(x => x
                 .AllowAnyOrigin()
                 .AllowAnyMethod()

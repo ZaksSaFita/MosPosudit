@@ -24,7 +24,6 @@ namespace MosPosudit.WebAPI.Controllers
         {
             var response = await _authService.Login(request);
             
-            // Send welcome notification
             if (response.UserId.HasValue)
             {
                 _messageService.PublishNotification(
@@ -38,13 +37,10 @@ namespace MosPosudit.WebAPI.Controllers
             return Ok(new { token = response.Token });
         }
 
-
         [HttpPost("logout")]
         [Authorize]
         public IActionResult Logout()
         {
-            // JWT logout - we can't actually invalidate the token on the server side
-            // but we can return a success response and let the client remove the token
             return Ok(new { message = "Successfully logged out" });
         }
     }

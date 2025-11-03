@@ -12,7 +12,6 @@ namespace MosPosudit.WebAPI.Extensions
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "MosPosudit API", Version = "v1" });
 
-                // Add JWT Authentication
                 c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
                 {
                     Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",

@@ -55,7 +55,6 @@ class _ChatScreenState extends State<ChatScreen> {
       // Get all messages
       final allMessages = await _messageService.getUserMessages();
       
-      // Mark unread messages in active chats as read (for both admin and users)
       final unreadMessages = allMessages.where((m) => 
         m.isActive && 
         m.toUserId == _currentAdminId && 
@@ -101,7 +100,6 @@ class _ChatScreenState extends State<ChatScreen> {
       final userRole = user['roleName'] ?? user['role'] ?? '';
       final isAdmin = userRole.toString().toLowerCase() == 'admin';
       
-      // Only load pending messages if user is admin
       if (isAdmin) {
         final messages = await _messageService.getPendingMessages();
         
@@ -112,7 +110,6 @@ class _ChatScreenState extends State<ChatScreen> {
           });
         }
       } else {
-        // For regular users, no pending messages to load
         if (mounted) {
           setState(() {
             _pendingMessages = [];
@@ -136,7 +133,6 @@ class _ChatScreenState extends State<ChatScreen> {
       
       if (token == null) return;
       
-      // Get all messages for admin
       final response = await http.get(
         Uri.parse('${AppConfig.instance.apiBaseUrl}/Message/user'),
         headers: {
@@ -150,14 +146,10 @@ class _ChatScreenState extends State<ChatScreen> {
         final List<dynamic> data = decoded is List ? decoded : (decoded['value'] ?? []);
         final allMessages = data.map((e) => MessageModel.fromJson(e)).toList();
         
-        // Group by user - include all active messages where admin is involved
         final Map<int, List<MessageModel>> chats = {};
         for (var msg in allMessages) {
-          // Include all active messages where admin is either sender or receiver
-          // This includes all messages from conversations started by this admin
           if (msg.isActive && (msg.fromUserId == _currentAdminId || msg.toUserId == _currentAdminId)) {
             final userId = msg.fromUserId == _currentAdminId ? msg.toUserId : msg.fromUserId;
-            // Only include if it's a conversation with another user (not admin-to-admin)
             if (userId != null && userId != _currentAdminId) {
               if (!chats.containsKey(userId)) {
                 chats[userId] = [];
@@ -167,7 +159,6 @@ class _ChatScreenState extends State<ChatScreen> {
           }
         }
         
-        // Sort messages by sentAt for each user
         for (var userId in chats.keys) {
           chats[userId]!.sort((a, b) => a.sentAt.compareTo(b.sentAt));
         }
@@ -200,7 +191,6 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _startChat(int messageId) async {
     try {
-      // Find the user from the message before starting chat
       int? userId;
       try {
         final message = _pendingMessages.firstWhere((m) => m.id == messageId);
@@ -324,7 +314,6 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        // Left sidebar - List of pending messages and active chats
         Container(
           width: 300,
           decoration: BoxDecoration(
@@ -348,7 +337,6 @@ class _ChatScreenState extends State<ChatScreen> {
               Expanded(
                 child: ListView(
                   children: [
-                    // Pending messages section
                     if (_pendingMessages.isNotEmpty) ...[
                       const Padding(
                         padding: EdgeInsets.all(16),
@@ -361,7 +349,6 @@ class _ChatScreenState extends State<ChatScreen> {
                           ),
                         ),
                       ),
-                      // Group pending messages by user
                       ...(_pendingMessages.map((m) => m.fromUserId).toSet().map((userId) {
                         final userMessages = _pendingMessages
                             .where((m) => m.fromUserId == userId)
@@ -369,7 +356,6 @@ class _ChatScreenState extends State<ChatScreen> {
                           ..sort((a, b) => a.sentAt.compareTo(b.sentAt));
                         final lastMessage = userMessages.last;
                         
-                        // All pending messages are unread by definition
                         final unreadCount = userMessages.length;
                         
                         return FutureBuilder<String?>(
@@ -442,7 +428,6 @@ class _ChatScreenState extends State<ChatScreen> {
                       })),
                       const Divider(),
                     ],
-                    // Active chats section
                     if (_activeUserIds.isNotEmpty) ...[
                       const Padding(
                         padding: EdgeInsets.all(16),
@@ -463,7 +448,6 @@ class _ChatScreenState extends State<ChatScreen> {
                             final messages = _activeChats[userId] ?? [];
                             final lastMessage = messages.isNotEmpty ? messages.last : null;
                             
-                            // Count unread messages for this user
                             final unreadCount = messages.where((m) => 
                               m.toUserId == _currentAdminId && 
                               !m.isRead && 
@@ -542,7 +526,6 @@ class _ChatScreenState extends State<ChatScreen> {
             ],
           ),
         ),
-        // Right side - Chat view
         Expanded(
           child: _selectedUserId == null
               ? const Center(
@@ -572,7 +555,6 @@ class _ChatScreenState extends State<ChatScreen> {
                     
                     return Column(
                       children: [
-                        // Chat header
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
@@ -623,7 +605,6 @@ class _ChatScreenState extends State<ChatScreen> {
                             ],
                           ),
                         ),
-                        // Messages
                         Expanded(
                           child: allMessages.isEmpty
                               ? const Center(
@@ -643,7 +624,6 @@ class _ChatScreenState extends State<ChatScreen> {
                                   },
                                 ),
                         ),
-                        // Message input (only for active chats)
                         if (isActiveChat)
                           Container(
                             decoration: BoxDecoration(

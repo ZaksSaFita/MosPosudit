@@ -44,7 +44,6 @@ class PaymentService {
     return null;
   }
 
-  // PayPal methods
   Future<PayPalOrderResponse> createPayPalOrder(OrderInsertRequest orderData) async {
     try {
       final prefs = await SharedPreferences.getInstance();

@@ -1,8 +1,6 @@
 ﻿namespace MosPosudit.Model.Exceptions
 {
-    /// <summary>
-    /// Base exception class for all business exceptions
-    /// </summary>
+    // Base exception class for all business exceptions
     public class BusinessException : Exception
     {
         public BusinessException()
@@ -18,9 +16,7 @@
         }
     }
 
-    /// <summary>
-    /// Exception thrown when a requested resource is not found
-    /// </summary>
+    // Exception thrown when a requested resource is not found
     public class NotFoundException : BusinessException
     {
         public NotFoundException()
@@ -36,9 +32,7 @@
         }
     }
 
-    /// <summary>
-    /// Exception thrown when a validation error occurs
-    /// </summary>
+    // Exception thrown when a validation error occurs
     public class ValidationException : BusinessException
     {
         public ValidationException()
@@ -54,9 +48,7 @@
         }
     }
 
-    /// <summary>
-    /// Exception thrown when a conflict occurs (e.g., duplicate entry)
-    /// </summary>
+    // Exception thrown when a conflict occurs (e.g., duplicate entry)
     public class ConflictException : BusinessException
     {
         public ConflictException()
