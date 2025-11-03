@@ -125,7 +125,7 @@ class _CartRecommendationsDialogState extends State<CartRecommendationsDialog> {
   Future<void> _addToCart(BuildContext context, ToolModel tool) async {
     try {
       final cartService = CartService();
-      final toolId = tool.id ?? 0;
+      final toolId = tool.id;
       
       final existingItem = await cartService.findItemByToolId(toolId);
       if (existingItem != null) {

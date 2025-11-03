@@ -5,7 +5,6 @@ import 'package:file_picker/file_picker.dart';
 import 'package:mosposudit_shared/services/category_service.dart';
 import 'package:mosposudit_shared/services/utility_service.dart';
 import 'package:mosposudit_shared/models/category.dart';
-import 'package:intl/intl.dart';
 import '../core/snackbar_helper.dart';
 
 class CategoriesManagementPage extends StatefulWidget {
@@ -46,7 +45,7 @@ class _CategoriesManagementPageState extends State<CategoriesManagementPage> {
         _categories = results;
         _isLoading = false;
       });
-    } catch (e, stackTrace) {
+    } catch (e) {
       setState(() {
         _error = 'Error: ${e.toString()}';
         _isLoading = false;

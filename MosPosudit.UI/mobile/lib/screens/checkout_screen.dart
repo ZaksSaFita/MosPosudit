@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:mosposudit_shared/services/cart_service.dart';
-import 'package:mosposudit_shared/services/order_service.dart';
 import 'package:mosposudit_shared/services/auth_service.dart';
 import 'package:mosposudit_shared/services/tool_service.dart';
 import 'package:mosposudit_shared/models/cart.dart';
@@ -30,6 +29,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   DateTime _selectedEndDate = DateTime.now().add(const Duration(days: 1));
   bool _datesSelected = false;
   bool _isValidatingAvailability = false;
+  String? _dateErrorMessage;
   
   @override
   void initState() {
@@ -142,9 +142,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   void _showUnavailableDevicesDialog(List<Map<String, dynamic>> unavailableTools) {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(20),
         ),
         title: Row(
           children: [
@@ -310,15 +311,35 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       initialDate: _selectedStartDate,
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Colors.blue,
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: Colors.black87,
+            ),
+            dialogBackgroundColor: Colors.white,
+            dialogTheme: const DialogThemeData(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.all(Radius.circular(20)),
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
     
     if (picked != null) {
       setState(() {
         _selectedStartDate = picked;
-        if (_selectedStartDate.isAfter(_selectedEndDate)) {
+        if (_selectedStartDate.isAfter(_selectedEndDate) || _selectedStartDate.isAtSameMomentAs(_selectedEndDate)) {
           _selectedEndDate = _selectedStartDate.add(const Duration(days: 1));
         }
         _datesSelected = false;
+        _dateErrorMessage = "Please select an end date to continue";
       });
     }
   }
@@ -329,15 +350,41 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       initialDate: _selectedEndDate,
       firstDate: _selectedStartDate,
       lastDate: DateTime.now().add(const Duration(days: 365)),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Colors.blue,
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: Colors.black87,
+            ),
+            dialogBackgroundColor: Colors.white,
+            dialogTheme: const DialogThemeData(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.all(Radius.circular(20)),
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
     
     if (picked != null) {
       setState(() {
         _selectedEndDate = picked;
         _datesSelected = true;
+        _dateErrorMessage = null;
       });
       
-      await _validateAvailabilityForSelectedPeriod();
+      final isAvailable = await _validateAvailabilityForSelectedPeriod();
+      if (!isAvailable) {
+        setState(() {
+          _dateErrorMessage = "Selected dates are not available. Please choose different dates.";
+          _datesSelected = false;
+        });
+      }
     }
   }
   
@@ -355,7 +402,35 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Terms and Conditions of Use'),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.description,
+                  color: Colors.blue.shade700,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Terms and Conditions',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -422,12 +497,23 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               ],
             ),
           ),
+          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('Close'),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                elevation: 0,
+              ),
+              child: const Text(
+                'Got it',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+              ),
             ),
           ],
         );
@@ -628,6 +714,20 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                               onTap: _selectEndDate,
                             ),
                           ),
+                          
+                          if (_dateErrorMessage != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8, left: 16, right: 16),
+                              child: Text(
+                                _dateErrorMessage!,
+                                style: const TextStyle(
+                                  color: Colors.red,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          
                           const SizedBox(height: 24),
                           
                           const Text(

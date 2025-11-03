@@ -51,23 +51,63 @@ class MosPosuditMobileApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Mos posud',
+      title: 'MosPosudit',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
-        snackBarTheme: SnackBarThemeData(
-          behavior: SnackBarBehavior.floating,
+        dialogTheme: const DialogThemeData(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.all(Radius.circular(20)),
           ),
-          contentTextStyle: const TextStyle(
-            fontSize: 14,
+          elevation: 8,
+          backgroundColor: Colors.white,
+          titleTextStyle: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
           ),
-          elevation: 4,
+          contentTextStyle: TextStyle(
+            fontSize: 15,
+            color: Colors.black87,
+          ),
+        ),
+        datePickerTheme: DatePickerThemeData(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(20)),
+          ),
+          headerBackgroundColor: Colors.blue,
+          headerForegroundColor: Colors.white,
+          backgroundColor: Colors.white,
+          elevation: 8,
+          dayStyle: TextStyle(fontSize: 14),
+          yearStyle: TextStyle(fontSize: 16),
         ),
       ),
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(1.0)),
+          child: ScaffoldMessenger(
+            child: Builder(
+              builder: (context) {
+                return _SnackBarOverride(child: child!);
+              },
+            ),
+          ),
+        );
+      },
       home: const AuthWrapper(),
     );
+  }
+}
+
+class _SnackBarOverride extends StatelessWidget {
+  final Widget child;
+
+  const _SnackBarOverride({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return child;
   }
 }
 
@@ -141,15 +181,14 @@ class _AuthWrapperState extends State<AuthWrapper> {
           }
         }
       } catch (e) {
-        final user = prefs.getString('user');
         if (mounted) {
           setState(() {
-            _isLoggedIn = token != null && token.isNotEmpty && user != null;
+            _isLoggedIn = token != null && token.isNotEmpty;
             _isLoading = false;
           });
         }
       }
-    } catch (e, stackTrace) {
+    } catch (e) {
       if (mounted) {
         setState(() {
           _isLoggedIn = false;
@@ -174,7 +213,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
       return _isLoggedIn 
           ? ClientHomeScreen(key: ClientHomeScreen.navigatorKey) 
           : const LoginScreen();
-    } catch (e, stackTrace) {
+    } catch (e) {
       return Scaffold(
         backgroundColor: Colors.white,
         body: Center(
@@ -299,6 +338,10 @@ class _LoginScreenState extends State<LoginScreen> {
         } else {
           await prefs.remove('user');
         }
+        
+        // Clear cart on login (each user gets fresh cart)
+        final cartService = CartService();
+        await cartService.clearCart();
         
         if (mounted) {
           context.showTopSnackBar(
@@ -834,7 +877,7 @@ class _ToolsPageState extends State<ToolsPage> {
 
       Map<int, double> toolRatings = {};
       for (var tool in loadedTools) {
-        final toolId = tool.id ?? 0;
+        final toolId = tool.id;
         if (toolId > 0) {
           toolRatings[toolId] = tool.averageRating ?? 5.0;
         }
@@ -860,7 +903,7 @@ class _ToolsPageState extends State<ToolsPage> {
   Future<void> _refreshCartStatus() async {
     try {
       final cartItems = await _cartService.getCartItems();
-      final toolsInCart = cartItems.map<int>((item) => item.toolId as int).toSet();
+      final toolsInCart = cartItems.map<int>((item) => item.toolId).toSet();
       if (mounted) {
         setState(() {
           _toolsInCart = toolsInCart;
@@ -959,7 +1002,7 @@ class _ToolsPageState extends State<ToolsPage> {
 
   Future<void> _addToCart(ToolModel tool) async {
     try {
-      final toolId = tool.id ?? 0;
+      final toolId = tool.id;
       
       final existingItem = await _cartService.findItemByToolId(toolId);
       
@@ -1012,7 +1055,7 @@ class _ToolsPageState extends State<ToolsPage> {
 
   Future<void> _toggleFavorite(ToolModel tool) async {
     try {
-      final toolId = tool.id ?? 0;
+      final toolId = tool.id;
       final isFavorite = _favoriteToolIds.contains(toolId);
 
       if (isFavorite) {
@@ -1373,7 +1416,7 @@ class _ToolsPageState extends State<ToolsPage> {
                                                 Navigator.of(context).push(
                                                   MaterialPageRoute(
                                                     builder: (context) => ReviewListScreen(
-                                                      toolId: tool.id ?? 0,
+                                                      toolId: tool.id,
                                                       toolName: tool.name,
                                                     ),
                                                   ),
@@ -1837,20 +1880,70 @@ class _ProfilePageState extends State<ProfilePage> {
                     // Show confirmation dialog
                     final confirm = await showDialog<bool>(
                       context: context,
+                      barrierDismissible: false,
                       builder: (context) => AlertDialog(
-                        title: const Text('Logout'),
-                        content: const Text('Are you sure you want to logout?'),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        title: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.red.shade50,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                Icons.logout,
+                                color: Colors.red.shade700,
+                                size: 24,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            const Text(
+                              'Logout',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        content: const Text(
+                          'Are you sure you want to logout?',
+                          style: TextStyle(fontSize: 15),
+                        ),
+                        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.of(context).pop(false),
-                            child: const Text('Cancel'),
-                          ),
-                          TextButton(
-                            onPressed: () => Navigator.of(context).pop(true),
                             style: TextButton.styleFrom(
-                              foregroundColor: Colors.red,
+                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
                             ),
-                            child: const Text('Logout'),
+                            child: const Text(
+                              'Cancel',
+                              style: TextStyle(fontSize: 15),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton(
+                            onPressed: () => Navigator.of(context).pop(true),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: const Text(
+                              'Logout',
+                              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                            ),
                           ),
                         ],
                       ),
@@ -1864,6 +1957,10 @@ class _ProfilePageState extends State<ProfilePage> {
                       await prefs.remove('saved_username');
                       await prefs.remove('saved_password');
                       await prefs.remove('remember_me');
+                      
+                      // Clear cart
+                      final cartService = CartService();
+                      await cartService.clearCart();
 
                       // Navigate to login screen
                       if (mounted) {

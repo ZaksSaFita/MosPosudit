@@ -142,7 +142,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _addToCart(ToolModel tool) async {
     try {
-      final toolId = tool.id ?? 0;
+      final toolId = tool.id;
       
       if (tool.isAvailable == false || (tool.quantity != null && tool.quantity! <= 0)) {
         if (mounted) {

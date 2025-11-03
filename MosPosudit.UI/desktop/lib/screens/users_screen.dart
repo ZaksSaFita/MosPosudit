@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:mosposudit_shared/services/user_service.dart';
 import 'package:mosposudit_shared/models/user.dart';
-import 'package:intl/intl.dart';
 import '../core/snackbar_helper.dart';
 
 class UsersManagementPage extends StatefulWidget {
@@ -45,7 +44,7 @@ class _UsersManagementPageState extends State<UsersManagementPage> {
         _users = results;
         _isLoading = false;
       });
-    } catch (e, stackTrace) {
+    } catch (e) {
       setState(() {
         _error = 'Error: ${e.toString()}';
         _isLoading = false;

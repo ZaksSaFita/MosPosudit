@@ -42,7 +42,7 @@ class _ReviewsManagementPageState extends State<ReviewsManagementPage> {
         _reviews = results;
         _isLoading = false;
       });
-    } catch (e, stackTrace) {
+    } catch (e) {
       setState(() {
         _error = 'Error: ${e.toString()}';
         _isLoading = false;

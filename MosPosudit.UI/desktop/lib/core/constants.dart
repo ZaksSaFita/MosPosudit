@@ -1,7 +1,7 @@
 const String _defaultApiUrl = 'http://localhost:5001/api';
 const String apiBaseUrl = String.fromEnvironment('API_URL', defaultValue: _defaultApiUrl);
 
-const String appName = 'MosPosudit Desktop';
+const String appName = 'MosPosudit';
 const String appVersion = '1.0.0';
 
 const double defaultPadding = 16.0;

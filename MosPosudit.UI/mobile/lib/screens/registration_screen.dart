@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:mosposudit_shared/core/config.dart';
+import 'package:mosposudit_shared/services/cart_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../main.dart';
 
@@ -104,6 +105,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             if (userResponse.statusCode == 200) {
               await prefs.setString('user', userResponse.body);
             }
+            
+            // Clear cart for new user
+            final cartService = CartService();
+            await cartService.clearCart();
             
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(

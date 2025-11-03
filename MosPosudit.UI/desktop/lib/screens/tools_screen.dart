@@ -26,7 +26,6 @@ class _ToolsManagementPageState extends State<ToolsManagementPage> {
   List<CategoryModel> _categories = [];
   bool _isLoading = true;
   String? _error;
-  int? _selectedCategoryId;
   String _searchQuery = '';
   ViewMode _viewMode = ViewMode.card;
   
@@ -56,7 +55,7 @@ class _ToolsManagementPageState extends State<ToolsManagementPage> {
         _categories = results[1] as List<CategoryModel>;
         _isLoading = false;
       });
-    } catch (e, stackTrace) {
+    } catch (e) {
       setState(() {
         _error = 'Error: ${e.toString()}';
         _isLoading = false;

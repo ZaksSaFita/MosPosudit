@@ -3,7 +3,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:async';
-import '../screens/edit_profile_screen.dart';
 import '../main.dart' show AuthWrapper;
 import 'package:mosposudit_shared/services/auth_service.dart';
 import 'package:mosposudit_shared/services/message_service.dart';

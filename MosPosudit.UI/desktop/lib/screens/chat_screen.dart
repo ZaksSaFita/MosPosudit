@@ -5,7 +5,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import '../core/constants.dart';
 import 'package:mosposudit_shared/core/config.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -25,7 +24,6 @@ class _ChatScreenState extends State<ChatScreen> {
   List<int> _activeUserIds = [];
   int? _selectedUserId;
   int? _currentAdminId;
-  bool _isLoading = true;
   bool _isSending = false;
   Timer? _refreshTimer;
 
@@ -106,23 +104,16 @@ class _ChatScreenState extends State<ChatScreen> {
         if (mounted) {
           setState(() {
             _pendingMessages = messages;
-            _isLoading = false;
           });
         }
       } else {
         if (mounted) {
           setState(() {
             _pendingMessages = [];
-            _isLoading = false;
           });
         }
       }
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
     }
   }
 

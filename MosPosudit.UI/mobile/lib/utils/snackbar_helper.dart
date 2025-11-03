@@ -8,31 +8,57 @@ extension SnackBarHelper on BuildContext {
   }) {
     final mediaQuery = MediaQuery.of(this);
     final topPadding = mediaQuery.padding.top;
-    final topMargin = topPadding + 10;
+    final screenHeight = mediaQuery.size.height;
     
     ScaffoldMessenger.of(this).showSnackBar(
       SnackBar(
-        content: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 2),
-          child: Text(
-            message,
-            style: const TextStyle(fontSize: 13),
-          ),
+        content: Text(
+          message,
+          style: const TextStyle(fontSize: 14),
         ),
-        backgroundColor: backgroundColor,
+        backgroundColor: backgroundColor ?? Colors.black87,
         behavior: SnackBarBehavior.floating,
-        margin: EdgeInsets.only(
-          top: topMargin,
-          left: 16,
-          right: 16,
+        margin: EdgeInsets.fromLTRB(
+          16,
+          topPadding + 70,
+          16,
+          screenHeight - topPadding - 150,
         ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
         ),
         duration: duration,
-        elevation: 4,
+        elevation: 6,
       ),
     );
   }
+}
+
+void showGlobalSnackBar(BuildContext context, String message, {Color? backgroundColor}) {
+  final mediaQuery = MediaQuery.of(context);
+  final topPadding = mediaQuery.padding.top;
+  final screenHeight = mediaQuery.size.height;
+  
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(
+        message,
+        style: const TextStyle(fontSize: 14, color: Colors.white),
+      ),
+      backgroundColor: backgroundColor ?? Colors.black87,
+      behavior: SnackBarBehavior.floating,
+      margin: EdgeInsets.fromLTRB(
+        16,
+        topPadding + 70,
+        16,
+        screenHeight - topPadding - 150,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+      ),
+      duration: const Duration(seconds: 3),
+      elevation: 6,
+    ),
+  );
 }
 

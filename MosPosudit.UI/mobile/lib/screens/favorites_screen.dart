@@ -47,7 +47,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       final toolsMap = <int, ToolModel>{};
       for (var tool in tools) {
         if (toolIds.contains(tool.id)) {
-          toolsMap[tool.id ?? 0] = tool;
+          toolsMap[tool.id] = tool;
         }
       }
 
@@ -94,7 +94,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
   Future<void> _addToCart(ToolModel tool) async {
     try {
-      final toolId = tool.id ?? 0;
+      final toolId = tool.id;
       
       final existingItem = await _cartService.findItemByToolId(toolId);
       
@@ -374,7 +374,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                                       Icons.favorite,
                                       color: Colors.red,
                                     ),
-                                    onPressed: () => _removeFavorite(tool.id ?? 0),
+                                    onPressed: () => _removeFavorite(tool.id),
                                     padding: const EdgeInsets.all(8),
                                     constraints: const BoxConstraints(
                                       minWidth: 40,

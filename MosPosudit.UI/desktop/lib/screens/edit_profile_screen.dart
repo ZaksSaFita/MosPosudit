@@ -44,10 +44,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> with TickerProvid
   bool _showCurrentPassword = false;
   bool _showNewPassword = false;
   bool _showConfirmPassword = false;
-  
-  bool _isEmailVerifying = false;
-  String? _emailVerificationCode;
-  final _emailVerificationController = TextEditingController();
 
   @override
   void initState() {
@@ -124,8 +120,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> with TickerProvid
       request.files.add(await http.MultipartFile.fromPath('file', _selectedFile!.path));
       final response = await request.send();
       if (response.statusCode == 200) {
-        final respStr = await response.stream.bytesToString();
-        final userResp = jsonDecode(respStr);
+        await response.stream.bytesToString();
         
         final userJson = prefs.getString('user');
         if (userJson != null) {
@@ -307,7 +302,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> with TickerProvid
     _newPasswordController.dispose();
     _confirmPasswordController.dispose();
     _resetEmailController.dispose();
-    _emailVerificationController.dispose();
     super.dispose();
   }
 

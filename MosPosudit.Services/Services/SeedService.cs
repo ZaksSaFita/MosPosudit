@@ -38,14 +38,14 @@ namespace MosPosudit.Services.Services
 
             // PHASE 2: Seed Users (depends on Roles)
             // Ensure admin user exists with correct email
-            var adminUser = db.Users.FirstOrDefault(x => x.Username == "admin");
+            var adminUser = db.Users.FirstOrDefault(x => x.Username == "desktop");
             if (adminUser == null)
             {
                 db.Users.Add(new User
                 {
                     FirstName = "Admin",
                     LastName = "User",
-                    Username = "admin",
+                    Username = "desktop",
                     Email = "mosposudit2@gmail.com",
                     PhoneNumber = "123456789",
                     PasswordHash = BCrypt.Net.BCrypt.HashPassword("test"),
@@ -94,14 +94,14 @@ namespace MosPosudit.Services.Services
             }
 
             // Ensure regular user exists with correct email
-            var regularUser = db.Users.FirstOrDefault(x => x.Username == "user");
+            var regularUser = db.Users.FirstOrDefault(x => x.Username == "mobile");
             if (regularUser == null)
             {
                 db.Users.Add(new User
                 {
                     FirstName = "Regular",
                     LastName = "User",
-                    Username = "user",
+                    Username = "mobile",
                     Email = "mosposudit3@gmail.com",
                     PhoneNumber = "987654321",
                     PasswordHash = BCrypt.Net.BCrypt.HashPassword("test"),
@@ -298,7 +298,7 @@ namespace MosPosudit.Services.Services
             };
 
             var userIds = new List<int>();
-            var existingUser = db.Users.FirstOrDefault(x => x.Username == "user");
+            var existingUser = db.Users.FirstOrDefault(x => x.Username == "mobile");
             if (existingUser != null)
                 userIds.Add(existingUser.Id);
 

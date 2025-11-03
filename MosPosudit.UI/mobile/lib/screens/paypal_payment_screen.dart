@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 import 'package:mosposudit_shared/services/payment_service.dart';
-import 'package:mosposudit_shared/services/order_service.dart';
 import 'package:mosposudit_shared/dtos/order/order_insert_request.dart';
 import 'package:mosposudit_shared/services/cart_service.dart';
 import 'dart:async';
@@ -35,7 +34,17 @@ class _PayPalPaymentScreenState extends State<PayPalPaymentScreen> {
 
   Future<void> _initializePayPal() async {
     try {
-      final paypalOrder = await _paymentService.createPayPalOrder(widget.orderData);
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+      
+      final paypalOrder = await _paymentService.createPayPalOrder(widget.orderData).timeout(
+        const Duration(seconds: 15),
+        onTimeout: () {
+          throw Exception('Payment request timed out. Please check your internet connection and try again.');
+        },
+      );
 
       if (paypalOrder.approvalUrl.isEmpty) {
         throw Exception('PayPal approval URL is empty');
@@ -48,7 +57,7 @@ class _PayPalPaymentScreenState extends State<PayPalPaymentScreen> {
 
       _controller = WebViewController()
         ..setJavaScriptMode(JavaScriptMode.unrestricted)
-        ..setUserAgent('Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36')
+        ..setUserAgent('Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36')
         ..setNavigationDelegate(
           NavigationDelegate(
             onPageStarted: (String url) {
@@ -67,18 +76,15 @@ class _PayPalPaymentScreenState extends State<PayPalPaymentScreen> {
               }
             },
             onWebResourceError: (WebResourceError error) {
-              if (mounted) {
-                setState(() {
-                  _isLoading = false;
-                  _errorMessage = 'WebView error: ${error.description}';
-                });
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('WebView error: ${error.description}'),
-                    backgroundColor: Colors.red,
-                    duration: const Duration(seconds: 5),
-                  ),
-                );
+              if (error.errorType == WebResourceErrorType.hostLookup ||
+                  error.errorType == WebResourceErrorType.connect ||
+                  error.errorType == WebResourceErrorType.timeout) {
+                if (mounted) {
+                  setState(() {
+                    _isLoading = false;
+                    _errorMessage = 'Unable to connect to PayPal. Please check your internet connection.';
+                  });
+                }
               }
             },
             onNavigationRequest: (NavigationRequest request) {
@@ -110,7 +116,6 @@ class _PayPalPaymentScreenState extends State<PayPalPaymentScreen> {
         AndroidWebViewController.enableDebugging(kDebugMode);
         androidController.setMediaPlaybackRequiresUserGesture(false);
         androidController.setOnShowFileSelector((params) async => []);
-        
       }
       
       _controller!.enableZoom(true);
@@ -122,7 +127,7 @@ class _PayPalPaymentScreenState extends State<PayPalPaymentScreen> {
           _isLoading = false;
         });
       }
-    } catch (e, stackTrace) {
+    } catch (e) {
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -220,114 +225,54 @@ class _PayPalPaymentScreenState extends State<PayPalPaymentScreen> {
   Future<void> _enableKeyboardSupport() async {
     if (_controller == null) return;
     
-    const email = 'mosposudit3@gmail.com';
+    await Future.delayed(const Duration(milliseconds: 1500));
     
     try {
       await _controller!.runJavaScript('''
         (function() {
-          var emailToFill = '${email}';
-          
-          function autoFillEmail() {
-            var emailSelectors = [
-              'input[type="email"]',
-              'input[name*="email" i]',
-              'input[id*="email" i]',
-              'input[placeholder*="email" i]',
-              'input[name*="mail" i]',
-              'input[id*="mail" i]'
-            ];
-            
-            for (var i = 0; i < emailSelectors.length; i++) {
-              var emailInputs = document.querySelectorAll(emailSelectors[i]);
-              emailInputs.forEach(function(input) {
-                if (input.value === '' || input.value === null) {
-                  input.value = emailToFill;
-                  
-                  var events = ['input', 'change', 'keyup', 'blur'];
-                  events.forEach(function(eventType) {
-                    var event = new Event(eventType, { bubbles: true });
-                    input.dispatchEvent(event);
-                  });
-                }
-              });
-            }
-          }
-          
-          function ensureKeyboardShows(input) {
-            if (!input.hasAttribute('data-keyboard-handler')) {
-              input.setAttribute('data-keyboard-handler', 'true');
-              
-              input.removeAttribute('readonly');
-              input.removeAttribute('disabled');
-              
-              if (input.tabIndex < 0) {
-                input.tabIndex = 0;
+          function tryAutoFill() {
+            try {
+              var emailInput = document.querySelector('input[type="email"]');
+              if (emailInput && !emailInput.value) {
+                emailInput.value = 'mosposudit3@gmail.com';
+                emailInput.dispatchEvent(new Event('input', { bubbles: true }));
               }
               
-              input.addEventListener('click', function(e) {
-                e.stopPropagation();
-                setTimeout(function() {
-                  input.focus();
-                  input.click();
-                }, 10);
-              }, true);
-              
-              input.addEventListener('touchstart', function(e) {
-                e.stopPropagation();
-                setTimeout(function() {
-                  input.focus();
-                }, 10);
-              }, true);
-              
-              input.addEventListener('focus', function() {
-                setTimeout(function() {
-                  input.click();
-                  input.focus();
-                }, 100);
-              });
-            }
+              var passwordInput = document.querySelector('input[type="password"]');
+              if (passwordInput && !passwordInput.value) {
+                passwordInput.value = 'Mosposudit123';
+                passwordInput.dispatchEvent(new Event('input', { bubbles: true }));
+              }
+            } catch(e) {}
           }
           
-          function setupExistingInputs() {
-            autoFillEmail();
-            
-            var inputs = document.querySelectorAll('input, textarea, [contenteditable="true"]');
-            inputs.forEach(ensureKeyboardShows);
+          function acceptCookies() {
+            try {
+              var cookieButtons = document.querySelectorAll('button');
+              for (var i = 0; i < cookieButtons.length; i++) {
+                var btn = cookieButtons[i];
+                var text = btn.innerText || btn.textContent || '';
+                if (text.toLowerCase().includes('accept') || text.toLowerCase().includes('agree')) {
+                  if (btn.offsetParent !== null) {
+                    btn.click();
+                    return true;
+                  }
+                }
+              }
+            } catch(e) {}
+            return false;
           }
           
-          if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', setupExistingInputs);
-          } else {
-            setupExistingInputs();
-          }
+          setTimeout(tryAutoFill, 500);
+          setTimeout(tryAutoFill, 2000);
+          setTimeout(acceptCookies, 1000);
+          setTimeout(acceptCookies, 2000);
           
-          var observer = new MutationObserver(function(mutations) {
-            autoFillEmail();
-            
-            var inputs = document.querySelectorAll('input, textarea, [contenteditable="true"]');
-            inputs.forEach(ensureKeyboardShows);
-          });
-          
-          if (document.body) {
-            observer.observe(document.body, {
-              childList: true,
-              subtree: true
-            });
-          }
-          
-          var attempts = 0;
-          var fillInterval = setInterval(function() {
-            autoFillEmail();
-            attempts++;
-            if (attempts >= 10) {
-              clearInterval(fillInterval);
-            }
-          }, 1000);
         })();
       ''');
     } catch (e) {
       if (kDebugMode) {
-        print('Failed to inject keyboard support JavaScript: $e');
+        print('Note: Could not inject helper script: $e');
       }
     }
   }

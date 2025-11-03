@@ -90,12 +90,12 @@ flutter run
 
 ### Desktop App
 
-* Username: `admin`
+* Username: `desktop`
 * Password: `test`
 
 ### Mobile App
 
-* Username: `user`
+* Username: `mobile`
 * Password: `test`
 
 ### RabbitMQ

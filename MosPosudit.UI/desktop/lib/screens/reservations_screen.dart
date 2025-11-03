@@ -42,7 +42,7 @@ class _ReservationsManagementPageState extends State<ReservationsManagementPage>
         _orders = results;
         _isLoading = false;
       });
-    } catch (e, stackTrace) {
+    } catch (e) {
       setState(() {
         _error = 'Error: ${e.toString()}';
         _isLoading = false;
