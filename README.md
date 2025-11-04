@@ -74,7 +74,7 @@ flutter pub get
 cd MosPosudit.UI/desktop
 flutter run -d windows
 ```
-
+After the desktop app starts, navigate to the ML Recommender System section and click Train Now to train the machine learning model for recommendations.
 #### Mobile
 
 Make sure the Android emulator is running:
